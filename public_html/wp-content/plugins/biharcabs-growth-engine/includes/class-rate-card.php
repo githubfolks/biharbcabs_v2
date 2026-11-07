@@ -7,6 +7,11 @@ class BCGE_Rate_Card {
     const HISTORY = 'bcge_rate_card_history';
     const HISTORY_LIMIT = 20;
 
+    /** both: pickup and drop must be in the service area. either: one end is enough. */
+    public static function area_rules() {
+        return array('both', 'either');
+    }
+
     public static function trip_types() {
         return array('oneway' => 'One way', 'roundtrip' => 'Round trip', 'airport' => 'Airport transfer');
     }
@@ -22,6 +27,9 @@ class BCGE_Rate_Card {
             'public_enabled' => false,
             'toll_tax_text'  => 'Toll and parking extra',
             'server_key'     => '',
+            // Names exactly as LocationIQ reverse geocoding returns them. An empty list means no limit.
+            'service_states'    => array('Bihar', 'West Bengal', 'Jharkhand', 'Assam', 'Uttar Pradesh'),
+            'service_area_rule' => 'both',
             'vehicles'       => array(
                 'sedan'  => $vehicle('Sedan', 'Swift / Dzire / Etios', 4, 2),
                 'ertiga' => $vehicle('Ertiga SUV', 'Ertiga', 6, 4),
@@ -72,9 +80,18 @@ class BCGE_Rate_Card {
             'public_enabled' => !empty($post['public_enabled']),
             'toll_tax_text'  => mb_substr(sanitize_text_field($post['toll_tax_text'] ?? ''), 0, 120),
             'server_key'     => sanitize_text_field($post['server_key'] ?? ''),
+            'service_states' => array(),
+            'service_area_rule' => in_array($post['service_area_rule'] ?? '', self::area_rules(), true) ? $post['service_area_rule'] : 'both',
             'vehicles'       => array(),
             'routes'         => array(),
         );
+        $states = preg_split('/[\r\n,]+/', (string) ($post['service_states'] ?? ''));
+        foreach (array_slice($states, 0, 40) as $state) {
+            $state = mb_substr(sanitize_text_field($state), 0, 60);
+            if ($state !== '' && !in_array($state, $card['service_states'], true)) {
+                $card['service_states'][] = $state;
+            }
+        }
 
         foreach ($base['vehicles'] as $code => $defaults) {
             $raw = is_array($post['vehicles'][$code] ?? null) ? $post['vehicles'][$code] : array();

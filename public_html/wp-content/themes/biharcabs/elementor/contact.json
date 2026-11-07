@@ -332,7 +332,7 @@
                                                         "isLinked": true
                                                     },
                                                     "bc_source": "contact-d7f870c",
-                                                    "editor": "<p class=\"text-muted mb-5\" style=\"font-size: 16px; line-height: 1.8;\">\n                            Have a question about fares or want to book an outstation cab? Reach out to our dedicated\n                            support team directly. We promise to respond instantly!\n                        </p>"
+                                                    "editor": "<p class=\"text-muted mb-5\" style=\"font-size: 16px; line-height: 1.8;\">\n                            Have a question about fares or want to book an outstation cab? Reach out to our dedicated\n                            support team directly. We promise to respond within 30 minutes!\n                        </p>"
                                                 },
                                                 "elements": []
                                             },
@@ -1104,7 +1104,7 @@
                                                                 "button_text_color": "",
                                                                 "background_color": ""
                                                             },
-                                                            "_title": "We will get back to you within 2-4 hours.",
+                                                            "_title": "We will get back to you within 30 minutes.",
                                                             "_css_classes": "bc-native-widget",
                                                             "_margin": {
                                                                 "unit": "px",
@@ -1115,7 +1115,7 @@
                                                                 "isLinked": true
                                                             },
                                                             "bc_source": "contact-2a2c34b",
-                                                            "editor": "<p class=\"text-muted mb-4\">We will get back to you within 2-4 hours.</p>"
+                                                            "editor": "<p class=\"text-muted mb-4\">We will get back to you within 30 minutes.</p>"
                                                         },
                                                         "elements": []
                                                     },

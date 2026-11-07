@@ -7,30 +7,36 @@
  */
 if (!defined('ABSPATH')) exit;
 
-define('BC_CONTENT_VERSION', 1);
+define('BC_CONTENT_VERSION', 2);
 
-/** Version 1: the home page review card named another company ("Akshay Cabs Experience"). */
-function bc_migrate_content_1() {
+/**
+ * Apply regex replacements to live pages' Elementor data and content.
+ *
+ * Live pages only. Revisions stay as history, and update_post_meta() would redirect a revision's
+ * value onto its parent, overwriting the live page with old content.
+ *
+ * @param array  $replacements Pattern => replacement.
+ * @param string $needle       Plain text every affected page contains, to narrow the query.
+ */
+function bc_replace_in_live_pages($replacements, $needle) {
     global $wpdb;
-    $pattern = '/Akshay(?:\\\\n|\s)+Cabs Experience/';
-    $replacement = 'Passenger Experience';
+    $patterns = array_keys($replacements);
+    $values   = array_values($replacements);
+    $like     = '%' . $wpdb->esc_like($needle) . '%';
 
-    // Live pages only. Revisions stay as history, and update_post_meta() would redirect a revision's
-    // value onto its parent, overwriting the live page with old content.
     $metas = $wpdb->get_results($wpdb->prepare(
         "SELECT m.post_id, m.meta_value FROM {$wpdb->postmeta} m
          INNER JOIN {$wpdb->posts} p ON p.ID = m.post_id
          WHERE m.meta_key = %s AND m.meta_value LIKE %s AND p.post_type = %s",
         '_elementor_data',
-        '%Akshay%',
+        $like,
         'page'
     ));
     foreach ($metas as $meta) {
-        $fixed = preg_replace($pattern, $replacement, $meta->meta_value);
+        $fixed = preg_replace($patterns, $values, $meta->meta_value);
         if ($fixed === null) return false;
         if ($fixed === $meta->meta_value) continue;
-        $json = json_decode($fixed, true);
-        if (!is_array($json)) return false;
+        if (!is_array(json_decode($fixed, true))) return false;
         if (!update_post_meta((int) $meta->post_id, '_elementor_data', wp_slash($fixed))) return false;
         delete_post_meta((int) $meta->post_id, '_elementor_element_cache');
     }
@@ -38,14 +44,34 @@ function bc_migrate_content_1() {
     $posts = $wpdb->get_results($wpdb->prepare(
         "SELECT ID, post_content FROM {$wpdb->posts} WHERE post_type = %s AND post_content LIKE %s",
         'page',
-        '%Akshay%'
+        $like
     ));
     foreach ($posts as $post) {
-        $fixed = preg_replace($pattern, $replacement, $post->post_content);
+        $fixed = preg_replace($patterns, $values, $post->post_content);
         if ($fixed === null) return false;
         if ($fixed === $post->post_content) continue;
         if ($wpdb->update($wpdb->posts, array('post_content' => $fixed), array('ID' => (int) $post->ID)) === false) return false;
         clean_post_cache((int) $post->ID);
+    }
+    return true;
+}
+
+/** Version 1: the home page review card named another company ("Akshay Cabs Experience"). */
+function bc_migrate_content_1() {
+    return bc_replace_in_live_pages(array('/Akshay(?:\\\\n|\s)+Cabs Experience/' => 'Passenger Experience'), 'Akshay');
+}
+
+/** Version 2: one response-time promise of 30 minutes, replacing 2 minutes, "instantly" and 2-4 hours. */
+function bc_migrate_content_2() {
+    $gap = '(?:\\\\n|\s)+';
+    $steps = array(
+        'confirm in 2 minutes'  => array('/confirm in 2 minutes/' => 'confirm within 30 minutes'),
+        'less than 2 minutes'   => array('/Driver confirmation' . $gap . 'takes less than 2 minutes/' => 'We confirm your booking within 30 minutes'),
+        'respond instantly'     => array('/respond instantly/' => 'respond within 30 minutes'),
+        'within 2-4 hours'      => array('/within 2-4 hours/' => 'within 30 minutes'),
+    );
+    foreach ($steps as $needle => $replacements) {
+        if (!bc_replace_in_live_pages($replacements, $needle)) return false;
     }
     return true;
 }

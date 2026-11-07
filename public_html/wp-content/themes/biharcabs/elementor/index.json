@@ -7205,7 +7205,7 @@
                                                     "items": [
                                                         {
                                                             "question": "How do I book a cab in Patna or Bihar Sharif with Bihar Cab Service?",
-                                                            "answer": "\n                                        You can book instantly by calling our 24x7 phone hotline or by submitting your\n                                        pickup &amp; drop details in our instant WhatsApp booking form. Driver confirmation\n                                        takes less than 2 minutes.\n                                    "
+                                                            "answer": "\n                                        You can book instantly by calling our 24x7 phone hotline or by submitting your\n                                        pickup &amp; drop details in our instant WhatsApp booking form. We confirm your booking within 30 minutes.\n                                    "
                                                         },
                                                         {
                                                             "question": "What is the fixed taxi fare from Patna JPNI Airport to Bihar Sharif?",
@@ -8325,8 +8325,8 @@
                                                                 },
                                                                 {
                                                                     "key": "copy_37",
-                                                                    "label": "We'll reply with exact fare & confirm in 2 minutes!",
-                                                                    "value": "We'll reply with exact fare & confirm in 2 minutes!"
+                                                                    "label": "We'll reply with exact fare & confirm within 30 minutes!",
+                                                                    "value": "We'll reply with exact fare & confirm within 30 minutes!"
                                                                 }
                                                             ]
                                                         },

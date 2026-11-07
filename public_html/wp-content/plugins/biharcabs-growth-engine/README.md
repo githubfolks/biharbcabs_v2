@@ -26,6 +26,8 @@ Fares are rounded to the whole rupee. The website does not currently ask for a r
 
 Request: `origin_city`, `trip_type` (`oneway`, `roundtrip`, `airport`, `local`) and `pickup_date` (`YYYY-MM-DD`) are required. Optional: `destination_city`, `return_date`, `duration_days`, and `origin_lat`, `origin_lon`, `destination_lat`, `destination_lon`.
 
+**Service area:** trips priced by distance must have both pickup and drop in the listed states (Bihar, West Bengal, Jharkhand, Assam and Uttar Pradesh by default), or only one end if the Rate Card is set to "either". The state comes from LocationIQ reverse geocoding on the server, using the names it returns. Places outside India, and places with no state such as Delhi, count as outside. If the lookup fails, the trip gets no estimate. Routes listed on the Rate Card are always quoted. An empty list removes the limit.
+
 A place matches a configured route on the part before its first comma, so `Gaya, Bihar, India` matches `Gaya`. Without a matching route, the distance comes from LocationIQ on the server, using the supplied coordinates. Client-supplied distances are not accepted.
 
 | Code | HTTP | Meaning |
@@ -34,6 +36,7 @@ A place matches a configured route on the part before its first comma, so `Gaya,
 | `INVALID_REQUEST` | 400 | Missing or invalid fields |
 | `RATE_LIMITED` | 429 | Too many requests |
 | `NO_TARIFF` | 200 | No price available; fall back to a custom quote |
+| `OUT_OF_SERVICE_AREA` | 200 | Trip is outside the service area; fall back to a custom quote |
 
 ## Audit
 
