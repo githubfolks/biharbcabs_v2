@@ -1294,3 +1294,11 @@
 @media (min-width:768px) and (max-width:991.98px){
  .bc-page-index .bc-source-index-8df17c7{padding-top:130px!important}
 }
+
+/* Fare estimate */
+.bc-fare-list{margin-top:12px;padding-top:12px;border-top:1px dashed #facc15;text-align:left}
+.bc-fare-row{display:flex;justify-content:space-between;gap:12px;padding:4px 0;font-size:15px;color:#111827}
+.bc-fare-row strong{white-space:nowrap}
+.bc-fare-note{display:block;margin-top:8px;font-size:12px;line-height:1.4;color:#4b5563}
+.bc-no-distance>small:first-child,.bc-no-distance>.mt-1{display:none}
+.bc-has-fares>small:not(:first-child){display:none!important}
