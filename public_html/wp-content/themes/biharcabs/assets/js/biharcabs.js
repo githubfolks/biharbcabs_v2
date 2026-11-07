@@ -197,7 +197,7 @@
   const box=find('fare_estimate_box','estimate'),distance=find('estimated_distance','distance');
   const auto=find('auto_detect_btn','auto');const coords=new Map();let version=0;
   const clear=()=>{version++;if(box)box.style.display='none';if(distance)distance.textContent='-';};
-  const notice=document.createElement('small');notice.className='d-block';notice.setAttribute('role','status');pickup.parentNode.appendChild(notice);
+  const notice=document.createElement('small');notice.className='d-block bc-location-notice';notice.setAttribute('role','status');pickup.parentNode.appendChild(notice);
   const request=async(url,signal)=>{const response=await fetch(url,{signal});if(!response.ok)throw new Error('Location service unavailable');return response.json();};
   async function route(){
    clear();const token=version,p=coords.get(pickup),d=coords.get(drop);if(!p||!d)return;
