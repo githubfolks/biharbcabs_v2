@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAllSettings, updateSetting } from '@/lib/settings';
+import { checkReturnTripPolicy } from '@/lib/return-trip-pricing';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,7 +25,17 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    await updateSetting(key, value, description);
+    let toSave = value;
+    if (key === 'return_trip_policy') {
+      // Money rules: save clean numbers, and refuse to switch the feature on with missing or invalid values.
+      const check = checkReturnTripPolicy(value);
+      if (check.policy.enabled && !check.active) {
+        return NextResponse.json({ success: false, error: `Return trips not switched on: ${check.errors.join(' ')}` }, { status: 400 });
+      }
+      toSave = check.policy;
+    }
+
+    await updateSetting(key, toSave, description);
     const updated = await getAllSettings(true);
 
     return NextResponse.json({ success: true, settings: updated });

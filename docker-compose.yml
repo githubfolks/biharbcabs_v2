@@ -81,6 +81,8 @@ services:
       PGPASSWORD: ""
       WP_API_BASE_URL: http://wordpress:80
       PORT: 3001
+      # Meta App Secret for webhook signatures. Set it in the shell or a local .env file, never in git.
+      META_APP_SECRET: ${META_APP_SECRET:-}
     extra_hosts:
       - "host.docker.internal:host-gateway"
 

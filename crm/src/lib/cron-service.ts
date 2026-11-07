@@ -6,7 +6,9 @@ import {
   getCompanyBillingInfo,
   getRevenueProtectionPolicy,
 } from './settings';
-import { checkAndEscalateSlaBreaches, BookingDetails } from './dispatch-engine';
+import { checkAndEscalateSlaBreaches, BookingDetails, releaseExpiredReturnWindows } from './dispatch-engine';
+import { notifyOfferedDrivers } from './dispatch-notify';
+import { expireDriverReturns } from './return-trips';
 import { sendWhatsAppText, sendWhatsAppButtons } from './whatsapp';
 
 export interface CronExecutionResult {
@@ -15,6 +17,8 @@ export interface CronExecutionResult {
   documentsExpiredSuspended: number;
   documentsExpiringWarned: number;
   unpaidDuesSuspended: number;
+  returnWindowsReleased: number;
+  driverReturnsExpired: number;
 }
 
 /**
@@ -236,7 +240,22 @@ export async function runUnpaidDuesGuardrails(): Promise<number> {
 /**
  * Master Cron Runner executing all automated background checks.
  */
+/**
+ * Return trips: rides whose returning-driver priority window ended go to regular drivers,
+ * and driver return statuses past their time are closed.
+ */
+export async function runReturnTripTasks(): Promise<{ released: number; expired: number }> {
+  const released = await releaseExpiredReturnWindows();
+  for (const r of released) {
+    await notifyOfferedDrivers(r.bookingId, r.result);
+  }
+  const expired = await expireDriverReturns();
+  return { released: released.length, expired };
+}
+
 export async function executeAllCronTasks(): Promise<CronExecutionResult> {
+  // Runs before SLA escalation so a ride leaves its priority window before it can be escalated.
+  const returnTrips = await runReturnTripTasks();
   const breached = await runSlaEscalation();
   const wakeups = await runDriverWakeupChecks();
   const docs = await runDocumentExpiryGuardrails();
@@ -248,6 +267,8 @@ export async function executeAllCronTasks(): Promise<CronExecutionResult> {
     documentsExpiredSuspended: docs.suspendedCount,
     documentsExpiringWarned: docs.warningCount,
     unpaidDuesSuspended: dues,
+    returnWindowsReleased: returnTrips.released,
+    driverReturnsExpired: returnTrips.expired,
   };
 }
 

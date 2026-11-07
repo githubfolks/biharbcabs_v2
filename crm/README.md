@@ -68,3 +68,44 @@ cd crm
 npx tsx --test src/tests/crm.test.ts
 ```
 
+
+Return-trip pricing and pickup-time parsing have pure tests with no database:
+```bash
+npx tsx --test src/tests/return-trip-pricing.test.ts
+```
+
+The end-to-end return-trip test needs a disposable database whose name ends in `_test`, with the CRM schema, `crm_settings` and migration 08. It also needs the WordPress quote endpoint, with a rate card listing Patna to Darbhanga:
+```bash
+DATABASE_URL=postgresql://localhost/biharcabs_crm_test npx tsx --test src/tests/return-trips.integration.ts
+```
+
+## Return Trips: Priority & Discount
+
+When a driver drops a customer away from their base city, the CRM offers a **🔁 Returning home** button after **Complete Trip**. Tapping it marks the driver as returning, from the drop city to their base city, for the configured number of hours.
+
+- **Discount at booking.** When a returning driver with a matching vehicle is free for a route and pickup time, the customer sees that vehicle discounted. The discount is recalculated from current settings when the booking is created.
+- **Priority.** A discounted booking goes only to returning drivers for the priority window. After that, the scheduled job (`/api/dispatch/cron`) sends it to regular drivers.
+- **Who pays.** The company pays the discount up to its platform commission, with GST recalculated on what remains, and the returning driver pays the rest. If a regular driver takes the ride, the company pays it all and the driver earns the normal payout. Each booking records the discount, both shares, and `return_discount_funded_by`.
+- **When it ends.** A driver's return ends when they tap **🏠 Reached home**, accept a return ride, or the time runs out.
+
+Configure it under **Settings → Return Trips**. It stays off until a discount (% or flat ₹), the priority window and the return duration are all set. The server rejects incomplete settings.
+
+Apply `crm-design/08_return_trips.sql` before deploying this code. It is safe to run more than once, never overwrites saved settings, and records itself in `crm_schema_migrations`.
+
+The bot now asks customers for their pickup time, and drivers' ride alerts show it. Before this, bookings defaulted to the next day at 9:00 AM.
+
+## WhatsApp Webhook Security
+
+- **Signed events only.** `POST /api/whatsapp/webhook` checks Meta's `X-Hub-Signature-256` header, an HMAC-SHA256 of the raw body keyed with your App Secret, before reading the event. Set `META_APP_SECRET` in the environment, never in git or the database. Until it is set, every event is rejected with 503 and the bot does not respond. Unsigned or wrongly signed events get 401.
+- **Each message once.** Meta retries deliveries for up to 36 hours. Every message id is recorded in `crm_webhook_events` and processed only once, so a repeated "Complete Trip" cannot settle a trip twice. A message is claimed before processing and is not reprocessed if processing fails part-way. Settlement also refuses a booking that is already settled.
+- **Only the right person can act.**
+  - **Accept a ride:** only a driver with a pending offer for it.
+  - **Start or complete a trip:** only the assigned driver, at the right stage.
+  - **See dues:** only that driver.
+  - **Rate a trip:** only that trip's customer, once it is settled.
+
+Apply `crm-design/09_webhook_events.sql` before deploying this code; without the table, webhook events fail. The security tests use a disposable `_test` database with migrations 08 and 09:
+```bash
+DATABASE_URL=postgresql://localhost/biharcabs_crm_test npx tsx --test src/tests/security.integration.ts
+```
+

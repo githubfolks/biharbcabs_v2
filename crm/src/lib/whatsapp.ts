@@ -204,6 +204,7 @@ export async function sendWhatsAppTemplate(
  * Parse an incoming Meta webhook event payload.
  */
 export function parseIncomingWebhook(body: any): {
+  messageId?: string;
   fromPhone?: string;
   customerName?: string;
   messageType?: string;
@@ -247,6 +248,7 @@ export function parseIncomingWebhook(body: any): {
   }
 
   return {
+    messageId: typeof message.id === 'string' ? message.id : undefined,
     fromPhone,
     customerName,
     messageType,

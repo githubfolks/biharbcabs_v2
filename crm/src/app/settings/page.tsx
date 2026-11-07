@@ -50,6 +50,7 @@ export default function SettingsPage() {
   }
 
   const slaTimeout = settings.dispatch_sla_timeout_minutes?.value ?? 15;
+  const returnPolicy = settings.return_trip_policy ?? { enabled: false, discount_type: 'PERCENT', discount_value: null, exclusive_window_minutes: 10, return_status_hours: null };
   const wakeupHours = settings.driver_wakeup_check_hours_before?.value ?? 2;
   const commModel = settings.commission_model ?? { type: 'PERCENTAGE', percentage: 12.0, fixed_margin: 300 };
   const maxNegative = settings.driver_max_negative_balance_limit?.value ?? 1500;
@@ -160,6 +161,61 @@ export default function SettingsPage() {
               </button>
             </div>
           </div>
+        </div>
+
+        {/* Return Trips */}
+        <div className="bg-white p-5 rounded-lg border border-slate-200 shadow-sm space-y-3">
+          <div className="flex items-center space-x-2 border-b pb-3">
+            <Sliders className="h-5 w-5 text-orange-600" />
+            <h3 className="font-bold text-slate-900">Return Trips: Priority & Customer Discount</h3>
+          </div>
+          <p className="text-xs text-slate-500">
+            After a drop away from home, a driver can tap &quot;Returning home&quot;. Rides from that city to their base city are then
+            offered to them first, and customers see a discount. The company pays the discount up to its commission and the
+            returning driver pays the rest; if a regular driver takes the ride, the company pays it all.
+          </p>
+          <label className="flex items-center space-x-2 text-xs font-semibold text-slate-700">
+            <input type="checkbox" id="rt_enabled" defaultChecked={returnPolicy.enabled === true} />
+            <span>Switch on return-trip priority and discount</span>
+          </label>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700">Discount type</label>
+              <select id="rt_type" defaultValue={returnPolicy.discount_type || 'PERCENT'} className="w-full mt-1 px-3 py-1.5 border rounded-md text-sm">
+                <option value="PERCENT">% of fare</option>
+                <option value="FLAT">Flat ₹ amount</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700">Discount value</label>
+              <input type="number" min="0" step="any" id="rt_value" defaultValue={returnPolicy.discount_value ?? ''} className="w-full mt-1 px-3 py-1.5 border rounded-md text-sm font-mono" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700">Priority window (minutes)</label>
+              <input type="number" min="1" max="120" id="rt_window" defaultValue={returnPolicy.exclusive_window_minutes ?? ''} className="w-full mt-1 px-3 py-1.5 border rounded-md text-sm font-mono" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700">Return status lasts (hours)</label>
+              <input type="number" min="1" max="48" step="any" id="rt_hours" defaultValue={returnPolicy.return_status_hours ?? ''} className="w-full mt-1 px-3 py-1.5 border rounded-md text-sm font-mono" />
+            </div>
+          </div>
+          <button
+            onClick={() => {
+              const val = (id: string) => (document.getElementById(id) as HTMLInputElement).value;
+              const num = (id: string) => (val(id) === '' ? null : Number(val(id)));
+              handleSaveSetting('return_trip_policy', {
+                enabled: (document.getElementById('rt_enabled') as HTMLInputElement).checked,
+                discount_type: val('rt_type'),
+                discount_value: num('rt_value'),
+                exclusive_window_minutes: num('rt_window'),
+                return_status_hours: num('rt_hours'),
+              });
+            }}
+            disabled={savingKey === 'return_trip_policy'}
+            className="px-3 py-1.5 bg-orange-600 text-white rounded-md text-xs font-semibold hover:bg-orange-700"
+          >
+            Save Return Trip Settings
+          </button>
         </div>
 
         {/* Commission & Finance Rules */}

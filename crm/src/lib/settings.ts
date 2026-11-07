@@ -1,4 +1,5 @@
 import { query } from './db';
+import { checkReturnTripPolicy, ReturnTripPolicyCheck } from './return-trip-pricing';
 
 interface CacheEntry {
   data: Record<string, any>;
@@ -282,3 +283,9 @@ export async function getRevenueProtectionPolicy(): Promise<RevenueProtectionPol
 
 
 
+
+/** Return-trip priority and discount settings, validated: incomplete or invalid settings leave the feature off. */
+export async function getReturnTripPolicy(): Promise<ReturnTripPolicyCheck> {
+  const raw = await getSetting<any>('return_trip_policy', {});
+  return checkReturnTripPolicy(raw);
+}

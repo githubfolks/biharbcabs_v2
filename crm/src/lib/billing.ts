@@ -63,6 +63,9 @@ export async function completeTripAndSettle(
     }
 
     const b = bookingRes.rows[0];
+    if (b.booking_status === 'COMPLETED_SETTLED') {
+      throw new Error(`Booking #${input.bookingId} is already completed and settled.`);
+    }
     const baseFare = Number(b.customer_total_fare);
     const advancePaid = Number(b.advance_paid || 0);
     const commission = Number(b.commission_amount || 0);
