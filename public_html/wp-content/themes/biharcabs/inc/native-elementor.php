@@ -85,9 +85,9 @@ add_action('elementor/frontend/container/before_render',function($element){
 });
 
 add_action('wp_enqueue_scripts',function(){
-    wp_enqueue_style('bc-blog',bc_asset('css/blog.css'),array('biharcabs'),'1.1.4.1');
+    wp_enqueue_style('bc-blog',bc_asset('css/blog.css'),array('biharcabs'),'1.1.6');
     wp_add_inline_style('bc-blog',':root{--bc-primary:'.sanitize_hex_color(bc_setting('primary')).';--bc-secondary:'.sanitize_hex_color(bc_setting('secondary')).';}');
-    wp_enqueue_style('bc-native',bc_asset('css/native-elementor.css'),array('biharcabs'),'1.1.4.1');
+    wp_enqueue_style('bc-native',bc_asset('css/native-elementor.css'),array('biharcabs'),'1.1.6');
 });
 
 function bc_native_backup($id){

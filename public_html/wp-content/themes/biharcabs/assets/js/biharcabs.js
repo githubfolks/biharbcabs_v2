@@ -196,14 +196,57 @@
   if(!pickup || !drop || pickup.dataset.bcLocation)return;pickup.dataset.bcLocation='1';
   const box=find('fare_estimate_box','estimate'),distance=find('estimated_distance','distance');
   const auto=find('auto_detect_btn','auto');const coords=new Map();let version=0;
-  const clear=()=>{version++;if(box)box.style.display='none';if(distance)distance.textContent='-';};
+  let fareList=null,quoteSequence=0;
+  const clear=()=>{version++;quoteSequence++;fareList?.remove();fareList=null;if(box){box.style.display='none';box.classList.remove('bc-no-distance','bc-has-fares');}if(distance)distance.textContent='-';};
   const notice=document.createElement('small');notice.className='d-block bc-location-notice';notice.setAttribute('role','status');pickup.parentNode.appendChild(notice);
   const request=async(url,signal)=>{const response=await fetch(url,{signal});if(!response.ok)throw new Error('Location service unavailable');return response.json();};
   async function route(){
    clear();const token=version,p=coords.get(pickup),d=coords.get(drop);if(!p||!d)return;
    try{const data=await request('https://us1.locationiq.com/v1/directions/driving/'+p.lon+','+p.lat+';'+d.lon+','+d.lat+'?key='+encodeURIComponent(config.locationKey)+'&overview=false');if(token!==version)return;if(data.routes?.[0] && distance && box){distance.textContent=(data.routes[0].distance/1000).toFixed(1)+' km';box.style.display='block';}}
    catch(_){notice.textContent='Distance unavailable. You can still send your booking.';}
+   if(token===version)showFares();
   }
+  const tripType=()=>{
+   const owner=pickup.closest('form');
+   const choice=owner?.closest('.hero-booking-card')?.querySelector('.hbc-tab.active')||owner?.querySelector('[data-bc-field="category"],[id*="category"]');
+   const label=(choice?.value||choice?.textContent||'').toLowerCase();
+   return label.includes('round')?'roundtrip':label.includes('airport')?'airport':label.includes('local')?'local':'oneway';
+  };
+  // Prices come only from the server. With no price available the booking flow simply carries on.
+  async function showFares(){
+   if(!config.quoteUrl||!box)return;
+   const sequence=++quoteSequence;
+   fareList?.remove();fareList=null;box.classList.remove('bc-has-fares');
+   const origin=pickup.value.trim(),destination=drop.value.trim();
+   if(!origin||!destination)return;
+   const trip=tripType(),from=coords.get(pickup),to=coords.get(drop),now=new Date();
+   const today=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');
+   const body={origin_city:origin,destination_city:destination,trip_type:trip,pickup_date:pickup.closest('form')?.querySelector('[type=date]')?.value||today};
+   if(from&&to)Object.assign(body,{origin_lat:from.lat,origin_lon:from.lon,destination_lat:to.lat,destination_lon:to.lon});
+   let data;
+   try{
+    const response=await fetch(config.quoteUrl,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    data=await response.json();
+   }catch(_){return;}
+   if(sequence!==quoteSequence||!data?.success||!data.quotes?.length)return;
+   const list=document.createElement('div');list.className='bc-fare-list';
+   data.quotes.forEach(item=>{
+    const row=document.createElement('div');row.className='bc-fare-row';
+    const name=document.createElement('span'),price=document.createElement('strong');
+    name.textContent=item.vehicle_name;price.textContent='₹'+Number(item.total_fare).toLocaleString('en-IN');
+    row.append(name,price);list.appendChild(row);
+   });
+   const note=document.createElement('small');note.className='bc-fare-note';
+   note.textContent=['Estimated fare'+(trip==='roundtrip'?' for a same-day return':''),data.quotes[0].toll_tax_text,'We confirm the final fare on WhatsApp'].filter(Boolean).join('. ')+'.';
+   list.appendChild(note);box.appendChild(list);fareList=list;
+   const km=Number(data.route?.distance_km);
+   if(km>0&&distance)distance.textContent=km.toFixed(1)+' km';
+   box.classList.toggle('bc-no-distance',!(km>0));box.classList.add('bc-has-fares');
+   box.style.display='block';
+  }
+  [pickup,drop].forEach(input=>input.addEventListener('change',showFares));
+  pickup.closest('form')?.querySelector('select[data-bc-field="category"],select[id*="category"]')?.addEventListener('change',showFares);
+  pickup.closest('.hero-booking-card')?.querySelectorAll('.hbc-tab').forEach(tab=>['click','keydown'].forEach(name=>tab.addEventListener(name,()=>setTimeout(showFares))));
   [pickup,drop].forEach(input=>{
    let timer,controller,sequence=0;const list=document.createElement('div');list.className='autocomplete-suggestions';input.parentNode.style.position='relative';input.parentNode.appendChild(list);input.autocomplete='off';
    input.addEventListener('input',()=>{

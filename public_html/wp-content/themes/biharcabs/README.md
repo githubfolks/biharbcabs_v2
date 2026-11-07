@@ -46,6 +46,10 @@ All booking forms hand off to WhatsApp and also save a lead to Cab Bookings. A l
 
 Vehicle, city and service CTAs open the shared booking modal and prefill it from their visible label, so renaming those labels in Elementor changes what is prefilled. A chosen vehicle is carried in Special Instructions as `Vehicle: <name>`.
 
+## Fare estimates
+
+The `biharcabs-growth-engine` plugin holds the rate card and serves quotes; see its README. The theme only displays them, and shows no prices while the plugin is inactive or estimates are switched off.
+
 ## Content migrations
 
 Home and Contact content is stored as Elementor data in the database, so a theme deploy cannot change it. `inc/content-migrations.php` holds versioned one-time fixes, recorded in the `bc_content_version` option. They run on the first request after deploy and only touch live pages, never revisions.
