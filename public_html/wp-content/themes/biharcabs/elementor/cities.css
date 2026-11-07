@@ -1,0 +1,73 @@
+
+            .custom-cities-hero {
+                background: linear-gradient(rgba(17, 24, 39, 0.9), rgba(17, 24, 39, 0.9)), url('assets/img/img/hero.webp') center/cover;
+                padding: 120px 0 80px 0;
+            }
+            .city-card {
+                position: relative;
+                border-radius: 16px;
+                overflow: hidden;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+                transition: 0.3s;
+                height: 100%;
+                display: block;
+                text-decoration: none;
+                group: relative;
+                background: white;
+            }
+            .city-card:hover {
+                transform: translateY(-5px);
+                box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+            }
+            .city-card-img {
+                height: 220px;
+                width: 100%;
+                object-fit: cover;
+                transition: transform 0.5s;
+            }
+            .city-card:hover .city-card-img {
+                transform: scale(1.05);
+            }
+            .city-card-overlay {
+                position: absolute;
+                inset: 0;
+                background: linear-gradient(to top, rgba(17,24,39,0.9) 0%, rgba(17,24,39,0.2) 50%, transparent 100%);
+                z-index: 1;
+            }
+            .city-card-content {
+                position: absolute;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                padding: 25px;
+                z-index: 2;
+                color: white;
+            }
+            .city-card h3 {
+                font-family: 'Outfit', sans-serif;
+                font-size: 24px;
+                font-weight: 700;
+                margin-bottom: 5px;
+                color: white;
+            }
+            .city-card p {
+                font-size: 14px;
+                color: #d1d5db;
+                margin-bottom: 15px;
+            }
+            .city-card-btn {
+                display: inline-block;
+                background: #facc15;
+                color: black;
+                font-weight: 700;
+                padding: 8px 20px;
+                border-radius: 8px;
+                font-size: 13px;
+                transition: 0.3s;
+                text-decoration: none;
+            }
+            .city-card-btn:hover {
+                background: #eab308;
+                color: black;
+            }
+        

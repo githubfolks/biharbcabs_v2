@@ -1,0 +1,13 @@
+/*
+Theme Name: Biharcabs
+Theme URI: https://biharcabs.com/
+Author: Biharcabs
+Author URI: https://biharcabs.com/
+Description: Bihar Cabs Premium Taxi & Cab Booking WordPress theme with 1-click Elementor demo setup, WhatsApp booking, lead capture system, and full SEO optimization.
+Version: 1.1.3
+Requires at least: 6.0
+Requires PHP: 8.0
+Text Domain: biharcabs
+Tags: custom-logo, custom-menu, featured-images, translation-ready, blog, elementor
+*/
+.screen-reader-text{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}.skip-link:focus{clip:auto;width:auto;height:auto;top:10px;left:10px;padding:12px;background:#fff;z-index:100000}.bc-honeypot{position:absolute;left:-10000px}.admin-bar .navbar.fixed-top{top:32px}.bc-content{padding:70px 0;min-height:50vh}.bc-blog-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:30px}.bc-blog-list{display:grid;gap:30px;max-width:900px;margin:auto}.bc-post-card{border:1px solid #e5e7eb;border-radius:16px;overflow:hidden;background:#fff}.bc-post-card img{width:100%;height:240px;object-fit:cover}.bc-post-copy{padding:25px}.bc-post-copy h2{font-size:25px;margin:12px 0}.bc-entry{max-width:900px;margin:auto}.bc-entry p,.bc-entry ul,.bc-entry ol{margin-bottom:1.3em}.bc-entry ul,.bc-entry ol{padding-left:1.5em}.bc-entry img{max-width:100%;height:auto}.bc-footer-menu{list-style:none;padding:0}.navbar-nav .sub-menu{display:none;position:absolute;background:white;padding:15px;min-width:200px;z-index:100}.navbar-nav li:hover>.sub-menu,.navbar-nav li:focus-within>.sub-menu{display:block}.bc-contact-status{margin-bottom:14px}.bc-contact-status:empty{display:none}.bc-pagination{margin-top:40px}.bc-pagination .page-numbers{padding:10px}.wp-caption{max-width:100%}.alignright{float:right;margin:0 0 1em 1em}.alignleft{float:left;margin:0 1em 1em 0}.aligncenter{display:block;margin:auto}.bypostauthor{border-left:2px solid #facc15}.gallery-caption{font-size:.9em}.sticky.bc-post-card{border-color:#facc15}@media(max-width:991px){.bc-blog-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.navbar-nav .sub-menu{position:static}}@media(max-width:767px){.bc-blog-grid{grid-template-columns:1fr}.admin-bar .navbar.fixed-top{top:46px}}

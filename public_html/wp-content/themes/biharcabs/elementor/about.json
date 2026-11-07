@@ -1,0 +1,1831 @@
+[
+    {
+        "id": "8c1a40c",
+        "elType": "container",
+        "settings": {
+            "_title": "About page",
+            "content_width": "full",
+            "css_classes": "bc-native-page bc-page-about",
+            "flex_direction": "column",
+            "flex_gap": {
+                "unit": "px",
+                "size": 0,
+                "row": "0",
+                "column": "0"
+            },
+            "padding": {
+                "unit": "px",
+                "top": "0",
+                "right": "0",
+                "bottom": "0",
+                "left": "0",
+                "isLinked": true
+            }
+        },
+        "elements": [
+            {
+                "id": "fc49620",
+                "elType": "container",
+                "settings": {
+                    "bc_source": "about-fc49620",
+                    "_title": "Section: About BiharCabs Your most trusted and reliable travel p",
+                    "html_tag": "section",
+                    "content_width": "full",
+                    "css_classes": "bc-native-node custom-hero text-center",
+                    "flex_direction": "column",
+                    "flex_gap": {
+                        "unit": "px",
+                        "size": 0,
+                        "row": "0",
+                        "column": "0"
+                    },
+                    "padding": {
+                        "unit": "px",
+                        "top": "",
+                        "right": "",
+                        "bottom": "",
+                        "left": "",
+                        "isLinked": false
+                    }
+                },
+                "elements": [
+                    {
+                        "id": "164d06a",
+                        "elType": "container",
+                        "settings": {
+                            "bc_source": "about-164d06a",
+                            "_title": "About BiharCabs Your most trusted and reliable travel p",
+                            "html_tag": "div",
+                            "content_width": "full",
+                            "css_classes": "bc-native-node container",
+                            "flex_direction": "column",
+                            "flex_gap": {
+                                "unit": "px",
+                                "size": 0,
+                                "row": "0",
+                                "column": "0"
+                            },
+                            "padding": {
+                                "unit": "px",
+                                "top": "",
+                                "right": "",
+                                "bottom": "",
+                                "left": "",
+                                "isLinked": false
+                            }
+                        },
+                        "elements": [
+                            {
+                                "id": "53f2c96",
+                                "elType": "widget",
+                                "widgetType": "heading",
+                                "settings": {
+                                    "__globals__": {
+                                        "title_color": "",
+                                        "typography_typography": "",
+                                        "text_color": "",
+                                        "button_text_color": "",
+                                        "background_color": ""
+                                    },
+                                    "_title": "About BiharCabs",
+                                    "_css_classes": "bc-native-widget",
+                                    "_margin": {
+                                        "unit": "px",
+                                        "top": "0",
+                                        "right": "0",
+                                        "bottom": "0",
+                                        "left": "0",
+                                        "isLinked": true
+                                    },
+                                    "bc_source": "about-53f2c96",
+                                    "title": "About\n                    <span>BiharCabs</span>\n                ",
+                                    "header_size": "h1",
+                                    "size": "default"
+                                },
+                                "elements": []
+                            },
+                            {
+                                "id": "a6dbd61",
+                                "elType": "widget",
+                                "widgetType": "text-editor",
+                                "settings": {
+                                    "__globals__": {
+                                        "title_color": "",
+                                        "typography_typography": "",
+                                        "text_color": "",
+                                        "button_text_color": "",
+                                        "background_color": ""
+                                    },
+                                    "_title": "Your most trusted and reliable travel partner for safe,",
+                                    "_css_classes": "bc-native-widget",
+                                    "_margin": {
+                                        "unit": "px",
+                                        "top": "0",
+                                        "right": "0",
+                                        "bottom": "0",
+                                        "left": "0",
+                                        "isLinked": true
+                                    },
+                                    "bc_source": "about-a6dbd61",
+                                    "editor": "<p class=\"text-white mx-auto\" style=\"max-width: 600px; font-size: 18px; line-height: 1.6;\">\n                    Your most trusted and reliable travel partner for safe, comfortable, and affordable rides across\n                    Bihar.\n                </p>"
+                                },
+                                "elements": []
+                            }
+                        ],
+                        "isInner": true
+                    }
+                ],
+                "isInner": true
+            },
+            {
+                "id": "94d355d",
+                "elType": "container",
+                "settings": {
+                    "bc_source": "about-94d355d",
+                    "_title": "Section: WHO WE ARE Driving Bihar Forward, One Ride At A Time. B",
+                    "html_tag": "section",
+                    "content_width": "full",
+                    "css_classes": "bc-native-node section-padding bg-white",
+                    "flex_direction": "column",
+                    "flex_gap": {
+                        "unit": "px",
+                        "size": 0,
+                        "row": "0",
+                        "column": "0"
+                    },
+                    "padding": {
+                        "unit": "px",
+                        "top": "",
+                        "right": "",
+                        "bottom": "",
+                        "left": "",
+                        "isLinked": false
+                    }
+                },
+                "elements": [
+                    {
+                        "id": "0bc9206",
+                        "elType": "container",
+                        "settings": {
+                            "bc_source": "about-0bc9206",
+                            "_title": "WHO WE ARE Driving Bihar Forward, One Ride At A Time. B",
+                            "html_tag": "div",
+                            "content_width": "full",
+                            "css_classes": "bc-native-node container",
+                            "flex_direction": "column",
+                            "flex_gap": {
+                                "unit": "px",
+                                "size": 0,
+                                "row": "0",
+                                "column": "0"
+                            },
+                            "padding": {
+                                "unit": "px",
+                                "top": "",
+                                "right": "",
+                                "bottom": "",
+                                "left": "",
+                                "isLinked": false
+                            }
+                        },
+                        "elements": [
+                            {
+                                "id": "c9b9ba7",
+                                "elType": "container",
+                                "settings": {
+                                    "bc_source": "about-c9b9ba7",
+                                    "_title": "WHO WE ARE Driving Bihar Forward, One Ride At A Time. B",
+                                    "html_tag": "div",
+                                    "content_width": "full",
+                                    "css_classes": "bc-native-node row align-items-center",
+                                    "flex_direction": "row",
+                                    "flex_gap": {
+                                        "unit": "px",
+                                        "size": 0,
+                                        "row": "0",
+                                        "column": "0"
+                                    },
+                                    "padding": {
+                                        "unit": "px",
+                                        "top": "",
+                                        "right": "",
+                                        "bottom": "",
+                                        "left": "",
+                                        "isLinked": false
+                                    }
+                                },
+                                "elements": [
+                                    {
+                                        "id": "7dc8368",
+                                        "elType": "container",
+                                        "settings": {
+                                            "bc_source": "about-7dc8368",
+                                            "_title": "col-lg-6 mb-4 mb-lg-0",
+                                            "html_tag": "div",
+                                            "content_width": "full",
+                                            "css_classes": "bc-native-node col-lg-6 mb-4 mb-lg-0",
+                                            "flex_direction": "column",
+                                            "flex_gap": {
+                                                "unit": "px",
+                                                "size": 0,
+                                                "row": "0",
+                                                "column": "0"
+                                            },
+                                            "padding": {
+                                                "unit": "px",
+                                                "top": "",
+                                                "right": "",
+                                                "bottom": "",
+                                                "left": "",
+                                                "isLinked": false
+                                            },
+                                            "width": {
+                                                "unit": "%",
+                                                "size": 50
+                                            },
+                                            "width_tablet": {
+                                                "unit": "%",
+                                                "size": 100
+                                            },
+                                            "width_mobile": {
+                                                "unit": "%",
+                                                "size": 100
+                                            }
+                                        },
+                                        "elements": [
+                                            {
+                                                "id": "a507f71",
+                                                "elType": "widget",
+                                                "widgetType": "image",
+                                                "settings": {
+                                                    "__globals__": {
+                                                        "title_color": "",
+                                                        "typography_typography": "",
+                                                        "text_color": "",
+                                                        "button_text_color": "",
+                                                        "background_color": ""
+                                                    },
+                                                    "_title": "BiharCabs SUV",
+                                                    "_css_classes": "bc-native-widget",
+                                                    "_margin": {
+                                                        "unit": "px",
+                                                        "top": "0",
+                                                        "right": "0",
+                                                        "bottom": "0",
+                                                        "left": "0",
+                                                        "isLinked": true
+                                                    },
+                                                    "bc_source": "about-a507f71",
+                                                    "image": {
+                                                        "url": "{{BC_ASSETS}}/img/img/taxi_suv_with_logo.webp",
+                                                        "id": 0
+                                                    },
+                                                    "image_size": "full",
+                                                    "caption_source": "none",
+                                                    "bc_image_alt": "BiharCabs SUV"
+                                                },
+                                                "elements": []
+                                            }
+                                        ],
+                                        "isInner": true
+                                    },
+                                    {
+                                        "id": "885519d",
+                                        "elType": "container",
+                                        "settings": {
+                                            "bc_source": "about-885519d",
+                                            "_title": "WHO WE ARE Driving Bihar Forward, One Ride At A Time. B",
+                                            "html_tag": "div",
+                                            "content_width": "full",
+                                            "css_classes": "bc-native-node col-lg-6 ps-lg-5",
+                                            "flex_direction": "column",
+                                            "flex_gap": {
+                                                "unit": "px",
+                                                "size": 0,
+                                                "row": "0",
+                                                "column": "0"
+                                            },
+                                            "padding": {
+                                                "unit": "px",
+                                                "top": "",
+                                                "right": "",
+                                                "bottom": "",
+                                                "left": "",
+                                                "isLinked": false
+                                            },
+                                            "width": {
+                                                "unit": "%",
+                                                "size": 50
+                                            },
+                                            "width_tablet": {
+                                                "unit": "%",
+                                                "size": 100
+                                            },
+                                            "width_mobile": {
+                                                "unit": "%",
+                                                "size": 100
+                                            }
+                                        },
+                                        "elements": [
+                                            {
+                                                "id": "385b38b",
+                                                "elType": "widget",
+                                                "widgetType": "heading",
+                                                "settings": {
+                                                    "__globals__": {
+                                                        "title_color": "",
+                                                        "typography_typography": "",
+                                                        "text_color": "",
+                                                        "button_text_color": "",
+                                                        "background_color": ""
+                                                    },
+                                                    "_title": "WHO WE ARE",
+                                                    "_css_classes": "bc-native-widget",
+                                                    "_margin": {
+                                                        "unit": "px",
+                                                        "top": "0",
+                                                        "right": "0",
+                                                        "bottom": "0",
+                                                        "left": "0",
+                                                        "isLinked": true
+                                                    },
+                                                    "bc_source": "about-385b38b",
+                                                    "title": "WHO WE ARE",
+                                                    "header_size": "h4",
+                                                    "size": "default"
+                                                },
+                                                "elements": []
+                                            },
+                                            {
+                                                "id": "88696b2",
+                                                "elType": "widget",
+                                                "widgetType": "heading",
+                                                "settings": {
+                                                    "__globals__": {
+                                                        "title_color": "",
+                                                        "typography_typography": "",
+                                                        "text_color": "",
+                                                        "button_text_color": "",
+                                                        "background_color": ""
+                                                    },
+                                                    "_title": "Driving Bihar Forward, One Ride At A Time.",
+                                                    "_css_classes": "bc-native-widget",
+                                                    "_margin": {
+                                                        "unit": "px",
+                                                        "top": "0",
+                                                        "right": "0",
+                                                        "bottom": "0",
+                                                        "left": "0",
+                                                        "isLinked": true
+                                                    },
+                                                    "bc_source": "about-88696b2",
+                                                    "title": "Driving\n                            Bihar Forward, One Ride At A Time.",
+                                                    "header_size": "h2",
+                                                    "size": "default"
+                                                },
+                                                "elements": []
+                                            },
+                                            {
+                                                "id": "3d77cdc",
+                                                "elType": "widget",
+                                                "widgetType": "text-editor",
+                                                "settings": {
+                                                    "__globals__": {
+                                                        "title_color": "",
+                                                        "typography_typography": "",
+                                                        "text_color": "",
+                                                        "button_text_color": "",
+                                                        "background_color": ""
+                                                    },
+                                                    "_title": "BiharCabs was founded with a single vision: to organize",
+                                                    "_css_classes": "bc-native-widget",
+                                                    "_margin": {
+                                                        "unit": "px",
+                                                        "top": "0",
+                                                        "right": "0",
+                                                        "bottom": "0",
+                                                        "left": "0",
+                                                        "isLinked": true
+                                                    },
+                                                    "bc_source": "about-3d77cdc",
+                                                    "editor": "<p class=\"text-muted mb-4\" style=\"line-height: 1.8; font-size: 16px;\">\n                            BiharCabs was founded with a single vision: to organize and modernize the unorganized taxi\n                            sector in Bihar. We take pride in being a locally managed, tech-enabled transportation\n                            network that connects thousands of passengers with verified, professional drivers every day.\n                        </p>"
+                                                },
+                                                "elements": []
+                                            },
+                                            {
+                                                "id": "0bc8f89",
+                                                "elType": "widget",
+                                                "widgetType": "text-editor",
+                                                "settings": {
+                                                    "__globals__": {
+                                                        "title_color": "",
+                                                        "typography_typography": "",
+                                                        "text_color": "",
+                                                        "button_text_color": "",
+                                                        "background_color": ""
+                                                    },
+                                                    "_title": "Whether you need a quick airport drop in Patna, a comfo",
+                                                    "_css_classes": "bc-native-widget",
+                                                    "_margin": {
+                                                        "unit": "px",
+                                                        "top": "0",
+                                                        "right": "0",
+                                                        "bottom": "0",
+                                                        "left": "0",
+                                                        "isLinked": true
+                                                    },
+                                                    "bc_source": "about-0bc8f89",
+                                                    "editor": "<p class=\"text-muted mb-4\" style=\"line-height: 1.8; font-size: 16px;\">\n                            Whether you need a quick airport drop in Patna, a comfortable outstation round trip to Gaya\n                            or Darbhanga, or a premium SUV for a family function, BiharCabs delivers a seamless booking\n                            experience and uncompromising service quality.\n                        </p>"
+                                                },
+                                                "elements": []
+                                            },
+                                            {
+                                                "id": "12866ca",
+                                                "elType": "widget",
+                                                "widgetType": "text-editor",
+                                                "settings": {
+                                                    "__globals__": {
+                                                        "title_color": "",
+                                                        "typography_typography": "",
+                                                        "text_color": "",
+                                                        "button_text_color": "",
+                                                        "background_color": ""
+                                                    },
+                                                    "_title": "100% Verified & Professional Drivers Transparent Billin",
+                                                    "_css_classes": "bc-native-widget",
+                                                    "_margin": {
+                                                        "unit": "px",
+                                                        "top": "0",
+                                                        "right": "0",
+                                                        "bottom": "0",
+                                                        "left": "0",
+                                                        "isLinked": true
+                                                    },
+                                                    "bc_source": "about-12866ca",
+                                                    "editor": "<ul class=\"list-unstyled mb-0\">\n                            <li class=\"mb-2\"><i class=\"fas fa-check-circle text-warning me-2\"></i> 100% Verified &amp;\n                                Professional Drivers</li>\n                            <li class=\"mb-2\"><i class=\"fas fa-check-circle text-warning me-2\"></i> Transparent Billing -\n                                No Hidden Charges</li>\n                            <li class=\"mb-2\"><i class=\"fas fa-check-circle text-warning me-2\"></i> Clean &amp;\n                                Well-Maintained Premium Fleet</li>\n                        </ul>"
+                                                },
+                                                "elements": []
+                                            }
+                                        ],
+                                        "isInner": true
+                                    }
+                                ],
+                                "isInner": true
+                            }
+                        ],
+                        "isInner": true
+                    }
+                ],
+                "isInner": true
+            },
+            {
+                "id": "dad4be8",
+                "elType": "container",
+                "settings": {
+                    "bc_source": "about-dad4be8",
+                    "_title": "Section: Our Mission To provide accessible, safe, and highly rel",
+                    "html_tag": "section",
+                    "content_width": "full",
+                    "css_classes": "bc-native-node section-padding",
+                    "flex_direction": "column",
+                    "flex_gap": {
+                        "unit": "px",
+                        "size": 0,
+                        "row": "0",
+                        "column": "0"
+                    },
+                    "padding": {
+                        "unit": "px",
+                        "top": "",
+                        "right": "",
+                        "bottom": "",
+                        "left": "",
+                        "isLinked": false
+                    }
+                },
+                "elements": [
+                    {
+                        "id": "981586d",
+                        "elType": "container",
+                        "settings": {
+                            "bc_source": "about-981586d",
+                            "_title": "Our Mission To provide accessible, safe, and highly rel",
+                            "html_tag": "div",
+                            "content_width": "full",
+                            "css_classes": "bc-native-node container",
+                            "flex_direction": "column",
+                            "flex_gap": {
+                                "unit": "px",
+                                "size": 0,
+                                "row": "0",
+                                "column": "0"
+                            },
+                            "padding": {
+                                "unit": "px",
+                                "top": "",
+                                "right": "",
+                                "bottom": "",
+                                "left": "",
+                                "isLinked": false
+                            }
+                        },
+                        "elements": [
+                            {
+                                "id": "800c1fc",
+                                "elType": "container",
+                                "settings": {
+                                    "bc_source": "about-800c1fc",
+                                    "_title": "Our Mission To provide accessible, safe, and highly rel",
+                                    "html_tag": "div",
+                                    "content_width": "full",
+                                    "css_classes": "bc-native-node row g-4",
+                                    "flex_direction": "row",
+                                    "flex_gap": {
+                                        "unit": "px",
+                                        "size": 0,
+                                        "row": "0",
+                                        "column": "0"
+                                    },
+                                    "padding": {
+                                        "unit": "px",
+                                        "top": "",
+                                        "right": "",
+                                        "bottom": "",
+                                        "left": "",
+                                        "isLinked": false
+                                    }
+                                },
+                                "elements": [
+                                    {
+                                        "id": "2eb35c0",
+                                        "elType": "container",
+                                        "settings": {
+                                            "bc_source": "about-2eb35c0",
+                                            "_title": "Our Mission To provide accessible, safe, and highly rel",
+                                            "html_tag": "div",
+                                            "content_width": "full",
+                                            "css_classes": "bc-native-node col-md-6",
+                                            "flex_direction": "column",
+                                            "flex_gap": {
+                                                "unit": "px",
+                                                "size": 0,
+                                                "row": "0",
+                                                "column": "0"
+                                            },
+                                            "padding": {
+                                                "unit": "px",
+                                                "top": "",
+                                                "right": "",
+                                                "bottom": "",
+                                                "left": "",
+                                                "isLinked": false
+                                            },
+                                            "width": {
+                                                "unit": "%",
+                                                "size": 50
+                                            },
+                                            "width_tablet": {
+                                                "unit": "%",
+                                                "size": 50
+                                            },
+                                            "width_mobile": {
+                                                "unit": "%",
+                                                "size": 100
+                                            }
+                                        },
+                                        "elements": [
+                                            {
+                                                "id": "f88224e",
+                                                "elType": "container",
+                                                "settings": {
+                                                    "bc_source": "about-f88224e",
+                                                    "_title": "Our Mission To provide accessible, safe, and highly rel",
+                                                    "html_tag": "div",
+                                                    "content_width": "full",
+                                                    "css_classes": "bc-native-node bg-white p-5 h-100 rounded",
+                                                    "flex_direction": "column",
+                                                    "flex_gap": {
+                                                        "unit": "px",
+                                                        "size": 0,
+                                                        "row": "0",
+                                                        "column": "0"
+                                                    },
+                                                    "padding": {
+                                                        "unit": "px",
+                                                        "top": "",
+                                                        "right": "",
+                                                        "bottom": "",
+                                                        "left": "",
+                                                        "isLinked": false
+                                                    }
+                                                },
+                                                "elements": [
+                                                    {
+                                                        "id": "342b520",
+                                                        "elType": "widget",
+                                                        "widgetType": "text-editor",
+                                                        "settings": {
+                                                            "__globals__": {
+                                                                "title_color": "",
+                                                                "typography_typography": "",
+                                                                "text_color": "",
+                                                                "button_text_color": "",
+                                                                "background_color": ""
+                                                            },
+                                                            "_title": "mb-4",
+                                                            "_css_classes": "bc-native-widget",
+                                                            "_margin": {
+                                                                "unit": "px",
+                                                                "top": "0",
+                                                                "right": "0",
+                                                                "bottom": "0",
+                                                                "left": "0",
+                                                                "isLinked": true
+                                                            },
+                                                            "bc_source": "about-342b520",
+                                                            "editor": "<div class=\"mb-4\">\n                                <i class=\"fas fa-bullseye\" style=\"font-size: 40px; color: #facc15;\"></i>\n                            </div>"
+                                                        },
+                                                        "elements": []
+                                                    },
+                                                    {
+                                                        "id": "8d8e5c0",
+                                                        "elType": "widget",
+                                                        "widgetType": "heading",
+                                                        "settings": {
+                                                            "__globals__": {
+                                                                "title_color": "",
+                                                                "typography_typography": "",
+                                                                "text_color": "",
+                                                                "button_text_color": "",
+                                                                "background_color": ""
+                                                            },
+                                                            "_title": "Our Mission",
+                                                            "_css_classes": "bc-native-widget",
+                                                            "_margin": {
+                                                                "unit": "px",
+                                                                "top": "0",
+                                                                "right": "0",
+                                                                "bottom": "0",
+                                                                "left": "0",
+                                                                "isLinked": true
+                                                            },
+                                                            "bc_source": "about-8d8e5c0",
+                                                            "title": "Our Mission",
+                                                            "header_size": "h3",
+                                                            "size": "default"
+                                                        },
+                                                        "elements": []
+                                                    },
+                                                    {
+                                                        "id": "152c315",
+                                                        "elType": "widget",
+                                                        "widgetType": "text-editor",
+                                                        "settings": {
+                                                            "__globals__": {
+                                                                "title_color": "",
+                                                                "typography_typography": "",
+                                                                "text_color": "",
+                                                                "button_text_color": "",
+                                                                "background_color": ""
+                                                            },
+                                                            "_title": "To provide accessible, safe, and highly reliable taxi s",
+                                                            "_css_classes": "bc-native-widget",
+                                                            "_margin": {
+                                                                "unit": "px",
+                                                                "top": "0",
+                                                                "right": "0",
+                                                                "bottom": "0",
+                                                                "left": "0",
+                                                                "isLinked": true
+                                                            },
+                                                            "bc_source": "about-152c315",
+                                                            "editor": "<p class=\"text-muted\" style=\"line-height: 1.8;\">\n                                To provide accessible, safe, and highly reliable taxi services across every district of\n                                Bihar, ensuring that every passenger experiences comfort and every driver partner\n                                achieves sustainable growth.\n                            </p>"
+                                                        },
+                                                        "elements": []
+                                                    }
+                                                ],
+                                                "isInner": true
+                                            }
+                                        ],
+                                        "isInner": true
+                                    },
+                                    {
+                                        "id": "c5b6d1f",
+                                        "elType": "container",
+                                        "settings": {
+                                            "bc_source": "about-c5b6d1f",
+                                            "_title": "Our Vision To become the undisputed leader and the most",
+                                            "html_tag": "div",
+                                            "content_width": "full",
+                                            "css_classes": "bc-native-node col-md-6",
+                                            "flex_direction": "column",
+                                            "flex_gap": {
+                                                "unit": "px",
+                                                "size": 0,
+                                                "row": "0",
+                                                "column": "0"
+                                            },
+                                            "padding": {
+                                                "unit": "px",
+                                                "top": "",
+                                                "right": "",
+                                                "bottom": "",
+                                                "left": "",
+                                                "isLinked": false
+                                            },
+                                            "width": {
+                                                "unit": "%",
+                                                "size": 50
+                                            },
+                                            "width_tablet": {
+                                                "unit": "%",
+                                                "size": 50
+                                            },
+                                            "width_mobile": {
+                                                "unit": "%",
+                                                "size": 100
+                                            }
+                                        },
+                                        "elements": [
+                                            {
+                                                "id": "d78c6dc",
+                                                "elType": "container",
+                                                "settings": {
+                                                    "bc_source": "about-d78c6dc",
+                                                    "_title": "Our Vision To become the undisputed leader and the most",
+                                                    "html_tag": "div",
+                                                    "content_width": "full",
+                                                    "css_classes": "bc-native-node bg-white p-5 h-100 rounded",
+                                                    "flex_direction": "column",
+                                                    "flex_gap": {
+                                                        "unit": "px",
+                                                        "size": 0,
+                                                        "row": "0",
+                                                        "column": "0"
+                                                    },
+                                                    "padding": {
+                                                        "unit": "px",
+                                                        "top": "",
+                                                        "right": "",
+                                                        "bottom": "",
+                                                        "left": "",
+                                                        "isLinked": false
+                                                    }
+                                                },
+                                                "elements": [
+                                                    {
+                                                        "id": "6fe3c0e",
+                                                        "elType": "widget",
+                                                        "widgetType": "text-editor",
+                                                        "settings": {
+                                                            "__globals__": {
+                                                                "title_color": "",
+                                                                "typography_typography": "",
+                                                                "text_color": "",
+                                                                "button_text_color": "",
+                                                                "background_color": ""
+                                                            },
+                                                            "_title": "mb-4",
+                                                            "_css_classes": "bc-native-widget",
+                                                            "_margin": {
+                                                                "unit": "px",
+                                                                "top": "0",
+                                                                "right": "0",
+                                                                "bottom": "0",
+                                                                "left": "0",
+                                                                "isLinked": true
+                                                            },
+                                                            "bc_source": "about-6fe3c0e",
+                                                            "editor": "<div class=\"mb-4\">\n                                <i class=\"fas fa-eye\" style=\"font-size: 40px; color: #1f2937;\"></i>\n                            </div>"
+                                                        },
+                                                        "elements": []
+                                                    },
+                                                    {
+                                                        "id": "392ba03",
+                                                        "elType": "widget",
+                                                        "widgetType": "heading",
+                                                        "settings": {
+                                                            "__globals__": {
+                                                                "title_color": "",
+                                                                "typography_typography": "",
+                                                                "text_color": "",
+                                                                "button_text_color": "",
+                                                                "background_color": ""
+                                                            },
+                                                            "_title": "Our Vision",
+                                                            "_css_classes": "bc-native-widget",
+                                                            "_margin": {
+                                                                "unit": "px",
+                                                                "top": "0",
+                                                                "right": "0",
+                                                                "bottom": "0",
+                                                                "left": "0",
+                                                                "isLinked": true
+                                                            },
+                                                            "bc_source": "about-392ba03",
+                                                            "title": "Our Vision",
+                                                            "header_size": "h3",
+                                                            "size": "default"
+                                                        },
+                                                        "elements": []
+                                                    },
+                                                    {
+                                                        "id": "a1a0626",
+                                                        "elType": "widget",
+                                                        "widgetType": "text-editor",
+                                                        "settings": {
+                                                            "__globals__": {
+                                                                "title_color": "",
+                                                                "typography_typography": "",
+                                                                "text_color": "",
+                                                                "button_text_color": "",
+                                                                "background_color": ""
+                                                            },
+                                                            "_title": "To become the undisputed leader and the most preferred ",
+                                                            "_css_classes": "bc-native-widget",
+                                                            "_margin": {
+                                                                "unit": "px",
+                                                                "top": "0",
+                                                                "right": "0",
+                                                                "bottom": "0",
+                                                                "left": "0",
+                                                                "isLinked": true
+                                                            },
+                                                            "bc_source": "about-a1a0626",
+                                                            "editor": "<p class=\"text-muted\" style=\"line-height: 1.8;\">\n                                To become the undisputed leader and the most preferred mobility brand in Eastern India\n                                by constantly innovating and setting new benchmarks in customer satisfaction and road\n                                safety.\n                            </p>"
+                                                        },
+                                                        "elements": []
+                                                    }
+                                                ],
+                                                "isInner": true
+                                            }
+                                        ],
+                                        "isInner": true
+                                    }
+                                ],
+                                "isInner": true
+                            }
+                        ],
+                        "isInner": true
+                    }
+                ],
+                "isInner": true
+            },
+            {
+                "id": "473550f",
+                "elType": "container",
+                "settings": {
+                    "bc_source": "about-473550f",
+                    "_title": "Section: WHY US The BiharCabs Advantage We go the extra mile to ",
+                    "html_tag": "section",
+                    "content_width": "full",
+                    "css_classes": "bc-native-node section-padding bg-white",
+                    "flex_direction": "column",
+                    "flex_gap": {
+                        "unit": "px",
+                        "size": 0,
+                        "row": "0",
+                        "column": "0"
+                    },
+                    "padding": {
+                        "unit": "px",
+                        "top": "",
+                        "right": "",
+                        "bottom": "",
+                        "left": "",
+                        "isLinked": false
+                    }
+                },
+                "elements": [
+                    {
+                        "id": "0b19cdc",
+                        "elType": "container",
+                        "settings": {
+                            "bc_source": "about-0b19cdc",
+                            "_title": "WHY US The BiharCabs Advantage We go the extra mile to ",
+                            "html_tag": "div",
+                            "content_width": "full",
+                            "css_classes": "bc-native-node container",
+                            "flex_direction": "column",
+                            "flex_gap": {
+                                "unit": "px",
+                                "size": 0,
+                                "row": "0",
+                                "column": "0"
+                            },
+                            "padding": {
+                                "unit": "px",
+                                "top": "",
+                                "right": "",
+                                "bottom": "",
+                                "left": "",
+                                "isLinked": false
+                            }
+                        },
+                        "elements": [
+                            {
+                                "id": "abf3a60",
+                                "elType": "container",
+                                "settings": {
+                                    "bc_source": "about-abf3a60",
+                                    "_title": "WHY US The BiharCabs Advantage We go the extra mile to ",
+                                    "html_tag": "div",
+                                    "content_width": "full",
+                                    "css_classes": "bc-native-node text-center mb-5",
+                                    "flex_direction": "column",
+                                    "flex_gap": {
+                                        "unit": "px",
+                                        "size": 0,
+                                        "row": "0",
+                                        "column": "0"
+                                    },
+                                    "padding": {
+                                        "unit": "px",
+                                        "top": "",
+                                        "right": "",
+                                        "bottom": "",
+                                        "left": "",
+                                        "isLinked": false
+                                    }
+                                },
+                                "elements": [
+                                    {
+                                        "id": "b81b0cc",
+                                        "elType": "widget",
+                                        "widgetType": "heading",
+                                        "settings": {
+                                            "__globals__": {
+                                                "title_color": "",
+                                                "typography_typography": "",
+                                                "text_color": "",
+                                                "button_text_color": "",
+                                                "background_color": ""
+                                            },
+                                            "_title": "WHY US",
+                                            "_css_classes": "bc-native-widget",
+                                            "_margin": {
+                                                "unit": "px",
+                                                "top": "0",
+                                                "right": "0",
+                                                "bottom": "0",
+                                                "left": "0",
+                                                "isLinked": true
+                                            },
+                                            "bc_source": "about-b81b0cc",
+                                            "title": "WHY US",
+                                            "header_size": "h4",
+                                            "size": "default"
+                                        },
+                                        "elements": []
+                                    },
+                                    {
+                                        "id": "838a5c8",
+                                        "elType": "widget",
+                                        "widgetType": "heading",
+                                        "settings": {
+                                            "__globals__": {
+                                                "title_color": "",
+                                                "typography_typography": "",
+                                                "text_color": "",
+                                                "button_text_color": "",
+                                                "background_color": ""
+                                            },
+                                            "_title": "The BiharCabs Advantage",
+                                            "_css_classes": "bc-native-widget",
+                                            "_margin": {
+                                                "unit": "px",
+                                                "top": "0",
+                                                "right": "0",
+                                                "bottom": "0",
+                                                "left": "0",
+                                                "isLinked": true
+                                            },
+                                            "bc_source": "about-838a5c8",
+                                            "title": "The BiharCabs Advantage",
+                                            "header_size": "h2",
+                                            "size": "default"
+                                        },
+                                        "elements": []
+                                    },
+                                    {
+                                        "id": "b0e2a43",
+                                        "elType": "widget",
+                                        "widgetType": "text-editor",
+                                        "settings": {
+                                            "__globals__": {
+                                                "title_color": "",
+                                                "typography_typography": "",
+                                                "text_color": "",
+                                                "button_text_color": "",
+                                                "background_color": ""
+                                            },
+                                            "_title": "We go the extra mile to ensure your journey is smooth, ",
+                                            "_css_classes": "bc-native-widget",
+                                            "_margin": {
+                                                "unit": "px",
+                                                "top": "0",
+                                                "right": "0",
+                                                "bottom": "0",
+                                                "left": "0",
+                                                "isLinked": true
+                                            },
+                                            "bc_source": "about-b0e2a43",
+                                            "editor": "<p class=\"text-muted mx-auto\" style=\"max-width: 600px;\">We go the extra mile to ensure your journey\n                        is smooth, secure, and completely hassle-free.</p>"
+                                        },
+                                        "elements": []
+                                    }
+                                ],
+                                "isInner": true
+                            },
+                            {
+                                "id": "3f08905",
+                                "elType": "container",
+                                "settings": {
+                                    "bc_source": "about-3f08905",
+                                    "_title": "24/7 Availability Round-the-clock service for late-nigh",
+                                    "html_tag": "div",
+                                    "content_width": "full",
+                                    "css_classes": "bc-native-node row g-4 text-center",
+                                    "flex_direction": "row",
+                                    "flex_gap": {
+                                        "unit": "px",
+                                        "size": 0,
+                                        "row": "0",
+                                        "column": "0"
+                                    },
+                                    "padding": {
+                                        "unit": "px",
+                                        "top": "",
+                                        "right": "",
+                                        "bottom": "",
+                                        "left": "",
+                                        "isLinked": false
+                                    }
+                                },
+                                "elements": [
+                                    {
+                                        "id": "68c5b95",
+                                        "elType": "container",
+                                        "settings": {
+                                            "bc_source": "about-68c5b95",
+                                            "_title": "24/7 Availability Round-the-clock service for late-nigh",
+                                            "html_tag": "div",
+                                            "content_width": "full",
+                                            "css_classes": "bc-native-node col-lg-3 col-sm-6",
+                                            "flex_direction": "column",
+                                            "flex_gap": {
+                                                "unit": "px",
+                                                "size": 0,
+                                                "row": "0",
+                                                "column": "0"
+                                            },
+                                            "padding": {
+                                                "unit": "px",
+                                                "top": "",
+                                                "right": "",
+                                                "bottom": "",
+                                                "left": "",
+                                                "isLinked": false
+                                            },
+                                            "width": {
+                                                "unit": "%",
+                                                "size": 25
+                                            },
+                                            "width_tablet": {
+                                                "unit": "%",
+                                                "size": 50
+                                            },
+                                            "width_mobile": {
+                                                "unit": "%",
+                                                "size": 100
+                                            }
+                                        },
+                                        "elements": [
+                                            {
+                                                "id": "b717535",
+                                                "elType": "container",
+                                                "settings": {
+                                                    "bc_source": "about-b717535",
+                                                    "_title": "24/7 Availability Round-the-clock service for late-nigh",
+                                                    "html_tag": "div",
+                                                    "content_width": "full",
+                                                    "css_classes": "bc-native-node p-4 rounded h-100",
+                                                    "flex_direction": "column",
+                                                    "flex_gap": {
+                                                        "unit": "px",
+                                                        "size": 0,
+                                                        "row": "0",
+                                                        "column": "0"
+                                                    },
+                                                    "padding": {
+                                                        "unit": "px",
+                                                        "top": "",
+                                                        "right": "",
+                                                        "bottom": "",
+                                                        "left": "",
+                                                        "isLinked": false
+                                                    }
+                                                },
+                                                "elements": [
+                                                    {
+                                                        "id": "13d0418",
+                                                        "elType": "widget",
+                                                        "widgetType": "text-editor",
+                                                        "settings": {
+                                                            "__globals__": {
+                                                                "title_color": "",
+                                                                "typography_typography": "",
+                                                                "text_color": "",
+                                                                "button_text_color": "",
+                                                                "background_color": ""
+                                                            },
+                                                            "_title": "mb-3 d-inline-block p-3 rounded-circle",
+                                                            "_css_classes": "bc-native-widget",
+                                                            "_margin": {
+                                                                "unit": "px",
+                                                                "top": "0",
+                                                                "right": "0",
+                                                                "bottom": "0",
+                                                                "left": "0",
+                                                                "isLinked": true
+                                                            },
+                                                            "bc_source": "about-13d0418",
+                                                            "editor": "<div class=\"mb-3 d-inline-block p-3 rounded-circle\" style=\"background: rgba(250,204,21,0.1);\">\n                                <i class=\"fas fa-clock text-warning\" style=\"font-size: 30px;\"></i>\n                            </div>"
+                                                        },
+                                                        "elements": []
+                                                    },
+                                                    {
+                                                        "id": "03f8632",
+                                                        "elType": "widget",
+                                                        "widgetType": "heading",
+                                                        "settings": {
+                                                            "__globals__": {
+                                                                "title_color": "",
+                                                                "typography_typography": "",
+                                                                "text_color": "",
+                                                                "button_text_color": "",
+                                                                "background_color": ""
+                                                            },
+                                                            "_title": "24/7 Availability",
+                                                            "_css_classes": "bc-native-widget",
+                                                            "_margin": {
+                                                                "unit": "px",
+                                                                "top": "0",
+                                                                "right": "0",
+                                                                "bottom": "0",
+                                                                "left": "0",
+                                                                "isLinked": true
+                                                            },
+                                                            "bc_source": "about-03f8632",
+                                                            "title": "24/7 Availability",
+                                                            "header_size": "h5",
+                                                            "size": "default"
+                                                        },
+                                                        "elements": []
+                                                    },
+                                                    {
+                                                        "id": "e3628e4",
+                                                        "elType": "widget",
+                                                        "widgetType": "text-editor",
+                                                        "settings": {
+                                                            "__globals__": {
+                                                                "title_color": "",
+                                                                "typography_typography": "",
+                                                                "text_color": "",
+                                                                "button_text_color": "",
+                                                                "background_color": ""
+                                                            },
+                                                            "_title": "Round-the-clock service for late-night flights, early m",
+                                                            "_css_classes": "bc-native-widget",
+                                                            "_margin": {
+                                                                "unit": "px",
+                                                                "top": "0",
+                                                                "right": "0",
+                                                                "bottom": "0",
+                                                                "left": "0",
+                                                                "isLinked": true
+                                                            },
+                                                            "bc_source": "about-e3628e4",
+                                                            "editor": "<p class=\"text-muted mb-0\" style=\"font-size: 14px;\">Round-the-clock service for late-night\n                                flights, early morning trains, or emergency travel.</p>"
+                                                        },
+                                                        "elements": []
+                                                    }
+                                                ],
+                                                "isInner": true
+                                            }
+                                        ],
+                                        "isInner": true
+                                    },
+                                    {
+                                        "id": "71205c8",
+                                        "elType": "container",
+                                        "settings": {
+                                            "bc_source": "about-71205c8",
+                                            "_title": "Affordable Fares Highly competitive pricing with zero h",
+                                            "html_tag": "div",
+                                            "content_width": "full",
+                                            "css_classes": "bc-native-node col-lg-3 col-sm-6",
+                                            "flex_direction": "column",
+                                            "flex_gap": {
+                                                "unit": "px",
+                                                "size": 0,
+                                                "row": "0",
+                                                "column": "0"
+                                            },
+                                            "padding": {
+                                                "unit": "px",
+                                                "top": "",
+                                                "right": "",
+                                                "bottom": "",
+                                                "left": "",
+                                                "isLinked": false
+                                            },
+                                            "width": {
+                                                "unit": "%",
+                                                "size": 25
+                                            },
+                                            "width_tablet": {
+                                                "unit": "%",
+                                                "size": 50
+                                            },
+                                            "width_mobile": {
+                                                "unit": "%",
+                                                "size": 100
+                                            }
+                                        },
+                                        "elements": [
+                                            {
+                                                "id": "1d47757",
+                                                "elType": "container",
+                                                "settings": {
+                                                    "bc_source": "about-1d47757",
+                                                    "_title": "Affordable Fares Highly competitive pricing with zero h",
+                                                    "html_tag": "div",
+                                                    "content_width": "full",
+                                                    "css_classes": "bc-native-node p-4 rounded h-100",
+                                                    "flex_direction": "column",
+                                                    "flex_gap": {
+                                                        "unit": "px",
+                                                        "size": 0,
+                                                        "row": "0",
+                                                        "column": "0"
+                                                    },
+                                                    "padding": {
+                                                        "unit": "px",
+                                                        "top": "",
+                                                        "right": "",
+                                                        "bottom": "",
+                                                        "left": "",
+                                                        "isLinked": false
+                                                    }
+                                                },
+                                                "elements": [
+                                                    {
+                                                        "id": "afa7774",
+                                                        "elType": "widget",
+                                                        "widgetType": "text-editor",
+                                                        "settings": {
+                                                            "__globals__": {
+                                                                "title_color": "",
+                                                                "typography_typography": "",
+                                                                "text_color": "",
+                                                                "button_text_color": "",
+                                                                "background_color": ""
+                                                            },
+                                                            "_title": "mb-3 d-inline-block p-3 rounded-circle",
+                                                            "_css_classes": "bc-native-widget",
+                                                            "_margin": {
+                                                                "unit": "px",
+                                                                "top": "0",
+                                                                "right": "0",
+                                                                "bottom": "0",
+                                                                "left": "0",
+                                                                "isLinked": true
+                                                            },
+                                                            "bc_source": "about-afa7774",
+                                                            "editor": "<div class=\"mb-3 d-inline-block p-3 rounded-circle\" style=\"background: rgba(250,204,21,0.1);\">\n                                <i class=\"fas fa-wallet text-warning\" style=\"font-size: 30px;\"></i>\n                            </div>"
+                                                        },
+                                                        "elements": []
+                                                    },
+                                                    {
+                                                        "id": "6c20f55",
+                                                        "elType": "widget",
+                                                        "widgetType": "heading",
+                                                        "settings": {
+                                                            "__globals__": {
+                                                                "title_color": "",
+                                                                "typography_typography": "",
+                                                                "text_color": "",
+                                                                "button_text_color": "",
+                                                                "background_color": ""
+                                                            },
+                                                            "_title": "Affordable Fares",
+                                                            "_css_classes": "bc-native-widget",
+                                                            "_margin": {
+                                                                "unit": "px",
+                                                                "top": "0",
+                                                                "right": "0",
+                                                                "bottom": "0",
+                                                                "left": "0",
+                                                                "isLinked": true
+                                                            },
+                                                            "bc_source": "about-6c20f55",
+                                                            "title": "Affordable Fares",
+                                                            "header_size": "h5",
+                                                            "size": "default"
+                                                        },
+                                                        "elements": []
+                                                    },
+                                                    {
+                                                        "id": "5c589a5",
+                                                        "elType": "widget",
+                                                        "widgetType": "text-editor",
+                                                        "settings": {
+                                                            "__globals__": {
+                                                                "title_color": "",
+                                                                "typography_typography": "",
+                                                                "text_color": "",
+                                                                "button_text_color": "",
+                                                                "background_color": ""
+                                                            },
+                                                            "_title": "Highly competitive pricing with zero hidden surges. You",
+                                                            "_css_classes": "bc-native-widget",
+                                                            "_margin": {
+                                                                "unit": "px",
+                                                                "top": "0",
+                                                                "right": "0",
+                                                                "bottom": "0",
+                                                                "left": "0",
+                                                                "isLinked": true
+                                                            },
+                                                            "bc_source": "about-5c589a5",
+                                                            "editor": "<p class=\"text-muted mb-0\" style=\"font-size: 14px;\">Highly competitive pricing with zero\n                                hidden surges. You pay what you see.</p>"
+                                                        },
+                                                        "elements": []
+                                                    }
+                                                ],
+                                                "isInner": true
+                                            }
+                                        ],
+                                        "isInner": true
+                                    },
+                                    {
+                                        "id": "a9dcf91",
+                                        "elType": "container",
+                                        "settings": {
+                                            "bc_source": "about-a9dcf91",
+                                            "_title": "Safe & Secure GPS-tracked vehicles, background-verified",
+                                            "html_tag": "div",
+                                            "content_width": "full",
+                                            "css_classes": "bc-native-node col-lg-3 col-sm-6",
+                                            "flex_direction": "column",
+                                            "flex_gap": {
+                                                "unit": "px",
+                                                "size": 0,
+                                                "row": "0",
+                                                "column": "0"
+                                            },
+                                            "padding": {
+                                                "unit": "px",
+                                                "top": "",
+                                                "right": "",
+                                                "bottom": "",
+                                                "left": "",
+                                                "isLinked": false
+                                            },
+                                            "width": {
+                                                "unit": "%",
+                                                "size": 25
+                                            },
+                                            "width_tablet": {
+                                                "unit": "%",
+                                                "size": 50
+                                            },
+                                            "width_mobile": {
+                                                "unit": "%",
+                                                "size": 100
+                                            }
+                                        },
+                                        "elements": [
+                                            {
+                                                "id": "0d05215",
+                                                "elType": "container",
+                                                "settings": {
+                                                    "bc_source": "about-0d05215",
+                                                    "_title": "Safe & Secure GPS-tracked vehicles, background-verified",
+                                                    "html_tag": "div",
+                                                    "content_width": "full",
+                                                    "css_classes": "bc-native-node p-4 rounded h-100",
+                                                    "flex_direction": "column",
+                                                    "flex_gap": {
+                                                        "unit": "px",
+                                                        "size": 0,
+                                                        "row": "0",
+                                                        "column": "0"
+                                                    },
+                                                    "padding": {
+                                                        "unit": "px",
+                                                        "top": "",
+                                                        "right": "",
+                                                        "bottom": "",
+                                                        "left": "",
+                                                        "isLinked": false
+                                                    }
+                                                },
+                                                "elements": [
+                                                    {
+                                                        "id": "fb5d406",
+                                                        "elType": "widget",
+                                                        "widgetType": "text-editor",
+                                                        "settings": {
+                                                            "__globals__": {
+                                                                "title_color": "",
+                                                                "typography_typography": "",
+                                                                "text_color": "",
+                                                                "button_text_color": "",
+                                                                "background_color": ""
+                                                            },
+                                                            "_title": "mb-3 d-inline-block p-3 rounded-circle",
+                                                            "_css_classes": "bc-native-widget",
+                                                            "_margin": {
+                                                                "unit": "px",
+                                                                "top": "0",
+                                                                "right": "0",
+                                                                "bottom": "0",
+                                                                "left": "0",
+                                                                "isLinked": true
+                                                            },
+                                                            "bc_source": "about-fb5d406",
+                                                            "editor": "<div class=\"mb-3 d-inline-block p-3 rounded-circle\" style=\"background: rgba(250,204,21,0.1);\">\n                                <i class=\"fas fa-shield-alt text-warning\" style=\"font-size: 30px;\"></i>\n                            </div>"
+                                                        },
+                                                        "elements": []
+                                                    },
+                                                    {
+                                                        "id": "66b8bbb",
+                                                        "elType": "widget",
+                                                        "widgetType": "heading",
+                                                        "settings": {
+                                                            "__globals__": {
+                                                                "title_color": "",
+                                                                "typography_typography": "",
+                                                                "text_color": "",
+                                                                "button_text_color": "",
+                                                                "background_color": ""
+                                                            },
+                                                            "_title": "Safe & Secure",
+                                                            "_css_classes": "bc-native-widget",
+                                                            "_margin": {
+                                                                "unit": "px",
+                                                                "top": "0",
+                                                                "right": "0",
+                                                                "bottom": "0",
+                                                                "left": "0",
+                                                                "isLinked": true
+                                                            },
+                                                            "bc_source": "about-66b8bbb",
+                                                            "title": "Safe &amp; Secure",
+                                                            "header_size": "h5",
+                                                            "size": "default"
+                                                        },
+                                                        "elements": []
+                                                    },
+                                                    {
+                                                        "id": "be8c13e",
+                                                        "elType": "widget",
+                                                        "widgetType": "text-editor",
+                                                        "settings": {
+                                                            "__globals__": {
+                                                                "title_color": "",
+                                                                "typography_typography": "",
+                                                                "text_color": "",
+                                                                "button_text_color": "",
+                                                                "background_color": ""
+                                                            },
+                                                            "_title": "GPS-tracked vehicles, background-verified drivers, and ",
+                                                            "_css_classes": "bc-native-widget",
+                                                            "_margin": {
+                                                                "unit": "px",
+                                                                "top": "0",
+                                                                "right": "0",
+                                                                "bottom": "0",
+                                                                "left": "0",
+                                                                "isLinked": true
+                                                            },
+                                                            "bc_source": "about-be8c13e",
+                                                            "editor": "<p class=\"text-muted mb-0\" style=\"font-size: 14px;\">GPS-tracked vehicles,\n                                background-verified drivers, and a dedicated support team for women.</p>"
+                                                        },
+                                                        "elements": []
+                                                    }
+                                                ],
+                                                "isInner": true
+                                            }
+                                        ],
+                                        "isInner": true
+                                    },
+                                    {
+                                        "id": "26804fa",
+                                        "elType": "container",
+                                        "settings": {
+                                            "bc_source": "about-26804fa",
+                                            "_title": "Local Expertise Our drivers know Bihar's routes inside ",
+                                            "html_tag": "div",
+                                            "content_width": "full",
+                                            "css_classes": "bc-native-node col-lg-3 col-sm-6",
+                                            "flex_direction": "column",
+                                            "flex_gap": {
+                                                "unit": "px",
+                                                "size": 0,
+                                                "row": "0",
+                                                "column": "0"
+                                            },
+                                            "padding": {
+                                                "unit": "px",
+                                                "top": "",
+                                                "right": "",
+                                                "bottom": "",
+                                                "left": "",
+                                                "isLinked": false
+                                            },
+                                            "width": {
+                                                "unit": "%",
+                                                "size": 25
+                                            },
+                                            "width_tablet": {
+                                                "unit": "%",
+                                                "size": 50
+                                            },
+                                            "width_mobile": {
+                                                "unit": "%",
+                                                "size": 100
+                                            }
+                                        },
+                                        "elements": [
+                                            {
+                                                "id": "7e2ff33",
+                                                "elType": "container",
+                                                "settings": {
+                                                    "bc_source": "about-7e2ff33",
+                                                    "_title": "Local Expertise Our drivers know Bihar's routes inside ",
+                                                    "html_tag": "div",
+                                                    "content_width": "full",
+                                                    "css_classes": "bc-native-node p-4 rounded h-100",
+                                                    "flex_direction": "column",
+                                                    "flex_gap": {
+                                                        "unit": "px",
+                                                        "size": 0,
+                                                        "row": "0",
+                                                        "column": "0"
+                                                    },
+                                                    "padding": {
+                                                        "unit": "px",
+                                                        "top": "",
+                                                        "right": "",
+                                                        "bottom": "",
+                                                        "left": "",
+                                                        "isLinked": false
+                                                    }
+                                                },
+                                                "elements": [
+                                                    {
+                                                        "id": "a0fea76",
+                                                        "elType": "widget",
+                                                        "widgetType": "text-editor",
+                                                        "settings": {
+                                                            "__globals__": {
+                                                                "title_color": "",
+                                                                "typography_typography": "",
+                                                                "text_color": "",
+                                                                "button_text_color": "",
+                                                                "background_color": ""
+                                                            },
+                                                            "_title": "mb-3 d-inline-block p-3 rounded-circle",
+                                                            "_css_classes": "bc-native-widget",
+                                                            "_margin": {
+                                                                "unit": "px",
+                                                                "top": "0",
+                                                                "right": "0",
+                                                                "bottom": "0",
+                                                                "left": "0",
+                                                                "isLinked": true
+                                                            },
+                                                            "bc_source": "about-a0fea76",
+                                                            "editor": "<div class=\"mb-3 d-inline-block p-3 rounded-circle\" style=\"background: rgba(250,204,21,0.1);\">\n                                <i class=\"fas fa-map-marked-alt text-warning\" style=\"font-size: 30px;\"></i>\n                            </div>"
+                                                        },
+                                                        "elements": []
+                                                    },
+                                                    {
+                                                        "id": "79c70b9",
+                                                        "elType": "widget",
+                                                        "widgetType": "heading",
+                                                        "settings": {
+                                                            "__globals__": {
+                                                                "title_color": "",
+                                                                "typography_typography": "",
+                                                                "text_color": "",
+                                                                "button_text_color": "",
+                                                                "background_color": ""
+                                                            },
+                                                            "_title": "Local Expertise",
+                                                            "_css_classes": "bc-native-widget",
+                                                            "_margin": {
+                                                                "unit": "px",
+                                                                "top": "0",
+                                                                "right": "0",
+                                                                "bottom": "0",
+                                                                "left": "0",
+                                                                "isLinked": true
+                                                            },
+                                                            "bc_source": "about-79c70b9",
+                                                            "title": "Local Expertise",
+                                                            "header_size": "h5",
+                                                            "size": "default"
+                                                        },
+                                                        "elements": []
+                                                    },
+                                                    {
+                                                        "id": "9cbd385",
+                                                        "elType": "widget",
+                                                        "widgetType": "text-editor",
+                                                        "settings": {
+                                                            "__globals__": {
+                                                                "title_color": "",
+                                                                "typography_typography": "",
+                                                                "text_color": "",
+                                                                "button_text_color": "",
+                                                                "background_color": ""
+                                                            },
+                                                            "_title": "Our drivers know Bihar's routes inside out, ensuring yo",
+                                                            "_css_classes": "bc-native-widget",
+                                                            "_margin": {
+                                                                "unit": "px",
+                                                                "top": "0",
+                                                                "right": "0",
+                                                                "bottom": "0",
+                                                                "left": "0",
+                                                                "isLinked": true
+                                                            },
+                                                            "bc_source": "about-9cbd385",
+                                                            "editor": "<p class=\"text-muted mb-0\" style=\"font-size: 14px;\">Our drivers know Bihar's routes inside\n                                out, ensuring you reach your destination faster.</p>"
+                                                        },
+                                                        "elements": []
+                                                    }
+                                                ],
+                                                "isInner": true
+                                            }
+                                        ],
+                                        "isInner": true
+                                    }
+                                ],
+                                "isInner": true
+                            }
+                        ],
+                        "isInner": true
+                    }
+                ],
+                "isInner": true
+            },
+            {
+                "id": "177b712",
+                "elType": "container",
+                "settings": {
+                    "bc_source": "about-177b712",
+                    "_title": "Section: Ready to Experience BiharCabs? Book your ride now and l",
+                    "html_tag": "section",
+                    "content_width": "full",
+                    "css_classes": "bc-native-node section-padding text-center",
+                    "flex_direction": "column",
+                    "flex_gap": {
+                        "unit": "px",
+                        "size": 0,
+                        "row": "0",
+                        "column": "0"
+                    },
+                    "padding": {
+                        "unit": "px",
+                        "top": "",
+                        "right": "",
+                        "bottom": "",
+                        "left": "",
+                        "isLinked": false
+                    }
+                },
+                "elements": [
+                    {
+                        "id": "30fc760",
+                        "elType": "container",
+                        "settings": {
+                            "bc_source": "about-30fc760",
+                            "_title": "Ready to Experience BiharCabs? Book your ride now and l",
+                            "html_tag": "div",
+                            "content_width": "full",
+                            "css_classes": "bc-native-node container",
+                            "flex_direction": "column",
+                            "flex_gap": {
+                                "unit": "px",
+                                "size": 0,
+                                "row": "0",
+                                "column": "0"
+                            },
+                            "padding": {
+                                "unit": "px",
+                                "top": "",
+                                "right": "",
+                                "bottom": "",
+                                "left": "",
+                                "isLinked": false
+                            }
+                        },
+                        "elements": [
+                            {
+                                "id": "f744a0a",
+                                "elType": "widget",
+                                "widgetType": "heading",
+                                "settings": {
+                                    "__globals__": {
+                                        "title_color": "",
+                                        "typography_typography": "",
+                                        "text_color": "",
+                                        "button_text_color": "",
+                                        "background_color": ""
+                                    },
+                                    "_title": "Ready to Experience BiharCabs?",
+                                    "_css_classes": "bc-native-widget",
+                                    "_margin": {
+                                        "unit": "px",
+                                        "top": "0",
+                                        "right": "0",
+                                        "bottom": "0",
+                                        "left": "0",
+                                        "isLinked": true
+                                    },
+                                    "bc_source": "about-f744a0a",
+                                    "title": "Ready to Experience\n                    BiharCabs?",
+                                    "header_size": "h2",
+                                    "size": "default"
+                                },
+                                "elements": []
+                            },
+                            {
+                                "id": "a115cee",
+                                "elType": "widget",
+                                "widgetType": "text-editor",
+                                "settings": {
+                                    "__globals__": {
+                                        "title_color": "",
+                                        "typography_typography": "",
+                                        "text_color": "",
+                                        "button_text_color": "",
+                                        "background_color": ""
+                                    },
+                                    "_title": "Book your ride now and let us take care of the rest. Co",
+                                    "_css_classes": "bc-native-widget",
+                                    "_margin": {
+                                        "unit": "px",
+                                        "top": "0",
+                                        "right": "0",
+                                        "bottom": "0",
+                                        "left": "0",
+                                        "isLinked": true
+                                    },
+                                    "bc_source": "about-a115cee",
+                                    "editor": "<p class=\"mb-5 mx-auto\" style=\"max-width: 600px; font-size: 18px; color: #d1d5db;\">\n                    Book your ride now and let us take care of the rest. Comfort, safety, and reliability guaranteed.\n                </p>"
+                                },
+                                "elements": []
+                            },
+                            {
+                                "id": "6966e78",
+                                "elType": "widget",
+                                "widgetType": "text-editor",
+                                "settings": {
+                                    "__globals__": {
+                                        "title_color": "",
+                                        "typography_typography": "",
+                                        "text_color": "",
+                                        "button_text_color": "",
+                                        "background_color": ""
+                                    },
+                                    "_title": "Book via WhatsApp Call Us Now",
+                                    "_css_classes": "bc-native-widget",
+                                    "_margin": {
+                                        "unit": "px",
+                                        "top": "0",
+                                        "right": "0",
+                                        "bottom": "0",
+                                        "left": "0",
+                                        "isLinked": true
+                                    },
+                                    "bc_source": "about-6966e78",
+                                    "editor": "<div class=\"d-flex justify-content-center gap-3 flex-wrap\">\n                    <a href=\"https://wa.me/917070992170\" class=\"btn btn-warning fw-bold px-4 py-3\" style=\"border-radius: 8px; font-family: 'Outfit', sans-serif;\">\n                        <i class=\"fab fa-whatsapp me-2\"></i> Book via WhatsApp\n                    </a>\n                    <a href=\"tel:+917070992170\" class=\"btn btn-outline-light fw-bold px-4 py-3\" style=\"border-radius: 8px; font-family: 'Outfit', sans-serif;\">\n                        <i class=\"fas fa-phone-alt me-2\"></i> Call Us Now\n                    </a>\n                </div>"
+                                },
+                                "elements": []
+                            }
+                        ],
+                        "isInner": true
+                    }
+                ],
+                "isInner": true
+            }
+        ],
+        "isInner": false
+    }
+]

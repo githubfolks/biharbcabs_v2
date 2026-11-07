@@ -1,0 +1,1684 @@
+[
+    {
+        "id": "351d188",
+        "elType": "container",
+        "settings": {
+            "_title": "Cities page",
+            "content_width": "full",
+            "css_classes": "bc-native-page bc-page-cities",
+            "flex_direction": "column",
+            "flex_gap": {
+                "unit": "px",
+                "size": 0,
+                "row": "0",
+                "column": "0"
+            },
+            "padding": {
+                "unit": "px",
+                "top": "0",
+                "right": "0",
+                "bottom": "0",
+                "left": "0",
+                "isLinked": true
+            }
+        },
+        "elements": [
+            {
+                "id": "693f287",
+                "elType": "container",
+                "settings": {
+                    "bc_source": "cities-693f287",
+                    "_title": "Section: OUR NETWORK Cities We Serve Extensive and reliable taxi",
+                    "html_tag": "section",
+                    "content_width": "full",
+                    "css_classes": "bc-native-node custom-cities-hero text-center",
+                    "flex_direction": "column",
+                    "flex_gap": {
+                        "unit": "px",
+                        "size": 0,
+                        "row": "0",
+                        "column": "0"
+                    },
+                    "padding": {
+                        "unit": "px",
+                        "top": "",
+                        "right": "",
+                        "bottom": "",
+                        "left": "",
+                        "isLinked": false
+                    }
+                },
+                "elements": [
+                    {
+                        "id": "e83ceca",
+                        "elType": "container",
+                        "settings": {
+                            "bc_source": "cities-e83ceca",
+                            "_title": "OUR NETWORK Cities We Serve Extensive and reliable taxi",
+                            "html_tag": "div",
+                            "content_width": "full",
+                            "css_classes": "bc-native-node container",
+                            "flex_direction": "column",
+                            "flex_gap": {
+                                "unit": "px",
+                                "size": 0,
+                                "row": "0",
+                                "column": "0"
+                            },
+                            "padding": {
+                                "unit": "px",
+                                "top": "",
+                                "right": "",
+                                "bottom": "",
+                                "left": "",
+                                "isLinked": false
+                            }
+                        },
+                        "elements": [
+                            {
+                                "id": "c6fc824",
+                                "elType": "widget",
+                                "widgetType": "text-editor",
+                                "settings": {
+                                    "__globals__": {
+                                        "title_color": "",
+                                        "typography_typography": "",
+                                        "text_color": "",
+                                        "button_text_color": "",
+                                        "background_color": ""
+                                    },
+                                    "_title": "OUR NETWORK",
+                                    "_css_classes": "bc-native-widget",
+                                    "_margin": {
+                                        "unit": "px",
+                                        "top": "0",
+                                        "right": "0",
+                                        "bottom": "0",
+                                        "left": "0",
+                                        "isLinked": true
+                                    },
+                                    "bc_source": "cities-c6fc824",
+                                    "editor": "<span class=\"d-inline-block px-4 py-2 rounded-pill mb-3\" style=\"background: rgba(250, 204, 21, 0.2); color: #facc15; font-weight: 700; font-size: 12px; letter-spacing: 1px;\"><i class=\"fas fa-map-marked-alt me-2\"></i>OUR NETWORK</span>"
+                                },
+                                "elements": []
+                            },
+                            {
+                                "id": "8808144",
+                                "elType": "widget",
+                                "widgetType": "heading",
+                                "settings": {
+                                    "__globals__": {
+                                        "title_color": "",
+                                        "typography_typography": "",
+                                        "text_color": "",
+                                        "button_text_color": "",
+                                        "background_color": ""
+                                    },
+                                    "_title": "Cities We Serve",
+                                    "_css_classes": "bc-native-widget",
+                                    "_margin": {
+                                        "unit": "px",
+                                        "top": "0",
+                                        "right": "0",
+                                        "bottom": "0",
+                                        "left": "0",
+                                        "isLinked": true
+                                    },
+                                    "bc_source": "cities-8808144",
+                                    "title": "Cities We Serve",
+                                    "header_size": "h1",
+                                    "size": "default"
+                                },
+                                "elements": []
+                            },
+                            {
+                                "id": "ea88541",
+                                "elType": "widget",
+                                "widgetType": "text-editor",
+                                "settings": {
+                                    "__globals__": {
+                                        "title_color": "",
+                                        "typography_typography": "",
+                                        "text_color": "",
+                                        "button_text_color": "",
+                                        "background_color": ""
+                                    },
+                                    "_title": "Extensive and reliable taxi coverage across Bihar. Whet",
+                                    "_css_classes": "bc-native-widget",
+                                    "_margin": {
+                                        "unit": "px",
+                                        "top": "0",
+                                        "right": "0",
+                                        "bottom": "0",
+                                        "left": "0",
+                                        "isLinked": true
+                                    },
+                                    "bc_source": "cities-ea88541",
+                                    "editor": "<p class=\"text-white mx-auto\" style=\"max-width: 600px; font-size: 18px; line-height: 1.6; color: #d1d5db !important;\">\n                    Extensive and reliable taxi coverage across Bihar. Whether you need a local ride or outstation drops, we've got you covered.\n                </p>"
+                                },
+                                "elements": []
+                            }
+                        ],
+                        "isInner": true
+                    }
+                ],
+                "isInner": true
+            },
+            {
+                "id": "f9c2bf3",
+                "elType": "container",
+                "settings": {
+                    "bc_source": "cities-f9c2bf3",
+                    "_title": "Section: Patna JPNI Airport Drops & Local Rentals Book a Ride Bi",
+                    "html_tag": "section",
+                    "content_width": "full",
+                    "css_classes": "bc-native-node section-padding bg-light",
+                    "flex_direction": "column",
+                    "flex_gap": {
+                        "unit": "px",
+                        "size": 0,
+                        "row": "0",
+                        "column": "0"
+                    },
+                    "padding": {
+                        "unit": "px",
+                        "top": "",
+                        "right": "",
+                        "bottom": "",
+                        "left": "",
+                        "isLinked": false
+                    }
+                },
+                "elements": [
+                    {
+                        "id": "3517eb4",
+                        "elType": "container",
+                        "settings": {
+                            "bc_source": "cities-3517eb4",
+                            "_title": "Patna JPNI Airport Drops & Local Rentals Book a Ride Bi",
+                            "html_tag": "div",
+                            "content_width": "full",
+                            "css_classes": "bc-native-node container",
+                            "flex_direction": "column",
+                            "flex_gap": {
+                                "unit": "px",
+                                "size": 0,
+                                "row": "0",
+                                "column": "0"
+                            },
+                            "padding": {
+                                "unit": "px",
+                                "top": "",
+                                "right": "",
+                                "bottom": "",
+                                "left": "",
+                                "isLinked": false
+                            }
+                        },
+                        "elements": [
+                            {
+                                "id": "124a1d7",
+                                "elType": "container",
+                                "settings": {
+                                    "bc_source": "cities-124a1d7",
+                                    "_title": "Patna JPNI Airport Drops & Local Rentals Book a Ride Bi",
+                                    "html_tag": "div",
+                                    "content_width": "full",
+                                    "css_classes": "bc-native-node row g-4",
+                                    "flex_direction": "row",
+                                    "flex_gap": {
+                                        "unit": "px",
+                                        "size": 0,
+                                        "row": "0",
+                                        "column": "0"
+                                    },
+                                    "padding": {
+                                        "unit": "px",
+                                        "top": "",
+                                        "right": "",
+                                        "bottom": "",
+                                        "left": "",
+                                        "isLinked": false
+                                    }
+                                },
+                                "elements": [
+                                    {
+                                        "id": "581be30",
+                                        "elType": "widget",
+                                        "widgetType": "text-editor",
+                                        "settings": {
+                                            "__globals__": {
+                                                "title_color": "",
+                                                "typography_typography": "",
+                                                "text_color": "",
+                                                "button_text_color": "",
+                                                "background_color": ""
+                                            },
+                                            "_title": "Patna JPNI Airport Drops & Local Rentals Book a Ride",
+                                            "_css_classes": "bc-native-widget",
+                                            "_margin": {
+                                                "unit": "px",
+                                                "top": "0",
+                                                "right": "0",
+                                                "bottom": "0",
+                                                "left": "0",
+                                                "isLinked": true
+                                            },
+                                            "bc_source": "cities-581be30",
+                                            "editor": "<div class=\"col-lg-4 col-md-6\">\n                        <a href=\"#book\" class=\"city-card\">\n                            <img src=\"{{BC_ASSETS}}/img/img/service_01.jpg\" class=\"city-card-img\" alt=\"Patna Taxi\">\n                            <div class=\"city-card-overlay\"></div>\n                            <div class=\"city-card-content\">\n                                <h3>Patna</h3>\n                                <p>JPNI Airport Drops &amp; Local Rentals</p>\n                                <span class=\"city-card-btn\">Book a Ride <i class=\"fas fa-arrow-right ms-1\"></i></span>\n                            </div>\n                        </a>\n                    </div>"
+                                        },
+                                        "elements": []
+                                    },
+                                    {
+                                        "id": "b13a874",
+                                        "elType": "widget",
+                                        "widgetType": "text-editor",
+                                        "settings": {
+                                            "__globals__": {
+                                                "title_color": "",
+                                                "typography_typography": "",
+                                                "text_color": "",
+                                                "button_text_color": "",
+                                                "background_color": ""
+                                            },
+                                            "_title": "Bihar Sharif City Commutes & Railway Station Drops Book",
+                                            "_css_classes": "bc-native-widget",
+                                            "_margin": {
+                                                "unit": "px",
+                                                "top": "0",
+                                                "right": "0",
+                                                "bottom": "0",
+                                                "left": "0",
+                                                "isLinked": true
+                                            },
+                                            "bc_source": "cities-b13a874",
+                                            "editor": "<div class=\"col-lg-4 col-md-6\">\n                        <a href=\"#book\" class=\"city-card\">\n                            <img src=\"{{BC_ASSETS}}/img/img/service_02.jpg\" class=\"city-card-img\" alt=\"Bihar Sharif Taxi\">\n                            <div class=\"city-card-overlay\"></div>\n                            <div class=\"city-card-content\">\n                                <h3>Bihar Sharif</h3>\n                                <p>City Commutes &amp; Railway Station Drops</p>\n                                <span class=\"city-card-btn\">Book a Ride <i class=\"fas fa-arrow-right ms-1\"></i></span>\n                            </div>\n                        </a>\n                    </div>"
+                                        },
+                                        "elements": []
+                                    },
+                                    {
+                                        "id": "4b6182a",
+                                        "elType": "widget",
+                                        "widgetType": "text-editor",
+                                        "settings": {
+                                            "__globals__": {
+                                                "title_color": "",
+                                                "typography_typography": "",
+                                                "text_color": "",
+                                                "button_text_color": "",
+                                                "background_color": ""
+                                            },
+                                            "_title": "Gaya Outstation Travel & Pilgrimage Tours Book a Ride",
+                                            "_css_classes": "bc-native-widget",
+                                            "_margin": {
+                                                "unit": "px",
+                                                "top": "0",
+                                                "right": "0",
+                                                "bottom": "0",
+                                                "left": "0",
+                                                "isLinked": true
+                                            },
+                                            "bc_source": "cities-4b6182a",
+                                            "editor": "<div class=\"col-lg-4 col-md-6\">\n                        <a href=\"#book\" class=\"city-card\">\n                            <img src=\"{{BC_ASSETS}}/img/img/service_03.jpg\" class=\"city-card-img\" alt=\"Gaya Taxi\">\n                            <div class=\"city-card-overlay\"></div>\n                            <div class=\"city-card-content\">\n                                <h3>Gaya</h3>\n                                <p>Outstation Travel &amp; Pilgrimage Tours</p>\n                                <span class=\"city-card-btn\">Book a Ride <i class=\"fas fa-arrow-right ms-1\"></i></span>\n                            </div>\n                        </a>\n                    </div>"
+                                        },
+                                        "elements": []
+                                    },
+                                    {
+                                        "id": "26656da",
+                                        "elType": "widget",
+                                        "widgetType": "text-editor",
+                                        "settings": {
+                                            "__globals__": {
+                                                "title_color": "",
+                                                "typography_typography": "",
+                                                "text_color": "",
+                                                "button_text_color": "",
+                                                "background_color": ""
+                                            },
+                                            "_title": "Rajgir Tourist Packages & Sightseeing Book a Ride",
+                                            "_css_classes": "bc-native-widget",
+                                            "_margin": {
+                                                "unit": "px",
+                                                "top": "0",
+                                                "right": "0",
+                                                "bottom": "0",
+                                                "left": "0",
+                                                "isLinked": true
+                                            },
+                                            "bc_source": "cities-26656da",
+                                            "editor": "<div class=\"col-lg-4 col-md-6\">\n                        <a href=\"#book\" class=\"city-card\">\n                            <img src=\"{{BC_ASSETS}}/img/img/service_04.jpg\" class=\"city-card-img\" alt=\"Rajgir Taxi\">\n                            <div class=\"city-card-overlay\"></div>\n                            <div class=\"city-card-content\">\n                                <h3>Rajgir</h3>\n                                <p>Tourist Packages &amp; Sightseeing</p>\n                                <span class=\"city-card-btn\">Book a Ride <i class=\"fas fa-arrow-right ms-1\"></i></span>\n                            </div>\n                        </a>\n                    </div>"
+                                        },
+                                        "elements": []
+                                    },
+                                    {
+                                        "id": "de385d9",
+                                        "elType": "widget",
+                                        "widgetType": "text-editor",
+                                        "settings": {
+                                            "__globals__": {
+                                                "title_color": "",
+                                                "typography_typography": "",
+                                                "text_color": "",
+                                                "button_text_color": "",
+                                                "background_color": ""
+                                            },
+                                            "_title": "Nawada Reliable Outstation Rentals Book a Ride",
+                                            "_css_classes": "bc-native-widget",
+                                            "_margin": {
+                                                "unit": "px",
+                                                "top": "0",
+                                                "right": "0",
+                                                "bottom": "0",
+                                                "left": "0",
+                                                "isLinked": true
+                                            },
+                                            "bc_source": "cities-de385d9",
+                                            "editor": "<div class=\"col-lg-4 col-md-6\">\n                        <a href=\"#book\" class=\"city-card\">\n                            <img src=\"{{BC_ASSETS}}/img/img/service_05.jpg\" class=\"city-card-img\" alt=\"Nawada Taxi\">\n                            <div class=\"city-card-overlay\"></div>\n                            <div class=\"city-card-content\">\n                                <h3>Nawada</h3>\n                                <p>Reliable Outstation Rentals</p>\n                                <span class=\"city-card-btn\">Book a Ride <i class=\"fas fa-arrow-right ms-1\"></i></span>\n                            </div>\n                        </a>\n                    </div>"
+                                        },
+                                        "elements": []
+                                    },
+                                    {
+                                        "id": "6fde54c",
+                                        "elType": "widget",
+                                        "widgetType": "text-editor",
+                                        "settings": {
+                                            "__globals__": {
+                                                "title_color": "",
+                                                "typography_typography": "",
+                                                "text_color": "",
+                                                "button_text_color": "",
+                                                "background_color": ""
+                                            },
+                                            "_title": "Darbhanga Airport Transfers & City Transport Book a Rid",
+                                            "_css_classes": "bc-native-widget",
+                                            "_margin": {
+                                                "unit": "px",
+                                                "top": "0",
+                                                "right": "0",
+                                                "bottom": "0",
+                                                "left": "0",
+                                                "isLinked": true
+                                            },
+                                            "bc_source": "cities-6fde54c",
+                                            "editor": "<div class=\"col-lg-4 col-md-6\">\n                        <a href=\"#book\" class=\"city-card\">\n                            <img src=\"{{BC_ASSETS}}/img/img/service_06.jpg\" class=\"city-card-img\" alt=\"Darbhanga Taxi\">\n                            <div class=\"city-card-overlay\"></div>\n                            <div class=\"city-card-content\">\n                                <h3>Darbhanga</h3>\n                                <p>Airport Transfers &amp; City Transport</p>\n                                <span class=\"city-card-btn\">Book a Ride <i class=\"fas fa-arrow-right ms-1\"></i></span>\n                            </div>\n                        </a>\n                    </div>"
+                                        },
+                                        "elements": []
+                                    },
+                                    {
+                                        "id": "5b4e816",
+                                        "elType": "widget",
+                                        "widgetType": "text-editor",
+                                        "settings": {
+                                            "__globals__": {
+                                                "title_color": "",
+                                                "typography_typography": "",
+                                                "text_color": "",
+                                                "button_text_color": "",
+                                                "background_color": ""
+                                            },
+                                            "_title": "Purnia Reliable City Rides & Rentals Book a Ride",
+                                            "_css_classes": "bc-native-widget",
+                                            "_margin": {
+                                                "unit": "px",
+                                                "top": "0",
+                                                "right": "0",
+                                                "bottom": "0",
+                                                "left": "0",
+                                                "isLinked": true
+                                            },
+                                            "bc_source": "cities-5b4e816",
+                                            "editor": "<div class=\"col-lg-4 col-md-6\">\n                        <a href=\"#book\" class=\"city-card\">\n                            <img src=\"{{BC_ASSETS}}/img/img/taxi_indian_outstation_taxi.webp\" class=\"city-card-img\" alt=\"Purnia Taxi\">\n                            <div class=\"city-card-overlay\"></div>\n                            <div class=\"city-card-content\">\n                                <h3>Purnia</h3>\n                                <p>Reliable City Rides &amp; Rentals</p>\n                                <span class=\"city-card-btn\">Book a Ride <i class=\"fas fa-arrow-right ms-1\"></i></span>\n                            </div>\n                        </a>\n                    </div>"
+                                        },
+                                        "elements": []
+                                    },
+                                    {
+                                        "id": "dc6decc",
+                                        "elType": "widget",
+                                        "widgetType": "text-editor",
+                                        "settings": {
+                                            "__globals__": {
+                                                "title_color": "",
+                                                "typography_typography": "",
+                                                "text_color": "",
+                                                "button_text_color": "",
+                                                "background_color": ""
+                                            },
+                                            "_title": "Muzaffarpur Express Outstation Transport Book a Ride",
+                                            "_css_classes": "bc-native-widget",
+                                            "_margin": {
+                                                "unit": "px",
+                                                "top": "0",
+                                                "right": "0",
+                                                "bottom": "0",
+                                                "left": "0",
+                                                "isLinked": true
+                                            },
+                                            "bc_source": "cities-dc6decc",
+                                            "editor": "<div class=\"col-lg-4 col-md-6\">\n                        <a href=\"#book\" class=\"city-card\">\n                            <img src=\"{{BC_ASSETS}}/img/img/taxi_indian_airport_taxi.webp\" class=\"city-card-img\" alt=\"Muzaffarpur Taxi\">\n                            <div class=\"city-card-overlay\"></div>\n                            <div class=\"city-card-content\">\n                                <h3>Muzaffarpur</h3>\n                                <p>Express Outstation Transport</p>\n                                <span class=\"city-card-btn\">Book a Ride <i class=\"fas fa-arrow-right ms-1\"></i></span>\n                            </div>\n                        </a>\n                    </div>"
+                                        },
+                                        "elements": []
+                                    },
+                                    {
+                                        "id": "e4e8ba9",
+                                        "elType": "widget",
+                                        "widgetType": "text-editor",
+                                        "settings": {
+                                            "__globals__": {
+                                                "title_color": "",
+                                                "typography_typography": "",
+                                                "text_color": "",
+                                                "button_text_color": "",
+                                                "background_color": ""
+                                            },
+                                            "_title": "Sitamarhi Safe Family Travel & Tours Book a Ride",
+                                            "_css_classes": "bc-native-widget",
+                                            "_margin": {
+                                                "unit": "px",
+                                                "top": "0",
+                                                "right": "0",
+                                                "bottom": "0",
+                                                "left": "0",
+                                                "isLinked": true
+                                            },
+                                            "bc_source": "cities-e4e8ba9",
+                                            "editor": "<div class=\"col-lg-4 col-md-6\">\n                        <a href=\"#book\" class=\"city-card\">\n                            <img src=\"{{BC_ASSETS}}/img/img/taxi_indian_corporate_taxi.webp\" class=\"city-card-img\" alt=\"Sitamarhi Taxi\">\n                            <div class=\"city-card-overlay\"></div>\n                            <div class=\"city-card-content\">\n                                <h3>Sitamarhi</h3>\n                                <p>Safe Family Travel &amp; Tours</p>\n                                <span class=\"city-card-btn\">Book a Ride <i class=\"fas fa-arrow-right ms-1\"></i></span>\n                            </div>\n                        </a>\n                    </div>"
+                                        },
+                                        "elements": []
+                                    },
+                                    {
+                                        "id": "fc4eac2",
+                                        "elType": "widget",
+                                        "widgetType": "text-editor",
+                                        "settings": {
+                                            "__globals__": {
+                                                "title_color": "",
+                                                "typography_typography": "",
+                                                "text_color": "",
+                                                "button_text_color": "",
+                                                "background_color": ""
+                                            },
+                                            "_title": "Sheohar Round Trip Cab Services Book a Ride",
+                                            "_css_classes": "bc-native-widget",
+                                            "_margin": {
+                                                "unit": "px",
+                                                "top": "0",
+                                                "right": "0",
+                                                "bottom": "0",
+                                                "left": "0",
+                                                "isLinked": true
+                                            },
+                                            "bc_source": "cities-fc4eac2",
+                                            "editor": "<div class=\"col-lg-4 col-md-6\">\n                        <a href=\"#book\" class=\"city-card\">\n                            <img src=\"{{BC_ASSETS}}/img/img/blog_01.jpg\" class=\"city-card-img\" alt=\"Sheohar Taxi\">\n                            <div class=\"city-card-overlay\"></div>\n                            <div class=\"city-card-content\">\n                                <h3>Sheohar</h3>\n                                <p>Round Trip Cab Services</p>\n                                <span class=\"city-card-btn\">Book a Ride <i class=\"fas fa-arrow-right ms-1\"></i></span>\n                            </div>\n                        </a>\n                    </div>"
+                                        },
+                                        "elements": []
+                                    },
+                                    {
+                                        "id": "43881bb",
+                                        "elType": "widget",
+                                        "widgetType": "text-editor",
+                                        "settings": {
+                                            "__globals__": {
+                                                "title_color": "",
+                                                "typography_typography": "",
+                                                "text_color": "",
+                                                "button_text_color": "",
+                                                "background_color": ""
+                                            },
+                                            "_title": "Samastipur Corporate & Station Drops Book a Ride",
+                                            "_css_classes": "bc-native-widget",
+                                            "_margin": {
+                                                "unit": "px",
+                                                "top": "0",
+                                                "right": "0",
+                                                "bottom": "0",
+                                                "left": "0",
+                                                "isLinked": true
+                                            },
+                                            "bc_source": "cities-43881bb",
+                                            "editor": "<div class=\"col-lg-4 col-md-6\">\n                        <a href=\"#book\" class=\"city-card\">\n                            <img src=\"{{BC_ASSETS}}/img/img/blog_02.jpg\" class=\"city-card-img\" alt=\"Samastipur Taxi\">\n                            <div class=\"city-card-overlay\"></div>\n                            <div class=\"city-card-content\">\n                                <h3>Samastipur</h3>\n                                <p>Corporate &amp; Station Drops</p>\n                                <span class=\"city-card-btn\">Book a Ride <i class=\"fas fa-arrow-right ms-1\"></i></span>\n                            </div>\n                        </a>\n                    </div>"
+                                        },
+                                        "elements": []
+                                    }
+                                ],
+                                "isInner": true
+                            }
+                        ],
+                        "isInner": true
+                    }
+                ],
+                "isInner": true
+            },
+            {
+                "id": "dfa0ea9",
+                "elType": "container",
+                "settings": {
+                    "bc_source": "cities-dfa0ea9",
+                    "_title": "FAST BOOKING ENQUIRY Book Your Verified Ride in 30 Seco",
+                    "html_tag": "div",
+                    "content_width": "full",
+                    "css_classes": "bc-native-node ",
+                    "flex_direction": "column",
+                    "flex_gap": {
+                        "unit": "px",
+                        "size": 0,
+                        "row": "0",
+                        "column": "0"
+                    },
+                    "padding": {
+                        "unit": "px",
+                        "top": "",
+                        "right": "",
+                        "bottom": "",
+                        "left": "",
+                        "isLinked": false
+                    },
+                    "_element_id": "book"
+                },
+                "elements": [
+                    {
+                        "id": "8be1287",
+                        "elType": "container",
+                        "settings": {
+                            "bc_source": "cities-8be1287",
+                            "_title": "Section: FAST BOOKING ENQUIRY Book Your Verified Ride in 30 Seco",
+                            "html_tag": "section",
+                            "content_width": "full",
+                            "css_classes": "bc-native-node section-padding",
+                            "flex_direction": "column",
+                            "flex_gap": {
+                                "unit": "px",
+                                "size": 0,
+                                "row": "0",
+                                "column": "0"
+                            },
+                            "padding": {
+                                "unit": "px",
+                                "top": "",
+                                "right": "",
+                                "bottom": "",
+                                "left": "",
+                                "isLinked": false
+                            }
+                        },
+                        "elements": [
+                            {
+                                "id": "8edde92",
+                                "elType": "container",
+                                "settings": {
+                                    "bc_source": "cities-8edde92",
+                                    "_title": "FAST BOOKING ENQUIRY Book Your Verified Ride in 30 Seco",
+                                    "html_tag": "div",
+                                    "content_width": "full",
+                                    "css_classes": "bc-native-node container",
+                                    "flex_direction": "column",
+                                    "flex_gap": {
+                                        "unit": "px",
+                                        "size": 0,
+                                        "row": "0",
+                                        "column": "0"
+                                    },
+                                    "padding": {
+                                        "unit": "px",
+                                        "top": "",
+                                        "right": "",
+                                        "bottom": "",
+                                        "left": "",
+                                        "isLinked": false
+                                    }
+                                },
+                                "elements": [
+                                    {
+                                        "id": "9b25b0f",
+                                        "elType": "container",
+                                        "settings": {
+                                            "bc_source": "cities-9b25b0f",
+                                            "_title": "FAST BOOKING ENQUIRY Book Your Verified Ride in 30 Seco",
+                                            "html_tag": "div",
+                                            "content_width": "full",
+                                            "css_classes": "bc-native-node row g-5 align-items-center",
+                                            "flex_direction": "row",
+                                            "flex_gap": {
+                                                "unit": "px",
+                                                "size": 0,
+                                                "row": "0",
+                                                "column": "0"
+                                            },
+                                            "padding": {
+                                                "unit": "px",
+                                                "top": "",
+                                                "right": "",
+                                                "bottom": "",
+                                                "left": "",
+                                                "isLinked": false
+                                            }
+                                        },
+                                        "elements": [
+                                            {
+                                                "id": "097157f",
+                                                "elType": "container",
+                                                "settings": {
+                                                    "bc_source": "cities-097157f",
+                                                    "_title": "FAST BOOKING ENQUIRY Book Your Verified Ride in 30 Seco",
+                                                    "html_tag": "div",
+                                                    "content_width": "full",
+                                                    "css_classes": "bc-native-node col-lg-5",
+                                                    "flex_direction": "column",
+                                                    "flex_gap": {
+                                                        "unit": "px",
+                                                        "size": 0,
+                                                        "row": "0",
+                                                        "column": "0"
+                                                    },
+                                                    "padding": {
+                                                        "unit": "px",
+                                                        "top": "",
+                                                        "right": "",
+                                                        "bottom": "",
+                                                        "left": "",
+                                                        "isLinked": false
+                                                    },
+                                                    "width": {
+                                                        "unit": "%",
+                                                        "size": 41.6667
+                                                    },
+                                                    "width_tablet": {
+                                                        "unit": "%",
+                                                        "size": 100
+                                                    },
+                                                    "width_mobile": {
+                                                        "unit": "%",
+                                                        "size": 100
+                                                    }
+                                                },
+                                                "elements": [
+                                                    {
+                                                        "id": "81d7dec",
+                                                        "elType": "widget",
+                                                        "widgetType": "text-editor",
+                                                        "settings": {
+                                                            "__globals__": {
+                                                                "title_color": "",
+                                                                "typography_typography": "",
+                                                                "text_color": "",
+                                                                "button_text_color": "",
+                                                                "background_color": ""
+                                                            },
+                                                            "_title": "FAST BOOKING ENQUIRY",
+                                                            "_css_classes": "bc-native-widget",
+                                                            "_margin": {
+                                                                "unit": "px",
+                                                                "top": "0",
+                                                                "right": "0",
+                                                                "bottom": "0",
+                                                                "left": "0",
+                                                                "isLinked": true
+                                                            },
+                                                            "bc_source": "cities-81d7dec",
+                                                            "editor": "<div class=\"fast-booking-badge\"><i class=\"fas fa-comment-dots me-1\"></i> FAST BOOKING ENQUIRY\n                        </div>"
+                                                        },
+                                                        "elements": []
+                                                    },
+                                                    {
+                                                        "id": "327ea3b",
+                                                        "elType": "widget",
+                                                        "widgetType": "heading",
+                                                        "settings": {
+                                                            "__globals__": {
+                                                                "title_color": "",
+                                                                "typography_typography": "",
+                                                                "text_color": "",
+                                                                "button_text_color": "",
+                                                                "background_color": ""
+                                                            },
+                                                            "_title": "Book Your Verified Ride in 30 Seconds",
+                                                            "_css_classes": "bc-native-widget",
+                                                            "_margin": {
+                                                                "unit": "px",
+                                                                "top": "0",
+                                                                "right": "0",
+                                                                "bottom": "0",
+                                                                "left": "0",
+                                                                "isLinked": true
+                                                            },
+                                                            "bc_source": "cities-327ea3b",
+                                                            "title": "Book Your\n                            Verified Ride in 30 Seconds",
+                                                            "header_size": "h2",
+                                                            "size": "default"
+                                                        },
+                                                        "elements": []
+                                                    },
+                                                    {
+                                                        "id": "422de0a",
+                                                        "elType": "container",
+                                                        "settings": {
+                                                            "bc_source": "cities-422de0a",
+                                                            "_title": "VERIFIED DRIVERS WAITING",
+                                                            "html_tag": "div",
+                                                            "content_width": "full",
+                                                            "css_classes": "bc-native-node driver-img-box",
+                                                            "flex_direction": "column",
+                                                            "flex_gap": {
+                                                                "unit": "px",
+                                                                "size": 0,
+                                                                "row": "0",
+                                                                "column": "0"
+                                                            },
+                                                            "padding": {
+                                                                "unit": "px",
+                                                                "top": "",
+                                                                "right": "",
+                                                                "bottom": "",
+                                                                "left": "",
+                                                                "isLinked": false
+                                                            }
+                                                        },
+                                                        "elements": [
+                                                            {
+                                                                "id": "97f9259",
+                                                                "elType": "widget",
+                                                                "widgetType": "image",
+                                                                "settings": {
+                                                                    "__globals__": {
+                                                                        "title_color": "",
+                                                                        "typography_typography": "",
+                                                                        "text_color": "",
+                                                                        "button_text_color": "",
+                                                                        "background_color": ""
+                                                                    },
+                                                                    "_title": "Verified Driver",
+                                                                    "_css_classes": "bc-native-widget",
+                                                                    "_margin": {
+                                                                        "unit": "px",
+                                                                        "top": "0",
+                                                                        "right": "0",
+                                                                        "bottom": "0",
+                                                                        "left": "0",
+                                                                        "isLinked": true
+                                                                    },
+                                                                    "bc_source": "cities-97f9259",
+                                                                    "image": {
+                                                                        "url": "{{BC_ASSETS}}/img/img/bihari_female.webp",
+                                                                        "id": 0
+                                                                    },
+                                                                    "image_size": "full",
+                                                                    "caption_source": "none",
+                                                                    "bc_image_alt": "Verified Driver"
+                                                                },
+                                                                "elements": []
+                                                            },
+                                                            {
+                                                                "id": "6a2ce26",
+                                                                "elType": "widget",
+                                                                "widgetType": "text-editor",
+                                                                "settings": {
+                                                                    "__globals__": {
+                                                                        "title_color": "",
+                                                                        "typography_typography": "",
+                                                                        "text_color": "",
+                                                                        "button_text_color": "",
+                                                                        "background_color": ""
+                                                                    },
+                                                                    "_title": "VERIFIED DRIVERS WAITING",
+                                                                    "_css_classes": "bc-native-widget",
+                                                                    "_margin": {
+                                                                        "unit": "px",
+                                                                        "top": "0",
+                                                                        "right": "0",
+                                                                        "bottom": "0",
+                                                                        "left": "0",
+                                                                        "isLinked": true
+                                                                    },
+                                                                    "bc_source": "cities-6a2ce26",
+                                                                    "editor": "<div class=\"verified-driver-badge\"><i class=\"fas fa-check-circle text-success me-1\"></i>\n                                VERIFIED DRIVERS WAITING</div>"
+                                                                },
+                                                                "elements": []
+                                                            }
+                                                        ],
+                                                        "isInner": true
+                                                    },
+                                                    {
+                                                        "id": "e94cec4",
+                                                        "elType": "widget",
+                                                        "widgetType": "text-editor",
+                                                        "settings": {
+                                                            "__globals__": {
+                                                                "title_color": "",
+                                                                "typography_typography": "",
+                                                                "text_color": "",
+                                                                "button_text_color": "",
+                                                                "background_color": ""
+                                                            },
+                                                            "_title": "Fill out the details to receive an instant fare quote a",
+                                                            "_css_classes": "bc-native-widget",
+                                                            "_margin": {
+                                                                "unit": "px",
+                                                                "top": "0",
+                                                                "right": "0",
+                                                                "bottom": "0",
+                                                                "left": "0",
+                                                                "isLinked": true
+                                                            },
+                                                            "bc_source": "cities-e94cec4",
+                                                            "editor": "<p class=\"text-muted mb-4\" style=\"font-size: 15px;\">Fill out the details to receive an instant\n                            fare quote and driver confirmation over phone or WhatsApp. Zero advance payment required.\n                        </p>"
+                                                        },
+                                                        "elements": []
+                                                    },
+                                                    {
+                                                        "id": "0a33ce3",
+                                                        "elType": "container",
+                                                        "settings": {
+                                                            "bc_source": "cities-0a33ce3",
+                                                            "_title": "24X7 DIRECT PHONE HOTLINE 070709 92170",
+                                                            "html_tag": "a",
+                                                            "content_width": "full",
+                                                            "css_classes": "bc-native-node text-decoration-none",
+                                                            "flex_direction": "column",
+                                                            "flex_gap": {
+                                                                "unit": "px",
+                                                                "size": 0,
+                                                                "row": "0",
+                                                                "column": "0"
+                                                            },
+                                                            "padding": {
+                                                                "unit": "px",
+                                                                "top": "",
+                                                                "right": "",
+                                                                "bottom": "",
+                                                                "left": "",
+                                                                "isLinked": false
+                                                            },
+                                                            "link": {
+                                                                "url": "tel:+917070992170"
+                                                            }
+                                                        },
+                                                        "elements": [
+                                                            {
+                                                                "id": "a294a6b",
+                                                                "elType": "container",
+                                                                "settings": {
+                                                                    "bc_source": "cities-a294a6b",
+                                                                    "_title": "24X7 DIRECT PHONE HOTLINE 070709 92170",
+                                                                    "html_tag": "div",
+                                                                    "content_width": "full",
+                                                                    "css_classes": "bc-native-node contact-box",
+                                                                    "flex_direction": "column",
+                                                                    "flex_gap": {
+                                                                        "unit": "px",
+                                                                        "size": 0,
+                                                                        "row": "0",
+                                                                        "column": "0"
+                                                                    },
+                                                                    "padding": {
+                                                                        "unit": "px",
+                                                                        "top": "",
+                                                                        "right": "",
+                                                                        "bottom": "",
+                                                                        "left": "",
+                                                                        "isLinked": false
+                                                                    }
+                                                                },
+                                                                "elements": [
+                                                                    {
+                                                                        "id": "41ea04f",
+                                                                        "elType": "widget",
+                                                                        "widgetType": "text-editor",
+                                                                        "settings": {
+                                                                            "__globals__": {
+                                                                                "title_color": "",
+                                                                                "typography_typography": "",
+                                                                                "text_color": "",
+                                                                                "button_text_color": "",
+                                                                                "background_color": ""
+                                                                            },
+                                                                            "_title": "contact-icon",
+                                                                            "_css_classes": "bc-native-widget",
+                                                                            "_margin": {
+                                                                                "unit": "px",
+                                                                                "top": "0",
+                                                                                "right": "0",
+                                                                                "bottom": "0",
+                                                                                "left": "0",
+                                                                                "isLinked": true
+                                                                            },
+                                                                            "bc_source": "cities-41ea04f",
+                                                                            "editor": "<div class=\"contact-icon\"><i class=\"fas fa-phone-alt me-1\"></i></div>"
+                                                                        },
+                                                                        "elements": []
+                                                                    },
+                                                                    {
+                                                                        "id": "4cf677f",
+                                                                        "elType": "container",
+                                                                        "settings": {
+                                                                            "bc_source": "cities-4cf677f",
+                                                                            "_title": "24X7 DIRECT PHONE HOTLINE 070709 92170",
+                                                                            "html_tag": "div",
+                                                                            "content_width": "full",
+                                                                            "css_classes": "bc-native-node ",
+                                                                            "flex_direction": "column",
+                                                                            "flex_gap": {
+                                                                                "unit": "px",
+                                                                                "size": 0,
+                                                                                "row": "0",
+                                                                                "column": "0"
+                                                                            },
+                                                                            "padding": {
+                                                                                "unit": "px",
+                                                                                "top": "",
+                                                                                "right": "",
+                                                                                "bottom": "",
+                                                                                "left": "",
+                                                                                "isLinked": false
+                                                                            }
+                                                                        },
+                                                                        "elements": [
+                                                                            {
+                                                                                "id": "74a62e0",
+                                                                                "elType": "widget",
+                                                                                "widgetType": "text-editor",
+                                                                                "settings": {
+                                                                                    "__globals__": {
+                                                                                        "title_color": "",
+                                                                                        "typography_typography": "",
+                                                                                        "text_color": "",
+                                                                                        "button_text_color": "",
+                                                                                        "background_color": ""
+                                                                                    },
+                                                                                    "_title": "24X7 DIRECT PHONE HOTLINE",
+                                                                                    "_css_classes": "bc-native-widget",
+                                                                                    "_margin": {
+                                                                                        "unit": "px",
+                                                                                        "top": "0",
+                                                                                        "right": "0",
+                                                                                        "bottom": "0",
+                                                                                        "left": "0",
+                                                                                        "isLinked": true
+                                                                                    },
+                                                                                    "bc_source": "cities-74a62e0",
+                                                                                    "editor": "<div class=\"contact-title\">24X7 DIRECT PHONE HOTLINE</div>"
+                                                                                },
+                                                                                "elements": []
+                                                                            },
+                                                                            {
+                                                                                "id": "62d78a5",
+                                                                                "elType": "widget",
+                                                                                "widgetType": "heading",
+                                                                                "settings": {
+                                                                                    "__globals__": {
+                                                                                        "title_color": "",
+                                                                                        "typography_typography": "",
+                                                                                        "text_color": "",
+                                                                                        "button_text_color": "",
+                                                                                        "background_color": ""
+                                                                                    },
+                                                                                    "_title": "070709 92170",
+                                                                                    "_css_classes": "bc-native-widget",
+                                                                                    "_margin": {
+                                                                                        "unit": "px",
+                                                                                        "top": "0",
+                                                                                        "right": "0",
+                                                                                        "bottom": "0",
+                                                                                        "left": "0",
+                                                                                        "isLinked": true
+                                                                                    },
+                                                                                    "bc_source": "cities-62d78a5",
+                                                                                    "title": "070709 92170",
+                                                                                    "header_size": "h4",
+                                                                                    "size": "default"
+                                                                                },
+                                                                                "elements": []
+                                                                            }
+                                                                        ],
+                                                                        "isInner": true
+                                                                    }
+                                                                ],
+                                                                "isInner": true
+                                                            }
+                                                        ],
+                                                        "isInner": true
+                                                    },
+                                                    {
+                                                        "id": "5f019d4",
+                                                        "elType": "container",
+                                                        "settings": {
+                                                            "bc_source": "cities-5f019d4",
+                                                            "_title": "INSTANT WHATSAPP SUPPORT Click to Chat on WhatsApp",
+                                                            "html_tag": "a",
+                                                            "content_width": "full",
+                                                            "css_classes": "bc-native-node text-decoration-none",
+                                                            "flex_direction": "column",
+                                                            "flex_gap": {
+                                                                "unit": "px",
+                                                                "size": 0,
+                                                                "row": "0",
+                                                                "column": "0"
+                                                            },
+                                                            "padding": {
+                                                                "unit": "px",
+                                                                "top": "",
+                                                                "right": "",
+                                                                "bottom": "",
+                                                                "left": "",
+                                                                "isLinked": false
+                                                            },
+                                                            "link": {
+                                                                "url": "https://wa.me/917070992170"
+                                                            }
+                                                        },
+                                                        "elements": [
+                                                            {
+                                                                "id": "8e398d1",
+                                                                "elType": "container",
+                                                                "settings": {
+                                                                    "bc_source": "cities-8e398d1",
+                                                                    "_title": "INSTANT WHATSAPP SUPPORT Click to Chat on WhatsApp",
+                                                                    "html_tag": "div",
+                                                                    "content_width": "full",
+                                                                    "css_classes": "bc-native-node contact-box whatsapp-box",
+                                                                    "flex_direction": "column",
+                                                                    "flex_gap": {
+                                                                        "unit": "px",
+                                                                        "size": 0,
+                                                                        "row": "0",
+                                                                        "column": "0"
+                                                                    },
+                                                                    "padding": {
+                                                                        "unit": "px",
+                                                                        "top": "",
+                                                                        "right": "",
+                                                                        "bottom": "",
+                                                                        "left": "",
+                                                                        "isLinked": false
+                                                                    }
+                                                                },
+                                                                "elements": [
+                                                                    {
+                                                                        "id": "09ff93b",
+                                                                        "elType": "widget",
+                                                                        "widgetType": "text-editor",
+                                                                        "settings": {
+                                                                            "__globals__": {
+                                                                                "title_color": "",
+                                                                                "typography_typography": "",
+                                                                                "text_color": "",
+                                                                                "button_text_color": "",
+                                                                                "background_color": ""
+                                                                            },
+                                                                            "_title": "contact-icon",
+                                                                            "_css_classes": "bc-native-widget",
+                                                                            "_margin": {
+                                                                                "unit": "px",
+                                                                                "top": "0",
+                                                                                "right": "0",
+                                                                                "bottom": "0",
+                                                                                "left": "0",
+                                                                                "isLinked": true
+                                                                            },
+                                                                            "bc_source": "cities-09ff93b",
+                                                                            "editor": "<div class=\"contact-icon\"><i class=\"fas fa-comment-dots me-1\"></i></div>"
+                                                                        },
+                                                                        "elements": []
+                                                                    },
+                                                                    {
+                                                                        "id": "c9ae222",
+                                                                        "elType": "container",
+                                                                        "settings": {
+                                                                            "bc_source": "cities-c9ae222",
+                                                                            "_title": "INSTANT WHATSAPP SUPPORT Click to Chat on WhatsApp",
+                                                                            "html_tag": "div",
+                                                                            "content_width": "full",
+                                                                            "css_classes": "bc-native-node ",
+                                                                            "flex_direction": "column",
+                                                                            "flex_gap": {
+                                                                                "unit": "px",
+                                                                                "size": 0,
+                                                                                "row": "0",
+                                                                                "column": "0"
+                                                                            },
+                                                                            "padding": {
+                                                                                "unit": "px",
+                                                                                "top": "",
+                                                                                "right": "",
+                                                                                "bottom": "",
+                                                                                "left": "",
+                                                                                "isLinked": false
+                                                                            }
+                                                                        },
+                                                                        "elements": [
+                                                                            {
+                                                                                "id": "3d532a2",
+                                                                                "elType": "widget",
+                                                                                "widgetType": "text-editor",
+                                                                                "settings": {
+                                                                                    "__globals__": {
+                                                                                        "title_color": "",
+                                                                                        "typography_typography": "",
+                                                                                        "text_color": "",
+                                                                                        "button_text_color": "",
+                                                                                        "background_color": ""
+                                                                                    },
+                                                                                    "_title": "INSTANT WHATSAPP SUPPORT",
+                                                                                    "_css_classes": "bc-native-widget",
+                                                                                    "_margin": {
+                                                                                        "unit": "px",
+                                                                                        "top": "0",
+                                                                                        "right": "0",
+                                                                                        "bottom": "0",
+                                                                                        "left": "0",
+                                                                                        "isLinked": true
+                                                                                    },
+                                                                                    "bc_source": "cities-3d532a2",
+                                                                                    "editor": "<div class=\"contact-title\">INSTANT WHATSAPP SUPPORT</div>"
+                                                                                },
+                                                                                "elements": []
+                                                                            },
+                                                                            {
+                                                                                "id": "ca12c0f",
+                                                                                "elType": "widget",
+                                                                                "widgetType": "heading",
+                                                                                "settings": {
+                                                                                    "__globals__": {
+                                                                                        "title_color": "",
+                                                                                        "typography_typography": "",
+                                                                                        "text_color": "",
+                                                                                        "button_text_color": "",
+                                                                                        "background_color": ""
+                                                                                    },
+                                                                                    "_title": "Click to Chat on WhatsApp",
+                                                                                    "_css_classes": "bc-native-widget",
+                                                                                    "_margin": {
+                                                                                        "unit": "px",
+                                                                                        "top": "0",
+                                                                                        "right": "0",
+                                                                                        "bottom": "0",
+                                                                                        "left": "0",
+                                                                                        "isLinked": true
+                                                                                    },
+                                                                                    "bc_source": "cities-ca12c0f",
+                                                                                    "title": "Click to Chat on WhatsApp",
+                                                                                    "header_size": "h4",
+                                                                                    "size": "default"
+                                                                                },
+                                                                                "elements": []
+                                                                            }
+                                                                        ],
+                                                                        "isInner": true
+                                                                    }
+                                                                ],
+                                                                "isInner": true
+                                                            }
+                                                        ],
+                                                        "isInner": true
+                                                    },
+                                                    {
+                                                        "id": "914ded5",
+                                                        "elType": "container",
+                                                        "settings": {
+                                                            "bc_source": "cities-914ded5",
+                                                            "_title": "Zero Advance Payment Required This is a lead enquiry fo",
+                                                            "html_tag": "div",
+                                                            "content_width": "full",
+                                                            "css_classes": "bc-native-node d-flex align-items-start mt-4",
+                                                            "flex_direction": "row",
+                                                            "flex_gap": {
+                                                                "unit": "px",
+                                                                "size": 0,
+                                                                "row": "0",
+                                                                "column": "0"
+                                                            },
+                                                            "padding": {
+                                                                "unit": "px",
+                                                                "top": "",
+                                                                "right": "",
+                                                                "bottom": "",
+                                                                "left": "",
+                                                                "isLinked": false
+                                                            }
+                                                        },
+                                                        "elements": [
+                                                            {
+                                                                "id": "ef4c9da",
+                                                                "elType": "widget",
+                                                                "widgetType": "text-editor",
+                                                                "settings": {
+                                                                    "__globals__": {
+                                                                        "title_color": "",
+                                                                        "typography_typography": "",
+                                                                        "text_color": "",
+                                                                        "button_text_color": "",
+                                                                        "background_color": ""
+                                                                    },
+                                                                    "_title": "div",
+                                                                    "_css_classes": "bc-native-widget",
+                                                                    "_margin": {
+                                                                        "unit": "px",
+                                                                        "top": "0",
+                                                                        "right": "0",
+                                                                        "bottom": "0",
+                                                                        "left": "0",
+                                                                        "isLinked": true
+                                                                    },
+                                                                    "bc_source": "cities-ef4c9da",
+                                                                    "editor": "<div style=\"color: #facc15; font-size: 20px; margin-right: 12px;\"><i class=\"fas fa-shield-alt text-primary me-1\"></i></div>"
+                                                                },
+                                                                "elements": []
+                                                            },
+                                                            {
+                                                                "id": "ad48ed2",
+                                                                "elType": "container",
+                                                                "settings": {
+                                                                    "bc_source": "cities-ad48ed2",
+                                                                    "_title": "Zero Advance Payment Required This is a lead enquiry fo",
+                                                                    "html_tag": "div",
+                                                                    "content_width": "full",
+                                                                    "css_classes": "bc-native-node ",
+                                                                    "flex_direction": "column",
+                                                                    "flex_gap": {
+                                                                        "unit": "px",
+                                                                        "size": 0,
+                                                                        "row": "0",
+                                                                        "column": "0"
+                                                                    },
+                                                                    "padding": {
+                                                                        "unit": "px",
+                                                                        "top": "",
+                                                                        "right": "",
+                                                                        "bottom": "",
+                                                                        "left": "",
+                                                                        "isLinked": false
+                                                                    }
+                                                                },
+                                                                "elements": [
+                                                                    {
+                                                                        "id": "58b47b8",
+                                                                        "elType": "widget",
+                                                                        "widgetType": "heading",
+                                                                        "settings": {
+                                                                            "__globals__": {
+                                                                                "title_color": "",
+                                                                                "typography_typography": "",
+                                                                                "text_color": "",
+                                                                                "button_text_color": "",
+                                                                                "background_color": ""
+                                                                            },
+                                                                            "_title": "Zero Advance Payment Required",
+                                                                            "_css_classes": "bc-native-widget",
+                                                                            "_margin": {
+                                                                                "unit": "px",
+                                                                                "top": "0",
+                                                                                "right": "0",
+                                                                                "bottom": "0",
+                                                                                "left": "0",
+                                                                                "isLinked": true
+                                                                            },
+                                                                            "bc_source": "cities-58b47b8",
+                                                                            "title": "Zero Advance Payment Required",
+                                                                            "header_size": "h6",
+                                                                            "size": "default"
+                                                                        },
+                                                                        "elements": []
+                                                                    },
+                                                                    {
+                                                                        "id": "c1506a1",
+                                                                        "elType": "widget",
+                                                                        "widgetType": "text-editor",
+                                                                        "settings": {
+                                                                            "__globals__": {
+                                                                                "title_color": "",
+                                                                                "typography_typography": "",
+                                                                                "text_color": "",
+                                                                                "button_text_color": "",
+                                                                                "background_color": ""
+                                                                            },
+                                                                            "_title": "This is a lead enquiry form. Pay directly to your verif",
+                                                                            "_css_classes": "bc-native-widget",
+                                                                            "_margin": {
+                                                                                "unit": "px",
+                                                                                "top": "0",
+                                                                                "right": "0",
+                                                                                "bottom": "0",
+                                                                                "left": "0",
+                                                                                "isLinked": true
+                                                                            },
+                                                                            "bc_source": "cities-c1506a1",
+                                                                            "editor": "<p class=\"text-muted mb-0\" style=\"font-size: 12px;\">This is a lead enquiry form. Pay\n                                    directly to your verified driver after your ride is completed safely.</p>"
+                                                                        },
+                                                                        "elements": []
+                                                                    }
+                                                                ],
+                                                                "isInner": true
+                                                            }
+                                                        ],
+                                                        "isInner": true
+                                                    }
+                                                ],
+                                                "isInner": true
+                                            },
+                                            {
+                                                "id": "802a485",
+                                                "elType": "container",
+                                                "settings": {
+                                                    "bc_source": "cities-802a485",
+                                                    "_title": "Instant Booking Request Your Name * Phone Number * Pick",
+                                                    "html_tag": "div",
+                                                    "content_width": "full",
+                                                    "css_classes": "bc-native-node col-lg-7",
+                                                    "flex_direction": "column",
+                                                    "flex_gap": {
+                                                        "unit": "px",
+                                                        "size": 0,
+                                                        "row": "0",
+                                                        "column": "0"
+                                                    },
+                                                    "padding": {
+                                                        "unit": "px",
+                                                        "top": "",
+                                                        "right": "",
+                                                        "bottom": "",
+                                                        "left": "",
+                                                        "isLinked": false
+                                                    },
+                                                    "width": {
+                                                        "unit": "%",
+                                                        "size": 58.3333
+                                                    },
+                                                    "width_tablet": {
+                                                        "unit": "%",
+                                                        "size": 100
+                                                    },
+                                                    "width_mobile": {
+                                                        "unit": "%",
+                                                        "size": 100
+                                                    }
+                                                },
+                                                "elements": [
+                                                    {
+                                                        "id": "5582bdb",
+                                                        "elType": "container",
+                                                        "settings": {
+                                                            "bc_source": "cities-5582bdb",
+                                                            "_title": "Instant Booking Request Your Name * Phone Number * Pick",
+                                                            "html_tag": "div",
+                                                            "content_width": "full",
+                                                            "css_classes": "bc-native-node booking-form-card",
+                                                            "flex_direction": "column",
+                                                            "flex_gap": {
+                                                                "unit": "px",
+                                                                "size": 0,
+                                                                "row": "0",
+                                                                "column": "0"
+                                                            },
+                                                            "padding": {
+                                                                "unit": "px",
+                                                                "top": "",
+                                                                "right": "",
+                                                                "bottom": "",
+                                                                "left": "",
+                                                                "isLinked": false
+                                                            }
+                                                        },
+                                                        "elements": [
+                                                            {
+                                                                "id": "5d552e6",
+                                                                "elType": "widget",
+                                                                "widgetType": "heading",
+                                                                "settings": {
+                                                                    "__globals__": {
+                                                                        "title_color": "",
+                                                                        "typography_typography": "",
+                                                                        "text_color": "",
+                                                                        "button_text_color": "",
+                                                                        "background_color": ""
+                                                                    },
+                                                                    "_title": "Instant Booking Request",
+                                                                    "_css_classes": "bc-native-widget",
+                                                                    "_margin": {
+                                                                        "unit": "px",
+                                                                        "top": "0",
+                                                                        "right": "0",
+                                                                        "bottom": "0",
+                                                                        "left": "0",
+                                                                        "isLinked": true
+                                                                    },
+                                                                    "bc_source": "cities-5d552e6",
+                                                                    "title": "Instant Booking Request\n                            ",
+                                                                    "header_size": "h4",
+                                                                    "size": "default"
+                                                                },
+                                                                "elements": []
+                                                            },
+                                                            {
+                                                                "id": "a5b32e4",
+                                                                "elType": "widget",
+                                                                "widgetType": "biharcabs-form",
+                                                                "settings": {
+                                                                    "__globals__": {
+                                                                        "title_color": "",
+                                                                        "typography_typography": "",
+                                                                        "text_color": "",
+                                                                        "button_text_color": "",
+                                                                        "background_color": ""
+                                                                    },
+                                                                    "_title": "WhatsApp booking form",
+                                                                    "_css_classes": "bc-native-widget",
+                                                                    "_margin": {
+                                                                        "unit": "px",
+                                                                        "top": "0",
+                                                                        "right": "0",
+                                                                        "bottom": "0",
+                                                                        "left": "0",
+                                                                        "isLinked": true
+                                                                    },
+                                                                    "bc_source": "cities-a5b32e4",
+                                                                    "form_source": "cities-form-a5b32e4",
+                                                                    "copy": [
+                                                                        {
+                                                                            "key": "copy_1",
+                                                                            "label": "Your Name",
+                                                                            "value": "Your Name"
+                                                                        },
+                                                                        {
+                                                                            "key": "copy_2",
+                                                                            "label": "*",
+                                                                            "value": "*"
+                                                                        },
+                                                                        {
+                                                                            "key": "copy_3",
+                                                                            "label": "Placeholder: Enter full name",
+                                                                            "value": "Enter full name"
+                                                                        },
+                                                                        {
+                                                                            "key": "copy_4",
+                                                                            "label": "Phone Number",
+                                                                            "value": "Phone Number"
+                                                                        },
+                                                                        {
+                                                                            "key": "copy_5",
+                                                                            "label": "*",
+                                                                            "value": "*"
+                                                                        },
+                                                                        {
+                                                                            "key": "copy_6",
+                                                                            "label": "Placeholder: +91 Mobile Number",
+                                                                            "value": "+91 Mobile Number"
+                                                                        },
+                                                                        {
+                                                                            "key": "copy_7",
+                                                                            "label": "Pickup Location",
+                                                                            "value": "Pickup Location"
+                                                                        },
+                                                                        {
+                                                                            "key": "copy_8",
+                                                                            "label": "*",
+                                                                            "value": "*"
+                                                                        },
+                                                                        {
+                                                                            "key": "copy_9",
+                                                                            "label": "Placeholder: Type pickup spot or city...",
+                                                                            "value": "Type pickup spot or city..."
+                                                                        },
+                                                                        {
+                                                                            "key": "copy_10",
+                                                                            "label": "Title: Auto Detect Location",
+                                                                            "value": "Auto Detect Location"
+                                                                        },
+                                                                        {
+                                                                            "key": "copy_11",
+                                                                            "label": "Drop Location",
+                                                                            "value": "Drop Location"
+                                                                        },
+                                                                        {
+                                                                            "key": "copy_12",
+                                                                            "label": "*",
+                                                                            "value": "*"
+                                                                        },
+                                                                        {
+                                                                            "key": "copy_13",
+                                                                            "label": "Placeholder: Type drop destination or city...",
+                                                                            "value": "Type drop destination or city..."
+                                                                        },
+                                                                        {
+                                                                            "key": "copy_14",
+                                                                            "label": "Travel Date",
+                                                                            "value": "Travel Date"
+                                                                        },
+                                                                        {
+                                                                            "key": "copy_15",
+                                                                            "label": "*",
+                                                                            "value": "*"
+                                                                        },
+                                                                        {
+                                                                            "key": "copy_16",
+                                                                            "label": "Pickup Time",
+                                                                            "value": "Pickup Time"
+                                                                        },
+                                                                        {
+                                                                            "key": "copy_17",
+                                                                            "label": "*",
+                                                                            "value": "*"
+                                                                        },
+                                                                        {
+                                                                            "key": "copy_18",
+                                                                            "label": "Total Passengers",
+                                                                            "value": "Total Passengers"
+                                                                        },
+                                                                        {
+                                                                            "key": "copy_19",
+                                                                            "label": "*",
+                                                                            "value": "*"
+                                                                        },
+                                                                        {
+                                                                            "key": "copy_20",
+                                                                            "label": "1 Person",
+                                                                            "value": "1 Person"
+                                                                        },
+                                                                        {
+                                                                            "key": "copy_21",
+                                                                            "label": "2 Persons",
+                                                                            "value": "2 Persons"
+                                                                        },
+                                                                        {
+                                                                            "key": "copy_22",
+                                                                            "label": "3 Persons",
+                                                                            "value": "3 Persons"
+                                                                        },
+                                                                        {
+                                                                            "key": "copy_23",
+                                                                            "label": "4 Persons",
+                                                                            "value": "4 Persons"
+                                                                        },
+                                                                        {
+                                                                            "key": "copy_24",
+                                                                            "label": "5+ Persons",
+                                                                            "value": "5+ Persons"
+                                                                        },
+                                                                        {
+                                                                            "key": "copy_25",
+                                                                            "label": "Trip Category",
+                                                                            "value": "Trip Category"
+                                                                        },
+                                                                        {
+                                                                            "key": "copy_26",
+                                                                            "label": "*",
+                                                                            "value": "*"
+                                                                        },
+                                                                        {
+                                                                            "key": "copy_27",
+                                                                            "label": "One Way (Drop)",
+                                                                            "value": "One Way (Drop)"
+                                                                        },
+                                                                        {
+                                                                            "key": "copy_28",
+                                                                            "label": "Round Trip",
+                                                                            "value": "Round Trip"
+                                                                        },
+                                                                        {
+                                                                            "key": "copy_29",
+                                                                            "label": "Local Rental",
+                                                                            "value": "Local Rental"
+                                                                        },
+                                                                        {
+                                                                            "key": "copy_30",
+                                                                            "label": "Airport Transfer",
+                                                                            "value": "Airport Transfer"
+                                                                        },
+                                                                        {
+                                                                            "key": "copy_31",
+                                                                            "label": "Special Instructions / Luggage (Optional)",
+                                                                            "value": "Special Instructions / Luggage (Optional)"
+                                                                        },
+                                                                        {
+                                                                            "key": "copy_32",
+                                                                            "label": "Placeholder: e.g. AC Sedan required, 3 big suitcases",
+                                                                            "value": "e.g. AC Sedan required, 3 big suitcases"
+                                                                        },
+                                                                        {
+                                                                            "key": "copy_33",
+                                                                            "label": "Total Driving Distance",
+                                                                            "value": "Total Driving Distance"
+                                                                        },
+                                                                        {
+                                                                            "key": "copy_34",
+                                                                            "label": "-",
+                                                                            "value": "-"
+                                                                        },
+                                                                        {
+                                                                            "key": "copy_35",
+                                                                            "label": "*Our team will contact you shortly with the best fare for th",
+                                                                            "value": "*Our team will contact you shortly with the best fare for this trip."
+                                                                        },
+                                                                        {
+                                                                            "key": "copy_36",
+                                                                            "label": "Send Booking on WhatsApp",
+                                                                            "value": "Send Booking on WhatsApp"
+                                                                        },
+                                                                        {
+                                                                            "key": "copy_37",
+                                                                            "label": "We'll reply with exact fare & confirm in 2 minutes!",
+                                                                            "value": "We'll reply with exact fare & confirm in 2 minutes!"
+                                                                        }
+                                                                    ]
+                                                                },
+                                                                "elements": []
+                                                            }
+                                                        ],
+                                                        "isInner": true
+                                                    }
+                                                ],
+                                                "isInner": true
+                                            }
+                                        ],
+                                        "isInner": true
+                                    }
+                                ],
+                                "isInner": true
+                            }
+                        ],
+                        "isInner": true
+                    }
+                ],
+                "isInner": true
+            }
+        ],
+        "isInner": false
+    }
+]

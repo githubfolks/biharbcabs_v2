@@ -1,0 +1,117 @@
+# ==============================================================================
+# OS & Editor Files
+# ==============================================================================
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# ==============================================================================
+# Environment, Credentials & Secrets
+# ==============================================================================
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+**/wp-config.php
+public_html/.private/
+public_html/.htaccess
+public_html/.htaccess.bk
+
+# ==============================================================================
+# Backups, Archives & Database Dumps
+# ==============================================================================
+*.tar
+*.tar.gz
+*.tgz
+*.zip
+*.rar
+*.7z
+*.sql.gz
+*.bak
+*.backup
+*.dump
+docker/db-init/01-biharcabs-dump.sql
+
+# ==============================================================================
+# WordPress Core, Cache, Uploads & 3rd-Party Plugins (public_html/)
+# Keep only custom theme (biharcabs) and custom plugin (biharcabs-growth-engine)
+# ==============================================================================
+public_html/wp-admin/
+public_html/wp-includes/
+public_html/index.php
+public_html/license.txt
+public_html/readme.html
+public_html/default.php
+public_html/llms.txt
+public_html/xmlrpc.php
+public_html/wp-*.php
+
+# WordPress wp-content runtime & cache directories
+**/wp-content/uploads/
+**/wp-content/cache/
+**/wp-content/litespeed/
+**/wp-content/upgrade/
+**/wp-content/upgrade-temp-backup/
+**/wp-content/mu-plugins/
+**/wp-content/advanced-cache.php
+**/wp-content/object-cache.php
+**/wp-content/db.php
+**/wp-content/debug.log
+
+# Ignore 3rd-party plugins, track only biharcabs-growth-engine
+public_html/wp-content/plugins/*
+!public_html/wp-content/plugins/biharcabs-growth-engine/
+
+# Ignore default/3rd-party themes, track only biharcabs custom theme
+public_html/wp-content/themes/*
+!public_html/wp-content/themes/biharcabs/
+
+# ==============================================================================
+# CRM & Automation Backend / Frontend (Node.js, Next.js, Python)
+# ==============================================================================
+node_modules/
+.pnp
+.pnp.js
+.next/
+out/
+dist/
+build/
+.turbo/
+.vercel/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Logs, Coverage & Temp Files
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+coverage/
+.nyc_output/
+tmp/
+temp/
+

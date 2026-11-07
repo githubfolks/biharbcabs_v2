@@ -1,0 +1,1259 @@
+[
+    {
+        "id": "e230770",
+        "elType": "container",
+        "settings": {
+            "_title": "Contact page",
+            "content_width": "full",
+            "css_classes": "bc-native-page bc-page-contact",
+            "flex_direction": "column",
+            "flex_gap": {
+                "unit": "px",
+                "size": 0,
+                "row": "0",
+                "column": "0"
+            },
+            "padding": {
+                "unit": "px",
+                "top": "0",
+                "right": "0",
+                "bottom": "0",
+                "left": "0",
+                "isLinked": true
+            }
+        },
+        "elements": [
+            {
+                "id": "c3a1bce",
+                "elType": "container",
+                "settings": {
+                    "bc_source": "contact-c3a1bce",
+                    "_title": "Section: 24/7 CUSTOMER SUPPORT Contact BiharCabs We're here to h",
+                    "html_tag": "section",
+                    "content_width": "full",
+                    "css_classes": "bc-native-node custom-contact-hero text-center",
+                    "flex_direction": "column",
+                    "flex_gap": {
+                        "unit": "px",
+                        "size": 0,
+                        "row": "0",
+                        "column": "0"
+                    },
+                    "padding": {
+                        "unit": "px",
+                        "top": "",
+                        "right": "",
+                        "bottom": "",
+                        "left": "",
+                        "isLinked": false
+                    }
+                },
+                "elements": [
+                    {
+                        "id": "9123db3",
+                        "elType": "container",
+                        "settings": {
+                            "bc_source": "contact-9123db3",
+                            "_title": "24/7 CUSTOMER SUPPORT Contact BiharCabs We're here to h",
+                            "html_tag": "div",
+                            "content_width": "full",
+                            "css_classes": "bc-native-node container",
+                            "flex_direction": "column",
+                            "flex_gap": {
+                                "unit": "px",
+                                "size": 0,
+                                "row": "0",
+                                "column": "0"
+                            },
+                            "padding": {
+                                "unit": "px",
+                                "top": "",
+                                "right": "",
+                                "bottom": "",
+                                "left": "",
+                                "isLinked": false
+                            }
+                        },
+                        "elements": [
+                            {
+                                "id": "b08d663",
+                                "elType": "widget",
+                                "widgetType": "text-editor",
+                                "settings": {
+                                    "__globals__": {
+                                        "title_color": "",
+                                        "typography_typography": "",
+                                        "text_color": "",
+                                        "button_text_color": "",
+                                        "background_color": ""
+                                    },
+                                    "_title": "24/7 CUSTOMER SUPPORT",
+                                    "_css_classes": "bc-native-widget",
+                                    "_margin": {
+                                        "unit": "px",
+                                        "top": "0",
+                                        "right": "0",
+                                        "bottom": "0",
+                                        "left": "0",
+                                        "isLinked": true
+                                    },
+                                    "bc_source": "contact-b08d663",
+                                    "editor": "<span class=\"d-inline-block px-4 py-2 rounded-pill mb-3\" style=\"background: rgba(250, 204, 21, 0.2); color: #facc15; font-weight: 700; font-size: 12px; letter-spacing: 1px;\"><i class=\"fas fa-headset me-2\"></i>24/7 CUSTOMER SUPPORT</span>"
+                                },
+                                "elements": []
+                            },
+                            {
+                                "id": "8bff3da",
+                                "elType": "widget",
+                                "widgetType": "heading",
+                                "settings": {
+                                    "__globals__": {
+                                        "title_color": "",
+                                        "typography_typography": "",
+                                        "text_color": "",
+                                        "button_text_color": "",
+                                        "background_color": ""
+                                    },
+                                    "_title": "Contact BiharCabs",
+                                    "_css_classes": "bc-native-widget",
+                                    "_margin": {
+                                        "unit": "px",
+                                        "top": "0",
+                                        "right": "0",
+                                        "bottom": "0",
+                                        "left": "0",
+                                        "isLinked": true
+                                    },
+                                    "bc_source": "contact-8bff3da",
+                                    "title": "\n                    Contact <span>BiharCabs</span>",
+                                    "header_size": "h1",
+                                    "size": "default"
+                                },
+                                "elements": []
+                            },
+                            {
+                                "id": "4adcc02",
+                                "elType": "widget",
+                                "widgetType": "text-editor",
+                                "settings": {
+                                    "__globals__": {
+                                        "title_color": "",
+                                        "typography_typography": "",
+                                        "text_color": "",
+                                        "button_text_color": "",
+                                        "background_color": ""
+                                    },
+                                    "_title": "We're here to help you 24/7. Get in touch for bookings,",
+                                    "_css_classes": "bc-native-widget",
+                                    "_margin": {
+                                        "unit": "px",
+                                        "top": "0",
+                                        "right": "0",
+                                        "bottom": "0",
+                                        "left": "0",
+                                        "isLinked": true
+                                    },
+                                    "bc_source": "contact-4adcc02",
+                                    "editor": "<p class=\"text-white mx-auto\" style=\"max-width: 600px; font-size: 18px; line-height: 1.6; color: #d1d5db !important;\">\n                    We're here to help you 24/7. Get in touch for bookings, queries, corporate accounts, or general\n                    support.\n                </p>"
+                                },
+                                "elements": []
+                            }
+                        ],
+                        "isInner": true
+                    }
+                ],
+                "isInner": true
+            },
+            {
+                "id": "3fcaef9",
+                "elType": "container",
+                "settings": {
+                    "bc_source": "contact-3fcaef9",
+                    "_title": "Section: Get In Touch Have a question about fares or want to boo",
+                    "html_tag": "section",
+                    "content_width": "full",
+                    "css_classes": "bc-native-node section-padding bg-light",
+                    "flex_direction": "column",
+                    "flex_gap": {
+                        "unit": "px",
+                        "size": 0,
+                        "row": "0",
+                        "column": "0"
+                    },
+                    "padding": {
+                        "unit": "px",
+                        "top": "",
+                        "right": "",
+                        "bottom": "",
+                        "left": "",
+                        "isLinked": false
+                    }
+                },
+                "elements": [
+                    {
+                        "id": "69c1c9d",
+                        "elType": "container",
+                        "settings": {
+                            "bc_source": "contact-69c1c9d",
+                            "_title": "Get In Touch Have a question about fares or want to boo",
+                            "html_tag": "div",
+                            "content_width": "full",
+                            "css_classes": "bc-native-node container",
+                            "flex_direction": "column",
+                            "flex_gap": {
+                                "unit": "px",
+                                "size": 0,
+                                "row": "0",
+                                "column": "0"
+                            },
+                            "padding": {
+                                "unit": "px",
+                                "top": "",
+                                "right": "",
+                                "bottom": "",
+                                "left": "",
+                                "isLinked": false
+                            }
+                        },
+                        "elements": [
+                            {
+                                "id": "bb8ba10",
+                                "elType": "container",
+                                "settings": {
+                                    "bc_source": "contact-bb8ba10",
+                                    "_title": "Get In Touch Have a question about fares or want to boo",
+                                    "html_tag": "div",
+                                    "content_width": "full",
+                                    "css_classes": "bc-native-node row g-5",
+                                    "flex_direction": "row",
+                                    "flex_gap": {
+                                        "unit": "px",
+                                        "size": 0,
+                                        "row": "0",
+                                        "column": "0"
+                                    },
+                                    "padding": {
+                                        "unit": "px",
+                                        "top": "",
+                                        "right": "",
+                                        "bottom": "",
+                                        "left": "",
+                                        "isLinked": false
+                                    }
+                                },
+                                "elements": [
+                                    {
+                                        "id": "b136d28",
+                                        "elType": "container",
+                                        "settings": {
+                                            "bc_source": "contact-b136d28",
+                                            "_title": "Get In Touch Have a question about fares or want to boo",
+                                            "html_tag": "div",
+                                            "content_width": "full",
+                                            "css_classes": "bc-native-node col-lg-5",
+                                            "flex_direction": "column",
+                                            "flex_gap": {
+                                                "unit": "px",
+                                                "size": 0,
+                                                "row": "0",
+                                                "column": "0"
+                                            },
+                                            "padding": {
+                                                "unit": "px",
+                                                "top": "",
+                                                "right": "",
+                                                "bottom": "",
+                                                "left": "",
+                                                "isLinked": false
+                                            },
+                                            "width": {
+                                                "unit": "%",
+                                                "size": 41.6667
+                                            },
+                                            "width_tablet": {
+                                                "unit": "%",
+                                                "size": 100
+                                            },
+                                            "width_mobile": {
+                                                "unit": "%",
+                                                "size": 100
+                                            }
+                                        },
+                                        "elements": [
+                                            {
+                                                "id": "befc0bb",
+                                                "elType": "widget",
+                                                "widgetType": "heading",
+                                                "settings": {
+                                                    "__globals__": {
+                                                        "title_color": "",
+                                                        "typography_typography": "",
+                                                        "text_color": "",
+                                                        "button_text_color": "",
+                                                        "background_color": ""
+                                                    },
+                                                    "_title": "Get In Touch",
+                                                    "_css_classes": "bc-native-widget",
+                                                    "_margin": {
+                                                        "unit": "px",
+                                                        "top": "0",
+                                                        "right": "0",
+                                                        "bottom": "0",
+                                                        "left": "0",
+                                                        "isLinked": true
+                                                    },
+                                                    "bc_source": "contact-befc0bb",
+                                                    "title": "Get In Touch\n                        ",
+                                                    "header_size": "h2",
+                                                    "size": "default"
+                                                },
+                                                "elements": []
+                                            },
+                                            {
+                                                "id": "d7f870c",
+                                                "elType": "widget",
+                                                "widgetType": "text-editor",
+                                                "settings": {
+                                                    "__globals__": {
+                                                        "title_color": "",
+                                                        "typography_typography": "",
+                                                        "text_color": "",
+                                                        "button_text_color": "",
+                                                        "background_color": ""
+                                                    },
+                                                    "_title": "Have a question about fares or want to book an outstati",
+                                                    "_css_classes": "bc-native-widget",
+                                                    "_margin": {
+                                                        "unit": "px",
+                                                        "top": "0",
+                                                        "right": "0",
+                                                        "bottom": "0",
+                                                        "left": "0",
+                                                        "isLinked": true
+                                                    },
+                                                    "bc_source": "contact-d7f870c",
+                                                    "editor": "<p class=\"text-muted mb-5\" style=\"font-size: 16px; line-height: 1.8;\">\n                            Have a question about fares or want to book an outstation cab? Reach out to our dedicated\n                            support team directly. We promise to respond instantly!\n                        </p>"
+                                                },
+                                                "elements": []
+                                            },
+                                            {
+                                                "id": "6601d48",
+                                                "elType": "container",
+                                                "settings": {
+                                                    "bc_source": "contact-6601d48",
+                                                    "_title": "Call Us 24x7 For instant booking & support +91 70709921",
+                                                    "html_tag": "div",
+                                                    "content_width": "full",
+                                                    "css_classes": "bc-native-node contact-info-card",
+                                                    "flex_direction": "column",
+                                                    "flex_gap": {
+                                                        "unit": "px",
+                                                        "size": 0,
+                                                        "row": "0",
+                                                        "column": "0"
+                                                    },
+                                                    "padding": {
+                                                        "unit": "px",
+                                                        "top": "",
+                                                        "right": "",
+                                                        "bottom": "",
+                                                        "left": "",
+                                                        "isLinked": false
+                                                    }
+                                                },
+                                                "elements": [
+                                                    {
+                                                        "id": "efbab5e",
+                                                        "elType": "widget",
+                                                        "widgetType": "text-editor",
+                                                        "settings": {
+                                                            "__globals__": {
+                                                                "title_color": "",
+                                                                "typography_typography": "",
+                                                                "text_color": "",
+                                                                "button_text_color": "",
+                                                                "background_color": ""
+                                                            },
+                                                            "_title": "contact-icon-box",
+                                                            "_css_classes": "bc-native-widget",
+                                                            "_margin": {
+                                                                "unit": "px",
+                                                                "top": "0",
+                                                                "right": "0",
+                                                                "bottom": "0",
+                                                                "left": "0",
+                                                                "isLinked": true
+                                                            },
+                                                            "bc_source": "contact-efbab5e",
+                                                            "editor": "<div class=\"contact-icon-box\">\n                                <i class=\"fas fa-phone-alt\"></i>\n                            </div>"
+                                                        },
+                                                        "elements": []
+                                                    },
+                                                    {
+                                                        "id": "0c34119",
+                                                        "elType": "container",
+                                                        "settings": {
+                                                            "bc_source": "contact-0c34119",
+                                                            "_title": "Call Us 24x7 For instant booking & support +91 70709921",
+                                                            "html_tag": "div",
+                                                            "content_width": "full",
+                                                            "css_classes": "bc-native-node ",
+                                                            "flex_direction": "column",
+                                                            "flex_gap": {
+                                                                "unit": "px",
+                                                                "size": 0,
+                                                                "row": "0",
+                                                                "column": "0"
+                                                            },
+                                                            "padding": {
+                                                                "unit": "px",
+                                                                "top": "",
+                                                                "right": "",
+                                                                "bottom": "",
+                                                                "left": "",
+                                                                "isLinked": false
+                                                            }
+                                                        },
+                                                        "elements": [
+                                                            {
+                                                                "id": "86b28b6",
+                                                                "elType": "widget",
+                                                                "widgetType": "heading",
+                                                                "settings": {
+                                                                    "__globals__": {
+                                                                        "title_color": "",
+                                                                        "typography_typography": "",
+                                                                        "text_color": "",
+                                                                        "button_text_color": "",
+                                                                        "background_color": ""
+                                                                    },
+                                                                    "_title": "Call Us 24x7",
+                                                                    "_css_classes": "bc-native-widget",
+                                                                    "_margin": {
+                                                                        "unit": "px",
+                                                                        "top": "0",
+                                                                        "right": "0",
+                                                                        "bottom": "0",
+                                                                        "left": "0",
+                                                                        "isLinked": true
+                                                                    },
+                                                                    "bc_source": "contact-86b28b6",
+                                                                    "title": "Call Us 24x7",
+                                                                    "header_size": "h4",
+                                                                    "size": "default"
+                                                                },
+                                                                "elements": []
+                                                            },
+                                                            {
+                                                                "id": "892d279",
+                                                                "elType": "widget",
+                                                                "widgetType": "text-editor",
+                                                                "settings": {
+                                                                    "__globals__": {
+                                                                        "title_color": "",
+                                                                        "typography_typography": "",
+                                                                        "text_color": "",
+                                                                        "button_text_color": "",
+                                                                        "background_color": ""
+                                                                    },
+                                                                    "_title": "For instant booking & support",
+                                                                    "_css_classes": "bc-native-widget",
+                                                                    "_margin": {
+                                                                        "unit": "px",
+                                                                        "top": "0",
+                                                                        "right": "0",
+                                                                        "bottom": "0",
+                                                                        "left": "0",
+                                                                        "isLinked": true
+                                                                    },
+                                                                    "bc_source": "contact-892d279",
+                                                                    "editor": "<p>For instant booking &amp; support</p>"
+                                                                },
+                                                                "elements": []
+                                                            },
+                                                            {
+                                                                "id": "c93bf81",
+                                                                "elType": "widget",
+                                                                "widgetType": "button",
+                                                                "settings": {
+                                                                    "__globals__": {
+                                                                        "title_color": "",
+                                                                        "typography_typography": "",
+                                                                        "text_color": "",
+                                                                        "button_text_color": "",
+                                                                        "background_color": ""
+                                                                    },
+                                                                    "_title": "+91 7070992170",
+                                                                    "_css_classes": "bc-native-widget",
+                                                                    "_margin": {
+                                                                        "unit": "px",
+                                                                        "top": "0",
+                                                                        "right": "0",
+                                                                        "bottom": "0",
+                                                                        "left": "0",
+                                                                        "isLinked": true
+                                                                    },
+                                                                    "bc_source": "contact-c93bf81",
+                                                                    "text": "+91 7070992170",
+                                                                    "link": {
+                                                                        "url": "tel:+917070992170",
+                                                                        "is_external": false
+                                                                    },
+                                                                    "size": "sm"
+                                                                },
+                                                                "elements": []
+                                                            }
+                                                        ],
+                                                        "isInner": true
+                                                    }
+                                                ],
+                                                "isInner": true
+                                            },
+                                            {
+                                                "id": "b903272",
+                                                "elType": "container",
+                                                "settings": {
+                                                    "bc_source": "contact-b903272",
+                                                    "_title": "WhatsApp Us For quotes and booking queries Click to Cha",
+                                                    "html_tag": "div",
+                                                    "content_width": "full",
+                                                    "css_classes": "bc-native-node contact-info-card",
+                                                    "flex_direction": "column",
+                                                    "flex_gap": {
+                                                        "unit": "px",
+                                                        "size": 0,
+                                                        "row": "0",
+                                                        "column": "0"
+                                                    },
+                                                    "padding": {
+                                                        "unit": "px",
+                                                        "top": "",
+                                                        "right": "",
+                                                        "bottom": "",
+                                                        "left": "",
+                                                        "isLinked": false
+                                                    }
+                                                },
+                                                "elements": [
+                                                    {
+                                                        "id": "b6f9abb",
+                                                        "elType": "widget",
+                                                        "widgetType": "text-editor",
+                                                        "settings": {
+                                                            "__globals__": {
+                                                                "title_color": "",
+                                                                "typography_typography": "",
+                                                                "text_color": "",
+                                                                "button_text_color": "",
+                                                                "background_color": ""
+                                                            },
+                                                            "_title": "contact-icon-box",
+                                                            "_css_classes": "bc-native-widget",
+                                                            "_margin": {
+                                                                "unit": "px",
+                                                                "top": "0",
+                                                                "right": "0",
+                                                                "bottom": "0",
+                                                                "left": "0",
+                                                                "isLinked": true
+                                                            },
+                                                            "bc_source": "contact-b6f9abb",
+                                                            "editor": "<div class=\"contact-icon-box\">\n                                <i class=\"fab fa-whatsapp\"></i>\n                            </div>"
+                                                        },
+                                                        "elements": []
+                                                    },
+                                                    {
+                                                        "id": "dc9203e",
+                                                        "elType": "container",
+                                                        "settings": {
+                                                            "bc_source": "contact-dc9203e",
+                                                            "_title": "WhatsApp Us For quotes and booking queries Click to Cha",
+                                                            "html_tag": "div",
+                                                            "content_width": "full",
+                                                            "css_classes": "bc-native-node ",
+                                                            "flex_direction": "column",
+                                                            "flex_gap": {
+                                                                "unit": "px",
+                                                                "size": 0,
+                                                                "row": "0",
+                                                                "column": "0"
+                                                            },
+                                                            "padding": {
+                                                                "unit": "px",
+                                                                "top": "",
+                                                                "right": "",
+                                                                "bottom": "",
+                                                                "left": "",
+                                                                "isLinked": false
+                                                            }
+                                                        },
+                                                        "elements": [
+                                                            {
+                                                                "id": "cf47010",
+                                                                "elType": "widget",
+                                                                "widgetType": "heading",
+                                                                "settings": {
+                                                                    "__globals__": {
+                                                                        "title_color": "",
+                                                                        "typography_typography": "",
+                                                                        "text_color": "",
+                                                                        "button_text_color": "",
+                                                                        "background_color": ""
+                                                                    },
+                                                                    "_title": "WhatsApp Us",
+                                                                    "_css_classes": "bc-native-widget",
+                                                                    "_margin": {
+                                                                        "unit": "px",
+                                                                        "top": "0",
+                                                                        "right": "0",
+                                                                        "bottom": "0",
+                                                                        "left": "0",
+                                                                        "isLinked": true
+                                                                    },
+                                                                    "bc_source": "contact-cf47010",
+                                                                    "title": "WhatsApp Us",
+                                                                    "header_size": "h4",
+                                                                    "size": "default"
+                                                                },
+                                                                "elements": []
+                                                            },
+                                                            {
+                                                                "id": "d53fc3b",
+                                                                "elType": "widget",
+                                                                "widgetType": "text-editor",
+                                                                "settings": {
+                                                                    "__globals__": {
+                                                                        "title_color": "",
+                                                                        "typography_typography": "",
+                                                                        "text_color": "",
+                                                                        "button_text_color": "",
+                                                                        "background_color": ""
+                                                                    },
+                                                                    "_title": "For quotes and booking queries",
+                                                                    "_css_classes": "bc-native-widget",
+                                                                    "_margin": {
+                                                                        "unit": "px",
+                                                                        "top": "0",
+                                                                        "right": "0",
+                                                                        "bottom": "0",
+                                                                        "left": "0",
+                                                                        "isLinked": true
+                                                                    },
+                                                                    "bc_source": "contact-d53fc3b",
+                                                                    "editor": "<p>For quotes and booking queries</p>"
+                                                                },
+                                                                "elements": []
+                                                            },
+                                                            {
+                                                                "id": "9de39e9",
+                                                                "elType": "widget",
+                                                                "widgetType": "button",
+                                                                "settings": {
+                                                                    "__globals__": {
+                                                                        "title_color": "",
+                                                                        "typography_typography": "",
+                                                                        "text_color": "",
+                                                                        "button_text_color": "",
+                                                                        "background_color": ""
+                                                                    },
+                                                                    "_title": "Click to Chat on WhatsApp",
+                                                                    "_css_classes": "bc-native-widget",
+                                                                    "_margin": {
+                                                                        "unit": "px",
+                                                                        "top": "0",
+                                                                        "right": "0",
+                                                                        "bottom": "0",
+                                                                        "left": "0",
+                                                                        "isLinked": true
+                                                                    },
+                                                                    "bc_source": "contact-9de39e9",
+                                                                    "text": "Click to Chat on WhatsApp",
+                                                                    "link": {
+                                                                        "url": "https://wa.me/917070992170",
+                                                                        "is_external": false
+                                                                    },
+                                                                    "size": "sm"
+                                                                },
+                                                                "elements": []
+                                                            }
+                                                        ],
+                                                        "isInner": true
+                                                    }
+                                                ],
+                                                "isInner": true
+                                            },
+                                            {
+                                                "id": "6def9e4",
+                                                "elType": "container",
+                                                "settings": {
+                                                    "bc_source": "contact-6def9e4",
+                                                    "_title": "Email Support For corporate leasing & complaints info@b",
+                                                    "html_tag": "div",
+                                                    "content_width": "full",
+                                                    "css_classes": "bc-native-node contact-info-card",
+                                                    "flex_direction": "column",
+                                                    "flex_gap": {
+                                                        "unit": "px",
+                                                        "size": 0,
+                                                        "row": "0",
+                                                        "column": "0"
+                                                    },
+                                                    "padding": {
+                                                        "unit": "px",
+                                                        "top": "",
+                                                        "right": "",
+                                                        "bottom": "",
+                                                        "left": "",
+                                                        "isLinked": false
+                                                    }
+                                                },
+                                                "elements": [
+                                                    {
+                                                        "id": "534d9d8",
+                                                        "elType": "widget",
+                                                        "widgetType": "text-editor",
+                                                        "settings": {
+                                                            "__globals__": {
+                                                                "title_color": "",
+                                                                "typography_typography": "",
+                                                                "text_color": "",
+                                                                "button_text_color": "",
+                                                                "background_color": ""
+                                                            },
+                                                            "_title": "contact-icon-box",
+                                                            "_css_classes": "bc-native-widget",
+                                                            "_margin": {
+                                                                "unit": "px",
+                                                                "top": "0",
+                                                                "right": "0",
+                                                                "bottom": "0",
+                                                                "left": "0",
+                                                                "isLinked": true
+                                                            },
+                                                            "bc_source": "contact-534d9d8",
+                                                            "editor": "<div class=\"contact-icon-box\">\n                                <i class=\"fas fa-envelope\"></i>\n                            </div>"
+                                                        },
+                                                        "elements": []
+                                                    },
+                                                    {
+                                                        "id": "99b10d2",
+                                                        "elType": "container",
+                                                        "settings": {
+                                                            "bc_source": "contact-99b10d2",
+                                                            "_title": "Email Support For corporate leasing & complaints info@b",
+                                                            "html_tag": "div",
+                                                            "content_width": "full",
+                                                            "css_classes": "bc-native-node ",
+                                                            "flex_direction": "column",
+                                                            "flex_gap": {
+                                                                "unit": "px",
+                                                                "size": 0,
+                                                                "row": "0",
+                                                                "column": "0"
+                                                            },
+                                                            "padding": {
+                                                                "unit": "px",
+                                                                "top": "",
+                                                                "right": "",
+                                                                "bottom": "",
+                                                                "left": "",
+                                                                "isLinked": false
+                                                            }
+                                                        },
+                                                        "elements": [
+                                                            {
+                                                                "id": "f3302eb",
+                                                                "elType": "widget",
+                                                                "widgetType": "heading",
+                                                                "settings": {
+                                                                    "__globals__": {
+                                                                        "title_color": "",
+                                                                        "typography_typography": "",
+                                                                        "text_color": "",
+                                                                        "button_text_color": "",
+                                                                        "background_color": ""
+                                                                    },
+                                                                    "_title": "Email Support",
+                                                                    "_css_classes": "bc-native-widget",
+                                                                    "_margin": {
+                                                                        "unit": "px",
+                                                                        "top": "0",
+                                                                        "right": "0",
+                                                                        "bottom": "0",
+                                                                        "left": "0",
+                                                                        "isLinked": true
+                                                                    },
+                                                                    "bc_source": "contact-f3302eb",
+                                                                    "title": "Email Support",
+                                                                    "header_size": "h4",
+                                                                    "size": "default"
+                                                                },
+                                                                "elements": []
+                                                            },
+                                                            {
+                                                                "id": "8475905",
+                                                                "elType": "widget",
+                                                                "widgetType": "text-editor",
+                                                                "settings": {
+                                                                    "__globals__": {
+                                                                        "title_color": "",
+                                                                        "typography_typography": "",
+                                                                        "text_color": "",
+                                                                        "button_text_color": "",
+                                                                        "background_color": ""
+                                                                    },
+                                                                    "_title": "For corporate leasing & complaints",
+                                                                    "_css_classes": "bc-native-widget",
+                                                                    "_margin": {
+                                                                        "unit": "px",
+                                                                        "top": "0",
+                                                                        "right": "0",
+                                                                        "bottom": "0",
+                                                                        "left": "0",
+                                                                        "isLinked": true
+                                                                    },
+                                                                    "bc_source": "contact-8475905",
+                                                                    "editor": "<p>For corporate leasing &amp; complaints</p>"
+                                                                },
+                                                                "elements": []
+                                                            },
+                                                            {
+                                                                "id": "4dded48",
+                                                                "elType": "widget",
+                                                                "widgetType": "button",
+                                                                "settings": {
+                                                                    "__globals__": {
+                                                                        "title_color": "",
+                                                                        "typography_typography": "",
+                                                                        "text_color": "",
+                                                                        "button_text_color": "",
+                                                                        "background_color": ""
+                                                                    },
+                                                                    "_title": "info@biharcabs.com",
+                                                                    "_css_classes": "bc-native-widget",
+                                                                    "_margin": {
+                                                                        "unit": "px",
+                                                                        "top": "0",
+                                                                        "right": "0",
+                                                                        "bottom": "0",
+                                                                        "left": "0",
+                                                                        "isLinked": true
+                                                                    },
+                                                                    "bc_source": "contact-4dded48",
+                                                                    "text": "info@biharcabs.com",
+                                                                    "link": {
+                                                                        "url": "mailto:info@biharcabs.com",
+                                                                        "is_external": false
+                                                                    },
+                                                                    "size": "sm"
+                                                                },
+                                                                "elements": []
+                                                            }
+                                                        ],
+                                                        "isInner": true
+                                                    }
+                                                ],
+                                                "isInner": true
+                                            },
+                                            {
+                                                "id": "4aa4fd2",
+                                                "elType": "container",
+                                                "settings": {
+                                                    "bc_source": "contact-4aa4fd2",
+                                                    "_title": "Office Location Taxi Stand Rd, near Hanuman mandir pin ",
+                                                    "html_tag": "div",
+                                                    "content_width": "full",
+                                                    "css_classes": "bc-native-node contact-info-card mb-0",
+                                                    "flex_direction": "column",
+                                                    "flex_gap": {
+                                                        "unit": "px",
+                                                        "size": 0,
+                                                        "row": "0",
+                                                        "column": "0"
+                                                    },
+                                                    "padding": {
+                                                        "unit": "px",
+                                                        "top": "",
+                                                        "right": "",
+                                                        "bottom": "",
+                                                        "left": "",
+                                                        "isLinked": false
+                                                    }
+                                                },
+                                                "elements": [
+                                                    {
+                                                        "id": "9a58a81",
+                                                        "elType": "widget",
+                                                        "widgetType": "text-editor",
+                                                        "settings": {
+                                                            "__globals__": {
+                                                                "title_color": "",
+                                                                "typography_typography": "",
+                                                                "text_color": "",
+                                                                "button_text_color": "",
+                                                                "background_color": ""
+                                                            },
+                                                            "_title": "contact-icon-box",
+                                                            "_css_classes": "bc-native-widget",
+                                                            "_margin": {
+                                                                "unit": "px",
+                                                                "top": "0",
+                                                                "right": "0",
+                                                                "bottom": "0",
+                                                                "left": "0",
+                                                                "isLinked": true
+                                                            },
+                                                            "bc_source": "contact-9a58a81",
+                                                            "editor": "<div class=\"contact-icon-box\">\n                                <i class=\"fas fa-map-marker-alt\"></i>\n                            </div>"
+                                                        },
+                                                        "elements": []
+                                                    },
+                                                    {
+                                                        "id": "492ed66",
+                                                        "elType": "container",
+                                                        "settings": {
+                                                            "bc_source": "contact-492ed66",
+                                                            "_title": "Office Location Taxi Stand Rd, near Hanuman mandir pin ",
+                                                            "html_tag": "div",
+                                                            "content_width": "full",
+                                                            "css_classes": "bc-native-node ",
+                                                            "flex_direction": "column",
+                                                            "flex_gap": {
+                                                                "unit": "px",
+                                                                "size": 0,
+                                                                "row": "0",
+                                                                "column": "0"
+                                                            },
+                                                            "padding": {
+                                                                "unit": "px",
+                                                                "top": "",
+                                                                "right": "",
+                                                                "bottom": "",
+                                                                "left": "",
+                                                                "isLinked": false
+                                                            }
+                                                        },
+                                                        "elements": [
+                                                            {
+                                                                "id": "ae6d5ee",
+                                                                "elType": "widget",
+                                                                "widgetType": "heading",
+                                                                "settings": {
+                                                                    "__globals__": {
+                                                                        "title_color": "",
+                                                                        "typography_typography": "",
+                                                                        "text_color": "",
+                                                                        "button_text_color": "",
+                                                                        "background_color": ""
+                                                                    },
+                                                                    "_title": "Office Location",
+                                                                    "_css_classes": "bc-native-widget",
+                                                                    "_margin": {
+                                                                        "unit": "px",
+                                                                        "top": "0",
+                                                                        "right": "0",
+                                                                        "bottom": "0",
+                                                                        "left": "0",
+                                                                        "isLinked": true
+                                                                    },
+                                                                    "bc_source": "contact-ae6d5ee",
+                                                                    "title": "Office Location",
+                                                                    "header_size": "h4",
+                                                                    "size": "default"
+                                                                },
+                                                                "elements": []
+                                                            },
+                                                            {
+                                                                "id": "843605f",
+                                                                "elType": "widget",
+                                                                "widgetType": "text-editor",
+                                                                "settings": {
+                                                                    "__globals__": {
+                                                                        "title_color": "",
+                                                                        "typography_typography": "",
+                                                                        "text_color": "",
+                                                                        "button_text_color": "",
+                                                                        "background_color": ""
+                                                                    },
+                                                                    "_title": "Taxi Stand Rd, near Hanuman mandir pin code, Sarvoday N",
+                                                                    "_css_classes": "bc-native-widget",
+                                                                    "_margin": {
+                                                                        "unit": "px",
+                                                                        "top": "0",
+                                                                        "right": "0",
+                                                                        "bottom": "0",
+                                                                        "left": "0",
+                                                                        "isLinked": true
+                                                                    },
+                                                                    "bc_source": "contact-843605f",
+                                                                    "editor": "<p>Taxi Stand Rd, near Hanuman mandir pin code, Sarvoday Nagar, Purnia, Bihar 854301</p>"
+                                                                },
+                                                                "elements": []
+                                                            }
+                                                        ],
+                                                        "isInner": true
+                                                    }
+                                                ],
+                                                "isInner": true
+                                            }
+                                        ],
+                                        "isInner": true
+                                    },
+                                    {
+                                        "id": "9193700",
+                                        "elType": "container",
+                                        "settings": {
+                                            "bc_source": "contact-9193700",
+                                            "_title": "Send Us A Message We will get back to you within 2-4 ho",
+                                            "html_tag": "div",
+                                            "content_width": "full",
+                                            "css_classes": "bc-native-node col-lg-7",
+                                            "flex_direction": "column",
+                                            "flex_gap": {
+                                                "unit": "px",
+                                                "size": 0,
+                                                "row": "0",
+                                                "column": "0"
+                                            },
+                                            "padding": {
+                                                "unit": "px",
+                                                "top": "",
+                                                "right": "",
+                                                "bottom": "",
+                                                "left": "",
+                                                "isLinked": false
+                                            },
+                                            "width": {
+                                                "unit": "%",
+                                                "size": 58.3333
+                                            },
+                                            "width_tablet": {
+                                                "unit": "%",
+                                                "size": 100
+                                            },
+                                            "width_mobile": {
+                                                "unit": "%",
+                                                "size": 100
+                                            }
+                                        },
+                                        "elements": [
+                                            {
+                                                "id": "c03fe98",
+                                                "elType": "container",
+                                                "settings": {
+                                                    "bc_source": "contact-c03fe98",
+                                                    "_title": "Send Us A Message We will get back to you within 2-4 ho",
+                                                    "html_tag": "div",
+                                                    "content_width": "full",
+                                                    "css_classes": "bc-native-node contact-form-wrapper",
+                                                    "flex_direction": "column",
+                                                    "flex_gap": {
+                                                        "unit": "px",
+                                                        "size": 0,
+                                                        "row": "0",
+                                                        "column": "0"
+                                                    },
+                                                    "padding": {
+                                                        "unit": "px",
+                                                        "top": "",
+                                                        "right": "",
+                                                        "bottom": "",
+                                                        "left": "",
+                                                        "isLinked": false
+                                                    }
+                                                },
+                                                "elements": [
+                                                    {
+                                                        "id": "d0e587d",
+                                                        "elType": "widget",
+                                                        "widgetType": "heading",
+                                                        "settings": {
+                                                            "__globals__": {
+                                                                "title_color": "",
+                                                                "typography_typography": "",
+                                                                "text_color": "",
+                                                                "button_text_color": "",
+                                                                "background_color": ""
+                                                            },
+                                                            "_title": "Send Us A Message",
+                                                            "_css_classes": "bc-native-widget",
+                                                            "_margin": {
+                                                                "unit": "px",
+                                                                "top": "0",
+                                                                "right": "0",
+                                                                "bottom": "0",
+                                                                "left": "0",
+                                                                "isLinked": true
+                                                            },
+                                                            "bc_source": "contact-d0e587d",
+                                                            "title": "Send Us A Message",
+                                                            "header_size": "h3",
+                                                            "size": "default"
+                                                        },
+                                                        "elements": []
+                                                    },
+                                                    {
+                                                        "id": "2a2c34b",
+                                                        "elType": "widget",
+                                                        "widgetType": "text-editor",
+                                                        "settings": {
+                                                            "__globals__": {
+                                                                "title_color": "",
+                                                                "typography_typography": "",
+                                                                "text_color": "",
+                                                                "button_text_color": "",
+                                                                "background_color": ""
+                                                            },
+                                                            "_title": "We will get back to you within 2-4 hours.",
+                                                            "_css_classes": "bc-native-widget",
+                                                            "_margin": {
+                                                                "unit": "px",
+                                                                "top": "0",
+                                                                "right": "0",
+                                                                "bottom": "0",
+                                                                "left": "0",
+                                                                "isLinked": true
+                                                            },
+                                                            "bc_source": "contact-2a2c34b",
+                                                            "editor": "<p class=\"text-muted mb-4\">We will get back to you within 2-4 hours.</p>"
+                                                        },
+                                                        "elements": []
+                                                    },
+                                                    {
+                                                        "id": "08edb8c",
+                                                        "elType": "widget",
+                                                        "widgetType": "biharcabs-form",
+                                                        "settings": {
+                                                            "__globals__": {
+                                                                "title_color": "",
+                                                                "typography_typography": "",
+                                                                "text_color": "",
+                                                                "button_text_color": "",
+                                                                "background_color": ""
+                                                            },
+                                                            "_title": "Contact enquiry form",
+                                                            "_css_classes": "bc-native-widget",
+                                                            "_margin": {
+                                                                "unit": "px",
+                                                                "top": "0",
+                                                                "right": "0",
+                                                                "bottom": "0",
+                                                                "left": "0",
+                                                                "isLinked": true
+                                                            },
+                                                            "bc_source": "contact-08edb8c",
+                                                            "form_source": "contact-form-08edb8c",
+                                                            "copy": [
+                                                                {
+                                                                    "key": "copy_1",
+                                                                    "label": "Full Name",
+                                                                    "value": "Full Name"
+                                                                },
+                                                                {
+                                                                    "key": "copy_2",
+                                                                    "label": "*",
+                                                                    "value": "*"
+                                                                },
+                                                                {
+                                                                    "key": "copy_3",
+                                                                    "label": "Placeholder: Enter your full name",
+                                                                    "value": "Enter your full name"
+                                                                },
+                                                                {
+                                                                    "key": "copy_4",
+                                                                    "label": "Phone Number",
+                                                                    "value": "Phone Number"
+                                                                },
+                                                                {
+                                                                    "key": "copy_5",
+                                                                    "label": "*",
+                                                                    "value": "*"
+                                                                },
+                                                                {
+                                                                    "key": "copy_6",
+                                                                    "label": "Placeholder: +91 Your mobile number",
+                                                                    "value": "+91 Your mobile number"
+                                                                },
+                                                                {
+                                                                    "key": "copy_7",
+                                                                    "label": "Email Address (Optional)",
+                                                                    "value": "Email Address (Optional)"
+                                                                },
+                                                                {
+                                                                    "key": "copy_8",
+                                                                    "label": "Placeholder: Enter your email address",
+                                                                    "value": "Enter your email address"
+                                                                },
+                                                                {
+                                                                    "key": "copy_9",
+                                                                    "label": "Subject",
+                                                                    "value": "Subject"
+                                                                },
+                                                                {
+                                                                    "key": "copy_10",
+                                                                    "label": "*",
+                                                                    "value": "*"
+                                                                },
+                                                                {
+                                                                    "key": "copy_11",
+                                                                    "label": "General Enquiry",
+                                                                    "value": "General Enquiry"
+                                                                },
+                                                                {
+                                                                    "key": "copy_12",
+                                                                    "label": "Taxi Booking Issue",
+                                                                    "value": "Taxi Booking Issue"
+                                                                },
+                                                                {
+                                                                    "key": "copy_13",
+                                                                    "label": "Corporate Tie-up",
+                                                                    "value": "Corporate Tie-up"
+                                                                },
+                                                                {
+                                                                    "key": "copy_14",
+                                                                    "label": "Feedback / Complaint",
+                                                                    "value": "Feedback / Complaint"
+                                                                },
+                                                                {
+                                                                    "key": "copy_15",
+                                                                    "label": "Your Message",
+                                                                    "value": "Your Message"
+                                                                },
+                                                                {
+                                                                    "key": "copy_16",
+                                                                    "label": "*",
+                                                                    "value": "*"
+                                                                },
+                                                                {
+                                                                    "key": "copy_17",
+                                                                    "label": "Placeholder: Write your message here...",
+                                                                    "value": "Write your message here..."
+                                                                },
+                                                                {
+                                                                    "key": "copy_18",
+                                                                    "label": "Send Message",
+                                                                    "value": "Send Message"
+                                                                }
+                                                            ]
+                                                        },
+                                                        "elements": []
+                                                    }
+                                                ],
+                                                "isInner": true
+                                            }
+                                        ],
+                                        "isInner": true
+                                    }
+                                ],
+                                "isInner": true
+                            }
+                        ],
+                        "isInner": true
+                    }
+                ],
+                "isInner": true
+            }
+        ],
+        "isInner": false
+    }
+]

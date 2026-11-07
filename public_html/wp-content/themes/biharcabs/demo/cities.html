@@ -1,0 +1,418 @@
+
+
+        <style>
+            .custom-cities-hero {
+                background: linear-gradient(rgba(17, 24, 39, 0.9), rgba(17, 24, 39, 0.9)), url('assets/img/img/hero.webp') center/cover;
+                padding: 120px 0 80px 0;
+            }
+            .city-card {
+                position: relative;
+                border-radius: 16px;
+                overflow: hidden;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+                transition: 0.3s;
+                height: 100%;
+                display: block;
+                text-decoration: none;
+                group: relative;
+                background: white;
+            }
+            .city-card:hover {
+                transform: translateY(-5px);
+                box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+            }
+            .city-card-img {
+                height: 220px;
+                width: 100%;
+                object-fit: cover;
+                transition: transform 0.5s;
+            }
+            .city-card:hover .city-card-img {
+                transform: scale(1.05);
+            }
+            .city-card-overlay {
+                position: absolute;
+                inset: 0;
+                background: linear-gradient(to top, rgba(17,24,39,0.9) 0%, rgba(17,24,39,0.2) 50%, transparent 100%);
+                z-index: 1;
+            }
+            .city-card-content {
+                position: absolute;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                padding: 25px;
+                z-index: 2;
+                color: white;
+            }
+            .city-card h3 {
+                font-family: 'Outfit', sans-serif;
+                font-size: 24px;
+                font-weight: 700;
+                margin-bottom: 5px;
+                color: white;
+            }
+            .city-card p {
+                font-size: 14px;
+                color: #d1d5db;
+                margin-bottom: 15px;
+            }
+            .city-card-btn {
+                display: inline-block;
+                background: #facc15;
+                color: black;
+                font-weight: 700;
+                padding: 8px 20px;
+                border-radius: 8px;
+                font-size: 13px;
+                transition: 0.3s;
+                text-decoration: none;
+            }
+            .city-card-btn:hover {
+                background: #eab308;
+                color: black;
+            }
+        </style>
+
+        <!-- Cities Hero Section -->
+        <section class="custom-cities-hero text-center">
+            <div class="container">
+                <span class="d-inline-block px-4 py-2 rounded-pill mb-3" style="background: rgba(250, 204, 21, 0.2); color: #facc15; font-weight: 700; font-size: 12px; letter-spacing: 1px;"><i class="fas fa-map-marked-alt me-2"></i>OUR NETWORK</span>
+                <h1 class="fw-bold text-white mb-3" style="font-family: 'Outfit', sans-serif; font-size: 3.5rem;">Cities We Serve</h1>
+                <p class="text-white mx-auto" style="max-width: 600px; font-size: 18px; line-height: 1.6; color: #d1d5db !important;">
+                    Extensive and reliable taxi coverage across Bihar. Whether you need a local ride or outstation drops, we've got you covered.
+                </p>
+            </div>
+        </section>
+
+        <!-- Cities Grid Section -->
+        <section class="section-padding bg-light" style="padding-top: 80px; padding-bottom: 80px;">
+            <div class="container">
+                <div class="row g-4">
+                    
+                    <!-- Patna -->
+                    <div class="col-lg-4 col-md-6">
+                        <a href="#book" class="city-card">
+                            <img src="assets/img/img/service_01.jpg" class="city-card-img" alt="Patna Taxi">
+                            <div class="city-card-overlay"></div>
+                            <div class="city-card-content">
+                                <h3>Patna</h3>
+                                <p>JPNI Airport Drops & Local Rentals</p>
+                                <span class="city-card-btn">Book a Ride <i class="fas fa-arrow-right ms-1"></i></span>
+                            </div>
+                        </a>
+                    </div>
+
+                    <!-- Bihar Sharif -->
+                    <div class="col-lg-4 col-md-6">
+                        <a href="#book" class="city-card">
+                            <img src="assets/img/img/service_02.jpg" class="city-card-img" alt="Bihar Sharif Taxi">
+                            <div class="city-card-overlay"></div>
+                            <div class="city-card-content">
+                                <h3>Bihar Sharif</h3>
+                                <p>City Commutes & Railway Station Drops</p>
+                                <span class="city-card-btn">Book a Ride <i class="fas fa-arrow-right ms-1"></i></span>
+                            </div>
+                        </a>
+                    </div>
+
+                    <!-- Gaya -->
+                    <div class="col-lg-4 col-md-6">
+                        <a href="#book" class="city-card">
+                            <img src="assets/img/img/service_03.jpg" class="city-card-img" alt="Gaya Taxi">
+                            <div class="city-card-overlay"></div>
+                            <div class="city-card-content">
+                                <h3>Gaya</h3>
+                                <p>Outstation Travel & Pilgrimage Tours</p>
+                                <span class="city-card-btn">Book a Ride <i class="fas fa-arrow-right ms-1"></i></span>
+                            </div>
+                        </a>
+                    </div>
+
+                    <!-- Rajgir -->
+                    <div class="col-lg-4 col-md-6">
+                        <a href="#book" class="city-card">
+                            <img src="assets/img/img/service_04.jpg" class="city-card-img" alt="Rajgir Taxi">
+                            <div class="city-card-overlay"></div>
+                            <div class="city-card-content">
+                                <h3>Rajgir</h3>
+                                <p>Tourist Packages & Sightseeing</p>
+                                <span class="city-card-btn">Book a Ride <i class="fas fa-arrow-right ms-1"></i></span>
+                            </div>
+                        </a>
+                    </div>
+
+                    <!-- Nawada -->
+                    <div class="col-lg-4 col-md-6">
+                        <a href="#book" class="city-card">
+                            <img src="assets/img/img/service_05.jpg" class="city-card-img" alt="Nawada Taxi">
+                            <div class="city-card-overlay"></div>
+                            <div class="city-card-content">
+                                <h3>Nawada</h3>
+                                <p>Reliable Outstation Rentals</p>
+                                <span class="city-card-btn">Book a Ride <i class="fas fa-arrow-right ms-1"></i></span>
+                            </div>
+                        </a>
+                    </div>
+
+                    <!-- Darbhanga -->
+                    <div class="col-lg-4 col-md-6">
+                        <a href="#book" class="city-card">
+                            <img src="assets/img/img/service_06.jpg" class="city-card-img" alt="Darbhanga Taxi">
+                            <div class="city-card-overlay"></div>
+                            <div class="city-card-content">
+                                <h3>Darbhanga</h3>
+                                <p>Airport Transfers & City Transport</p>
+                                <span class="city-card-btn">Book a Ride <i class="fas fa-arrow-right ms-1"></i></span>
+                            </div>
+                        </a>
+                    </div>
+
+                    <!-- Purnia -->
+                    <div class="col-lg-4 col-md-6">
+                        <a href="#book" class="city-card">
+                            <img src="assets/img/img/taxi_indian_outstation_taxi.webp" class="city-card-img" alt="Purnia Taxi">
+                            <div class="city-card-overlay"></div>
+                            <div class="city-card-content">
+                                <h3>Purnia</h3>
+                                <p>Reliable City Rides & Rentals</p>
+                                <span class="city-card-btn">Book a Ride <i class="fas fa-arrow-right ms-1"></i></span>
+                            </div>
+                        </a>
+                    </div>
+
+                    <!-- Muzaffarpur -->
+                    <div class="col-lg-4 col-md-6">
+                        <a href="#book" class="city-card">
+                            <img src="assets/img/img/taxi_indian_airport_taxi.webp" class="city-card-img" alt="Muzaffarpur Taxi">
+                            <div class="city-card-overlay"></div>
+                            <div class="city-card-content">
+                                <h3>Muzaffarpur</h3>
+                                <p>Express Outstation Transport</p>
+                                <span class="city-card-btn">Book a Ride <i class="fas fa-arrow-right ms-1"></i></span>
+                            </div>
+                        </a>
+                    </div>
+
+                    <!-- Sitamarhi -->
+                    <div class="col-lg-4 col-md-6">
+                        <a href="#book" class="city-card">
+                            <img src="assets/img/img/taxi_indian_corporate_taxi.webp" class="city-card-img" alt="Sitamarhi Taxi">
+                            <div class="city-card-overlay"></div>
+                            <div class="city-card-content">
+                                <h3>Sitamarhi</h3>
+                                <p>Safe Family Travel & Tours</p>
+                                <span class="city-card-btn">Book a Ride <i class="fas fa-arrow-right ms-1"></i></span>
+                            </div>
+                        </a>
+                    </div>
+
+                    <!-- Sheohar -->
+                    <div class="col-lg-4 col-md-6">
+                        <a href="#book" class="city-card">
+                            <img src="assets/img/img/blog_01.jpg" class="city-card-img" alt="Sheohar Taxi">
+                            <div class="city-card-overlay"></div>
+                            <div class="city-card-content">
+                                <h3>Sheohar</h3>
+                                <p>Round Trip Cab Services</p>
+                                <span class="city-card-btn">Book a Ride <i class="fas fa-arrow-right ms-1"></i></span>
+                            </div>
+                        </a>
+                    </div>
+
+                    <!-- Samastipur -->
+                    <div class="col-lg-4 col-md-6">
+                        <a href="#book" class="city-card">
+                            <img src="assets/img/img/blog_02.jpg" class="city-card-img" alt="Samastipur Taxi">
+                            <div class="city-card-overlay"></div>
+                            <div class="city-card-content">
+                                <h3>Samastipur</h3>
+                                <p>Corporate & Station Drops</p>
+                                <span class="city-card-btn">Book a Ride <i class="fas fa-arrow-right ms-1"></i></span>
+                            </div>
+                        </a>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+
+<div id="book"><!-- 9. Booking Enquiry Section -->
+        
+        <section class="section-padding" style="background: #fafafa;">
+            <div class="container">
+                <div class="row g-5 align-items-center">
+                    <!-- Left Column -->
+                    <div class="col-lg-5">
+                        <div class="fast-booking-badge"><i class="fas fa-comment-dots me-1"></i> FAST BOOKING ENQUIRY
+                        </div>
+                        <h2 class="fw-bold mb-4"
+                            style="font-family: 'Outfit', sans-serif; font-size: 2.8rem; line-height: 1.2;">Book Your
+                            Verified Ride in 30 Seconds</h2>
+
+                        <div class="driver-img-box">
+                            <img src="assets/img/img/bihari_female.webp" alt="Verified Driver">
+                            <div class="verified-driver-badge"><i class="fas fa-check-circle text-success me-1"></i>
+                                VERIFIED DRIVERS WAITING</div>
+                        </div>
+
+                        <p class="text-muted mb-4" style="font-size: 15px;">Fill out the details to receive an instant
+                            fare quote and driver confirmation over phone or WhatsApp. Zero advance payment required.
+                        </p>
+
+                        <a href="tel:+917070992170" class="text-decoration-none">
+                            <div class="contact-box">
+                                <div class="contact-icon"><i class="fas fa-phone-alt me-1"></i></div>
+                                <div>
+                                    <div class="contact-title">24X7 DIRECT PHONE HOTLINE</div>
+                                    <h4 class="contact-value">070709 92170</h4>
+                                </div>
+                            </div>
+                        </a>
+
+                        <a href="https://wa.me/917070992170" class="text-decoration-none">
+                            <div class="contact-box whatsapp-box">
+                                <div class="contact-icon"><i class="fas fa-comment-dots me-1"></i></div>
+                                <div>
+                                    <div class="contact-title">INSTANT WHATSAPP SUPPORT</div>
+                                    <h4 class="contact-value">Click to Chat on WhatsApp</h4>
+                                </div>
+                            </div>
+                        </a>
+
+                        <div class="d-flex align-items-start mt-4">
+                            <div style="color: #facc15; font-size: 20px; margin-right: 12px;"><i
+                                    class="fas fa-shield-alt text-primary me-1"></i></div>
+                            <div>
+                                <h6 class="fw-bold mb-1" style="font-size: 14px;">Zero Advance Payment Required</h6>
+                                <p class="text-muted mb-0" style="font-size: 12px;">This is a lead enquiry form. Pay
+                                    directly to your verified driver after your ride is completed safely.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Column (Form) -->
+                    <div class="col-lg-7">
+                        <div class="booking-form-card">
+                            <h4 class="fw-bold mb-4" style="font-family: 'Outfit', sans-serif;">Instant Booking Request
+                            </h4>
+                            <form action="#">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label-custom">Your Name <span>*</span></label>
+                                        <input type="text" id="name_instant" class="custom-input" placeholder="Enter full name">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label-custom">Phone Number <span>*</span></label>
+                                        <input type="tel" id="phone_instant" class="custom-input" placeholder="+91 Mobile Number">
+                                    </div>
+
+                                    <div class="col-md-6 position-relative">
+                                        <label class="form-label-custom">Pickup Location <span>*</span></label>
+                                        <input type="text" id="pickup_location_instant" class="custom-input pe-5"
+                                            placeholder="Type pickup spot or city...">
+                                        <i class="fas fa-crosshairs text-primary position-absolute" id="auto_detect_btn_instant" style="right: 25px; top: 40px; cursor: pointer; font-size: 18px; z-index: 10;" title="Auto Detect Location"></i>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label-custom">Drop Location <span>*</span></label>
+                                        <input type="text" id="drop_location_instant" class="custom-input"
+                                            placeholder="Type drop destination or city...">
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <label class="form-label-custom">Travel Date <span>*</span></label>
+                                        <input type="date" id="date_instant" class="custom-input">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label-custom">Pickup Time <span>*</span></label>
+                                        <input type="time" id="time_instant" class="custom-input">
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <label class="form-label-custom">Total Passengers <span>*</span></label>
+                                        <select id="passengers_instant" class="custom-input custom-select">
+                                            <option>1 Person</option>
+                                            <option>2 Persons</option>
+                                            <option>3 Persons</option>
+                                            <option>4 Persons</option>
+                                            <option>5+ Persons</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label-custom">Trip Category <span>*</span></label>
+                                        <select id="category_instant" class="custom-input custom-select">
+                                            <option>One Way (Drop)</option>
+                                            <option>Round Trip</option>
+                                            <option>Local Rental</option>
+                                            <option>Airport Transfer</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="col-12">
+                                        <label class="form-label-custom">Special Instructions / Luggage
+                                            (Optional)</label>
+                                        <input type="text" id="instructions_instant" class="custom-input"
+                                            placeholder="e.g. AC Sedan required, 3 big suitcases">
+                                    </div>
+
+                                    <div class="col-12 mt-4">
+                                        <div id="fare_estimate_box_instant" class="mb-3 p-3 rounded text-center" style="display: none; background: rgba(250, 204, 21, 0.1); border: 1px dashed #facc15;">
+                                            <small class="text-muted text-uppercase fw-bold" style="letter-spacing: 1px;">Total Driving Distance</small>
+                                            <div class="mt-1">
+                                                <i class="fas fa-route text-warning me-2" style="font-size: 20px;"></i>
+                                                <strong id="estimated_distance_instant" class="text-dark" style="font-size: 24px;">-</strong>
+                                            </div>
+                                            <small class="text-muted mt-2 d-block" style="font-size: 11px;">*Our team will contact you shortly with the best fare for this trip.</small>
+                                        </div>
+                                    
+                                        <button type="button" class="btn-whatsapp-submit" onclick="submitInstantBooking()"><i
+                                                class="fas fa-comment-dots me-1"></i> Send Booking on
+                                            WhatsApp</button>
+                                        <p class="text-center text-muted mt-3 mb-0"
+                                            style="font-size: 12px; font-weight: 600;">We'll reply with exact fare &
+                                            confirm in 2 minutes!</p>
+                                    </div>
+                                </div>
+                            </form>
+                            
+                            <script>
+                                function submitInstantBooking() {
+                                    const name = document.getElementById('name_instant').value;
+                                    const phone = document.getElementById('phone_instant').value;
+                                    const pickup = document.getElementById('pickup_location_instant').value;
+                                    const drop = document.getElementById('drop_location_instant').value;
+                                    const date = document.getElementById('date_instant').value;
+                                    const time = document.getElementById('time_instant').value;
+                                    const passengers = document.getElementById('passengers_instant').value;
+                                    const category = document.getElementById('category_instant').value;
+                                    const instructions = document.getElementById('instructions_instant').value;
+                                    
+                                    if (!pickup || !drop) {
+                                        alert("Please fill in Pickup and Drop locations.");
+                                        return;
+                                    }
+                                    
+                                    const estDist = document.getElementById('estimated_distance_instant') ? document.getElementById('estimated_distance_instant').innerText : '';
+                                    
+                                    let message = `Hello BiharCabs! I would like to make an Instant Booking.\n\n*Name:* ${name || 'N/A'}\n*Phone:* ${phone || 'N/A'}\n*Category:* ${category}\n*Pickup:* ${pickup}\n*Drop:* ${drop}\n*Date:* ${date || 'N/A'}\n*Time:* ${time || 'N/A'}\n*Passengers:* ${passengers}`;
+                                    
+                                    if (instructions) {
+                                        message += `\n*Instructions:* ${instructions}`;
+                                    }
+                                    
+                                    if (estDist && estDist !== '-') {
+                                        message += `\n*Distance:* ${estDist}`;
+                                    }
+                                    
+                                    message += `\n\nPlease confirm availability and fare.`;
+                                    const whatsappUrl = `https://wa.me/917070992170?text=${encodeURIComponent(message)}`;
+                                    window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+                                }
+                            </script>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </div>

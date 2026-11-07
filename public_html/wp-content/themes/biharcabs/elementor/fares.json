@@ -1,0 +1,1687 @@
+[
+    {
+        "id": "e5f696a",
+        "elType": "container",
+        "settings": {
+            "_title": "Fares page",
+            "content_width": "full",
+            "css_classes": "bc-native-page bc-page-fares",
+            "flex_direction": "column",
+            "flex_gap": {
+                "unit": "px",
+                "size": 0,
+                "row": "0",
+                "column": "0"
+            },
+            "padding": {
+                "unit": "px",
+                "top": "0",
+                "right": "0",
+                "bottom": "0",
+                "left": "0",
+                "isLinked": true
+            }
+        },
+        "elements": [
+            {
+                "id": "43be68f",
+                "elType": "container",
+                "settings": {
+                    "bc_source": "fares-43be68f",
+                    "_title": "Our Taxi Rate Home Our Taxi Rate",
+                    "html_tag": "div",
+                    "content_width": "full",
+                    "css_classes": "bc-native-node site-breadcrumb",
+                    "flex_direction": "column",
+                    "flex_gap": {
+                        "unit": "px",
+                        "size": 0,
+                        "row": "0",
+                        "column": "0"
+                    },
+                    "padding": {
+                        "unit": "px",
+                        "top": "",
+                        "right": "",
+                        "bottom": "",
+                        "left": "",
+                        "isLinked": false
+                    }
+                },
+                "elements": [
+                    {
+                        "id": "91115d0",
+                        "elType": "container",
+                        "settings": {
+                            "bc_source": "fares-91115d0",
+                            "_title": "Our Taxi Rate Home Our Taxi Rate",
+                            "html_tag": "div",
+                            "content_width": "full",
+                            "css_classes": "bc-native-node container",
+                            "flex_direction": "column",
+                            "flex_gap": {
+                                "unit": "px",
+                                "size": 0,
+                                "row": "0",
+                                "column": "0"
+                            },
+                            "padding": {
+                                "unit": "px",
+                                "top": "",
+                                "right": "",
+                                "bottom": "",
+                                "left": "",
+                                "isLinked": false
+                            }
+                        },
+                        "elements": [
+                            {
+                                "id": "4199e92",
+                                "elType": "widget",
+                                "widgetType": "heading",
+                                "settings": {
+                                    "__globals__": {
+                                        "title_color": "",
+                                        "typography_typography": "",
+                                        "text_color": "",
+                                        "button_text_color": "",
+                                        "background_color": ""
+                                    },
+                                    "_title": "Our Taxi Rate",
+                                    "_css_classes": "bc-native-widget",
+                                    "_margin": {
+                                        "unit": "px",
+                                        "top": "0",
+                                        "right": "0",
+                                        "bottom": "0",
+                                        "left": "0",
+                                        "isLinked": true
+                                    },
+                                    "bc_source": "fares-4199e92",
+                                    "title": "Our Taxi Rate",
+                                    "header_size": "h1",
+                                    "size": "default"
+                                },
+                                "elements": []
+                            },
+                            {
+                                "id": "f198193",
+                                "elType": "widget",
+                                "widgetType": "text-editor",
+                                "settings": {
+                                    "__globals__": {
+                                        "title_color": "",
+                                        "typography_typography": "",
+                                        "text_color": "",
+                                        "button_text_color": "",
+                                        "background_color": ""
+                                    },
+                                    "_title": "Home Our Taxi Rate",
+                                    "_css_classes": "bc-native-widget",
+                                    "_margin": {
+                                        "unit": "px",
+                                        "top": "0",
+                                        "right": "0",
+                                        "bottom": "0",
+                                        "left": "0",
+                                        "isLinked": true
+                                    },
+                                    "bc_source": "fares-f198193",
+                                    "editor": "<ul class=\"breadcrumb-menu\">\r\n                    <li><a href=\"{{BC_PAGE_index}}\">Home</a></li>\r\n                    <li class=\"active\">Our Taxi Rate</li>\r\n                </ul>"
+                                },
+                                "elements": []
+                            }
+                        ],
+                        "isInner": true
+                    }
+                ],
+                "isInner": true
+            },
+            {
+                "id": "cbdf7e4",
+                "elType": "container",
+                "settings": {
+                    "bc_source": "fares-cbdf7e4",
+                    "_title": "Taxi Rate Our Taxi Rate For You Basic Pakage One Time P",
+                    "html_tag": "div",
+                    "content_width": "full",
+                    "css_classes": "bc-native-node taxi-rate py-120",
+                    "flex_direction": "column",
+                    "flex_gap": {
+                        "unit": "px",
+                        "size": 0,
+                        "row": "0",
+                        "column": "0"
+                    },
+                    "padding": {
+                        "unit": "px",
+                        "top": "",
+                        "right": "",
+                        "bottom": "",
+                        "left": "",
+                        "isLinked": false
+                    }
+                },
+                "elements": [
+                    {
+                        "id": "e52dfa7",
+                        "elType": "container",
+                        "settings": {
+                            "bc_source": "fares-e52dfa7",
+                            "_title": "Taxi Rate Our Taxi Rate For You Basic Pakage One Time P",
+                            "html_tag": "div",
+                            "content_width": "full",
+                            "css_classes": "bc-native-node container",
+                            "flex_direction": "column",
+                            "flex_gap": {
+                                "unit": "px",
+                                "size": 0,
+                                "row": "0",
+                                "column": "0"
+                            },
+                            "padding": {
+                                "unit": "px",
+                                "top": "",
+                                "right": "",
+                                "bottom": "",
+                                "left": "",
+                                "isLinked": false
+                            }
+                        },
+                        "elements": [
+                            {
+                                "id": "fd95f1f",
+                                "elType": "container",
+                                "settings": {
+                                    "bc_source": "fares-fd95f1f",
+                                    "_title": "Taxi Rate Our Taxi Rate For You",
+                                    "html_tag": "div",
+                                    "content_width": "full",
+                                    "css_classes": "bc-native-node row",
+                                    "flex_direction": "row",
+                                    "flex_gap": {
+                                        "unit": "px",
+                                        "size": 0,
+                                        "row": "0",
+                                        "column": "0"
+                                    },
+                                    "padding": {
+                                        "unit": "px",
+                                        "top": "",
+                                        "right": "",
+                                        "bottom": "",
+                                        "left": "",
+                                        "isLinked": false
+                                    }
+                                },
+                                "elements": [
+                                    {
+                                        "id": "3de1487",
+                                        "elType": "container",
+                                        "settings": {
+                                            "bc_source": "fares-3de1487",
+                                            "_title": "Taxi Rate Our Taxi Rate For You",
+                                            "html_tag": "div",
+                                            "content_width": "full",
+                                            "css_classes": "bc-native-node col-lg-6 mx-auto",
+                                            "flex_direction": "column",
+                                            "flex_gap": {
+                                                "unit": "px",
+                                                "size": 0,
+                                                "row": "0",
+                                                "column": "0"
+                                            },
+                                            "padding": {
+                                                "unit": "px",
+                                                "top": "",
+                                                "right": "",
+                                                "bottom": "",
+                                                "left": "",
+                                                "isLinked": false
+                                            },
+                                            "width": {
+                                                "unit": "%",
+                                                "size": 50
+                                            },
+                                            "width_tablet": {
+                                                "unit": "%",
+                                                "size": 100
+                                            },
+                                            "width_mobile": {
+                                                "unit": "%",
+                                                "size": 100
+                                            }
+                                        },
+                                        "elements": [
+                                            {
+                                                "id": "780bc7e",
+                                                "elType": "container",
+                                                "settings": {
+                                                    "bc_source": "fares-780bc7e",
+                                                    "_title": "Taxi Rate Our Taxi Rate For You",
+                                                    "html_tag": "div",
+                                                    "content_width": "full",
+                                                    "css_classes": "bc-native-node site-heading text-center",
+                                                    "flex_direction": "column",
+                                                    "flex_gap": {
+                                                        "unit": "px",
+                                                        "size": 0,
+                                                        "row": "0",
+                                                        "column": "0"
+                                                    },
+                                                    "padding": {
+                                                        "unit": "px",
+                                                        "top": "",
+                                                        "right": "",
+                                                        "bottom": "",
+                                                        "left": "",
+                                                        "isLinked": false
+                                                    }
+                                                },
+                                                "elements": [
+                                                    {
+                                                        "id": "1db7b88",
+                                                        "elType": "widget",
+                                                        "widgetType": "text-editor",
+                                                        "settings": {
+                                                            "__globals__": {
+                                                                "title_color": "",
+                                                                "typography_typography": "",
+                                                                "text_color": "",
+                                                                "button_text_color": "",
+                                                                "background_color": ""
+                                                            },
+                                                            "_title": "Taxi Rate",
+                                                            "_css_classes": "bc-native-widget",
+                                                            "_margin": {
+                                                                "unit": "px",
+                                                                "top": "0",
+                                                                "right": "0",
+                                                                "bottom": "0",
+                                                                "left": "0",
+                                                                "isLinked": true
+                                                            },
+                                                            "bc_source": "fares-1db7b88",
+                                                            "editor": "<span class=\"site-title-tagline\">Taxi Rate</span>"
+                                                        },
+                                                        "elements": []
+                                                    },
+                                                    {
+                                                        "id": "57784ef",
+                                                        "elType": "widget",
+                                                        "widgetType": "heading",
+                                                        "settings": {
+                                                            "__globals__": {
+                                                                "title_color": "",
+                                                                "typography_typography": "",
+                                                                "text_color": "",
+                                                                "button_text_color": "",
+                                                                "background_color": ""
+                                                            },
+                                                            "_title": "Our Taxi Rate For You",
+                                                            "_css_classes": "bc-native-widget",
+                                                            "_margin": {
+                                                                "unit": "px",
+                                                                "top": "0",
+                                                                "right": "0",
+                                                                "bottom": "0",
+                                                                "left": "0",
+                                                                "isLinked": true
+                                                            },
+                                                            "bc_source": "fares-57784ef",
+                                                            "title": "Our Taxi Rate For You",
+                                                            "header_size": "h2",
+                                                            "size": "default"
+                                                        },
+                                                        "elements": []
+                                                    },
+                                                    {
+                                                        "id": "a354710",
+                                                        "elType": "widget",
+                                                        "widgetType": "text-editor",
+                                                        "settings": {
+                                                            "__globals__": {
+                                                                "title_color": "",
+                                                                "typography_typography": "",
+                                                                "text_color": "",
+                                                                "button_text_color": "",
+                                                                "background_color": ""
+                                                            },
+                                                            "_title": "heading-divider",
+                                                            "_css_classes": "bc-native-widget",
+                                                            "_margin": {
+                                                                "unit": "px",
+                                                                "top": "0",
+                                                                "right": "0",
+                                                                "bottom": "0",
+                                                                "left": "0",
+                                                                "isLinked": true
+                                                            },
+                                                            "bc_source": "fares-a354710",
+                                                            "editor": "<div class=\"heading-divider\"></div>"
+                                                        },
+                                                        "elements": []
+                                                    }
+                                                ],
+                                                "isInner": true
+                                            }
+                                        ],
+                                        "isInner": true
+                                    }
+                                ],
+                                "isInner": true
+                            },
+                            {
+                                "id": "b07d02c",
+                                "elType": "container",
+                                "settings": {
+                                    "bc_source": "fares-b07d02c",
+                                    "_title": "Basic Pakage One Time Payment Base Charge: $2.30 Distan",
+                                    "html_tag": "div",
+                                    "content_width": "full",
+                                    "css_classes": "bc-native-node row",
+                                    "flex_direction": "row",
+                                    "flex_gap": {
+                                        "unit": "px",
+                                        "size": 0,
+                                        "row": "0",
+                                        "column": "0"
+                                    },
+                                    "padding": {
+                                        "unit": "px",
+                                        "top": "",
+                                        "right": "",
+                                        "bottom": "",
+                                        "left": "",
+                                        "isLinked": false
+                                    }
+                                },
+                                "elements": [
+                                    {
+                                        "id": "9571f95",
+                                        "elType": "container",
+                                        "settings": {
+                                            "bc_source": "fares-9571f95",
+                                            "_title": "Basic Pakage One Time Payment Base Charge: $2.30 Distan",
+                                            "html_tag": "div",
+                                            "content_width": "full",
+                                            "css_classes": "bc-native-node col-md-6 col-lg-4",
+                                            "flex_direction": "column",
+                                            "flex_gap": {
+                                                "unit": "px",
+                                                "size": 0,
+                                                "row": "0",
+                                                "column": "0"
+                                            },
+                                            "padding": {
+                                                "unit": "px",
+                                                "top": "",
+                                                "right": "",
+                                                "bottom": "",
+                                                "left": "",
+                                                "isLinked": false
+                                            },
+                                            "width": {
+                                                "unit": "%",
+                                                "size": 33.3333
+                                            },
+                                            "width_tablet": {
+                                                "unit": "%",
+                                                "size": 50
+                                            },
+                                            "width_mobile": {
+                                                "unit": "%",
+                                                "size": 100
+                                            }
+                                        },
+                                        "elements": [
+                                            {
+                                                "id": "c64db6f",
+                                                "elType": "container",
+                                                "settings": {
+                                                    "bc_source": "fares-c64db6f",
+                                                    "_title": "Basic Pakage One Time Payment Base Charge: $2.30 Distan",
+                                                    "html_tag": "div",
+                                                    "content_width": "full",
+                                                    "css_classes": "bc-native-node rate-item wow fadeInUp",
+                                                    "flex_direction": "column",
+                                                    "flex_gap": {
+                                                        "unit": "px",
+                                                        "size": 0,
+                                                        "row": "0",
+                                                        "column": "0"
+                                                    },
+                                                    "padding": {
+                                                        "unit": "px",
+                                                        "top": "",
+                                                        "right": "",
+                                                        "bottom": "",
+                                                        "left": "",
+                                                        "isLinked": false
+                                                    }
+                                                },
+                                                "elements": [
+                                                    {
+                                                        "id": "ac69dfe",
+                                                        "elType": "container",
+                                                        "settings": {
+                                                            "bc_source": "fares-ac69dfe",
+                                                            "_title": "rate-header",
+                                                            "html_tag": "div",
+                                                            "content_width": "full",
+                                                            "css_classes": "bc-native-node rate-header",
+                                                            "flex_direction": "column",
+                                                            "flex_gap": {
+                                                                "unit": "px",
+                                                                "size": 0,
+                                                                "row": "0",
+                                                                "column": "0"
+                                                            },
+                                                            "padding": {
+                                                                "unit": "px",
+                                                                "top": "",
+                                                                "right": "",
+                                                                "bottom": "",
+                                                                "left": "",
+                                                                "isLinked": false
+                                                            }
+                                                        },
+                                                        "elements": [
+                                                            {
+                                                                "id": "e522ac5",
+                                                                "elType": "container",
+                                                                "settings": {
+                                                                    "bc_source": "fares-e522ac5",
+                                                                    "_title": "rate-img",
+                                                                    "html_tag": "div",
+                                                                    "content_width": "full",
+                                                                    "css_classes": "bc-native-node rate-img",
+                                                                    "flex_direction": "column",
+                                                                    "flex_gap": {
+                                                                        "unit": "px",
+                                                                        "size": 0,
+                                                                        "row": "0",
+                                                                        "column": "0"
+                                                                    },
+                                                                    "padding": {
+                                                                        "unit": "px",
+                                                                        "top": "",
+                                                                        "right": "",
+                                                                        "bottom": "",
+                                                                        "left": "",
+                                                                        "isLinked": false
+                                                                    }
+                                                                },
+                                                                "elements": [
+                                                                    {
+                                                                        "id": "d1f0b22",
+                                                                        "elType": "widget",
+                                                                        "widgetType": "image",
+                                                                        "settings": {
+                                                                            "__globals__": {
+                                                                                "title_color": "",
+                                                                                "typography_typography": "",
+                                                                                "text_color": "",
+                                                                                "button_text_color": "",
+                                                                                "background_color": ""
+                                                                            },
+                                                                            "_title": "Image",
+                                                                            "_css_classes": "bc-native-widget",
+                                                                            "_margin": {
+                                                                                "unit": "px",
+                                                                                "top": "0",
+                                                                                "right": "0",
+                                                                                "bottom": "0",
+                                                                                "left": "0",
+                                                                                "isLinked": true
+                                                                            },
+                                                                            "bc_source": "fares-d1f0b22",
+                                                                            "image": {
+                                                                                "url": "{{BC_ASSETS}}/img/img/rate_01.png",
+                                                                                "id": 0
+                                                                            },
+                                                                            "image_size": "full",
+                                                                            "caption_source": "none",
+                                                                            "bc_image_alt": ""
+                                                                        },
+                                                                        "elements": []
+                                                                    }
+                                                                ],
+                                                                "isInner": true
+                                                            }
+                                                        ],
+                                                        "isInner": true
+                                                    },
+                                                    {
+                                                        "id": "e1bbb79",
+                                                        "elType": "container",
+                                                        "settings": {
+                                                            "bc_source": "fares-e1bbb79",
+                                                            "_title": "Basic Pakage One Time Payment",
+                                                            "html_tag": "div",
+                                                            "content_width": "full",
+                                                            "css_classes": "bc-native-node rate-header-content",
+                                                            "flex_direction": "column",
+                                                            "flex_gap": {
+                                                                "unit": "px",
+                                                                "size": 0,
+                                                                "row": "0",
+                                                                "column": "0"
+                                                            },
+                                                            "padding": {
+                                                                "unit": "px",
+                                                                "top": "",
+                                                                "right": "",
+                                                                "bottom": "",
+                                                                "left": "",
+                                                                "isLinked": false
+                                                            }
+                                                        },
+                                                        "elements": [
+                                                            {
+                                                                "id": "8db1dc6",
+                                                                "elType": "widget",
+                                                                "widgetType": "heading",
+                                                                "settings": {
+                                                                    "__globals__": {
+                                                                        "title_color": "",
+                                                                        "typography_typography": "",
+                                                                        "text_color": "",
+                                                                        "button_text_color": "",
+                                                                        "background_color": ""
+                                                                    },
+                                                                    "_title": "Basic Pakage",
+                                                                    "_css_classes": "bc-native-widget",
+                                                                    "_margin": {
+                                                                        "unit": "px",
+                                                                        "top": "0",
+                                                                        "right": "0",
+                                                                        "bottom": "0",
+                                                                        "left": "0",
+                                                                        "isLinked": true
+                                                                    },
+                                                                    "bc_source": "fares-8db1dc6",
+                                                                    "title": "Basic Pakage",
+                                                                    "header_size": "h4",
+                                                                    "size": "default"
+                                                                },
+                                                                "elements": []
+                                                            },
+                                                            {
+                                                                "id": "e6e33c0",
+                                                                "elType": "widget",
+                                                                "widgetType": "text-editor",
+                                                                "settings": {
+                                                                    "__globals__": {
+                                                                        "title_color": "",
+                                                                        "typography_typography": "",
+                                                                        "text_color": "",
+                                                                        "button_text_color": "",
+                                                                        "background_color": ""
+                                                                    },
+                                                                    "_title": "One Time Payment",
+                                                                    "_css_classes": "bc-native-widget",
+                                                                    "_margin": {
+                                                                        "unit": "px",
+                                                                        "top": "0",
+                                                                        "right": "0",
+                                                                        "bottom": "0",
+                                                                        "left": "0",
+                                                                        "isLinked": true
+                                                                    },
+                                                                    "bc_source": "fares-e6e33c0",
+                                                                    "editor": "<p class=\"rate-duration\">One Time Payment</p>"
+                                                                },
+                                                                "elements": []
+                                                            }
+                                                        ],
+                                                        "isInner": true
+                                                    },
+                                                    {
+                                                        "id": "4ad01aa",
+                                                        "elType": "container",
+                                                        "settings": {
+                                                            "bc_source": "fares-4ad01aa",
+                                                            "_title": "Base Charge: $2.30 Distance Allowance: 5000m Up To 50 k",
+                                                            "html_tag": "div",
+                                                            "content_width": "full",
+                                                            "css_classes": "bc-native-node rate-content",
+                                                            "flex_direction": "column",
+                                                            "flex_gap": {
+                                                                "unit": "px",
+                                                                "size": 0,
+                                                                "row": "0",
+                                                                "column": "0"
+                                                            },
+                                                            "padding": {
+                                                                "unit": "px",
+                                                                "top": "",
+                                                                "right": "",
+                                                                "bottom": "",
+                                                                "left": "",
+                                                                "isLinked": false
+                                                            }
+                                                        },
+                                                        "elements": [
+                                                            {
+                                                                "id": "8e323a7",
+                                                                "elType": "container",
+                                                                "settings": {
+                                                                    "bc_source": "fares-8e323a7",
+                                                                    "_title": "rate-icon",
+                                                                    "html_tag": "div",
+                                                                    "content_width": "full",
+                                                                    "css_classes": "bc-native-node rate-icon",
+                                                                    "flex_direction": "column",
+                                                                    "flex_gap": {
+                                                                        "unit": "px",
+                                                                        "size": 0,
+                                                                        "row": "0",
+                                                                        "column": "0"
+                                                                    },
+                                                                    "padding": {
+                                                                        "unit": "px",
+                                                                        "top": "",
+                                                                        "right": "",
+                                                                        "bottom": "",
+                                                                        "left": "",
+                                                                        "isLinked": false
+                                                                    }
+                                                                },
+                                                                "elements": [
+                                                                    {
+                                                                        "id": "915312a",
+                                                                        "elType": "widget",
+                                                                        "widgetType": "image",
+                                                                        "settings": {
+                                                                            "__globals__": {
+                                                                                "title_color": "",
+                                                                                "typography_typography": "",
+                                                                                "text_color": "",
+                                                                                "button_text_color": "",
+                                                                                "background_color": ""
+                                                                            },
+                                                                            "_title": "Image",
+                                                                            "_css_classes": "bc-native-widget",
+                                                                            "_margin": {
+                                                                                "unit": "px",
+                                                                                "top": "0",
+                                                                                "right": "0",
+                                                                                "bottom": "0",
+                                                                                "left": "0",
+                                                                                "isLinked": true
+                                                                            },
+                                                                            "bc_source": "fares-915312a",
+                                                                            "image": {
+                                                                                "url": "{{BC_ASSETS}}/img/img/icon_taxi-1.svg",
+                                                                                "id": 0
+                                                                            },
+                                                                            "image_size": "full",
+                                                                            "caption_source": "none",
+                                                                            "bc_image_alt": ""
+                                                                        },
+                                                                        "elements": []
+                                                                    }
+                                                                ],
+                                                                "isInner": true
+                                                            },
+                                                            {
+                                                                "id": "9c0f5fb",
+                                                                "elType": "container",
+                                                                "settings": {
+                                                                    "bc_source": "fares-9c0f5fb",
+                                                                    "_title": "Base Charge: $2.30 Distance Allowance: 5000m Up To 50 k",
+                                                                    "html_tag": "div",
+                                                                    "content_width": "full",
+                                                                    "css_classes": "bc-native-node rate-feature",
+                                                                    "flex_direction": "column",
+                                                                    "flex_gap": {
+                                                                        "unit": "px",
+                                                                        "size": 0,
+                                                                        "row": "0",
+                                                                        "column": "0"
+                                                                    },
+                                                                    "padding": {
+                                                                        "unit": "px",
+                                                                        "top": "",
+                                                                        "right": "",
+                                                                        "bottom": "",
+                                                                        "left": "",
+                                                                        "isLinked": false
+                                                                    }
+                                                                },
+                                                                "elements": [
+                                                                    {
+                                                                        "id": "ec9e543",
+                                                                        "elType": "widget",
+                                                                        "widgetType": "text-editor",
+                                                                        "settings": {
+                                                                            "__globals__": {
+                                                                                "title_color": "",
+                                                                                "typography_typography": "",
+                                                                                "text_color": "",
+                                                                                "button_text_color": "",
+                                                                                "background_color": ""
+                                                                            },
+                                                                            "_title": "Base Charge: $2.30 Distance Allowance: 5000m Up To 50 k",
+                                                                            "_css_classes": "bc-native-widget",
+                                                                            "_margin": {
+                                                                                "unit": "px",
+                                                                                "top": "0",
+                                                                                "right": "0",
+                                                                                "bottom": "0",
+                                                                                "left": "0",
+                                                                                "isLinked": true
+                                                                            },
+                                                                            "bc_source": "fares-ec9e543",
+                                                                            "editor": "<ul>\r\n                                        <li><i class=\"fas fa-check-double\"></i> Base Charge: <span>$2.30</span></li>\r\n                                        <li><i class=\"fas fa-check-double\"></i> Distance Allowance: <span>5000m</span></li>\r\n                                        <li><i class=\"fas fa-check-double\"></i> Up To 50 kms: <span>$1.38/km</span></li>\r\n                                        <li><i class=\"fas fa-check-double\"></i> Booking Fee: <span>$0.99</span></li>\r\n                                        <li><i class=\"fas fa-check-double\"></i> Extra Passangers: <span>$0.45</span></li>\r\n                                    </ul>"
+                                                                        },
+                                                                        "elements": []
+                                                                    },
+                                                                    {
+                                                                        "id": "f73b20a",
+                                                                        "elType": "widget",
+                                                                        "widgetType": "button",
+                                                                        "settings": {
+                                                                            "__globals__": {
+                                                                                "title_color": "",
+                                                                                "typography_typography": "",
+                                                                                "text_color": "",
+                                                                                "button_text_color": "",
+                                                                                "background_color": ""
+                                                                            },
+                                                                            "_title": "Choose Plan",
+                                                                            "_css_classes": "bc-native-widget",
+                                                                            "_margin": {
+                                                                                "unit": "px",
+                                                                                "top": "0",
+                                                                                "right": "0",
+                                                                                "bottom": "0",
+                                                                                "left": "0",
+                                                                                "isLinked": true
+                                                                            },
+                                                                            "bc_source": "fares-f73b20a",
+                                                                            "text": "Choose Plan<i class=\"fas fa-arrow-right\"></i>",
+                                                                            "link": {
+                                                                                "url": "#",
+                                                                                "is_external": false
+                                                                            },
+                                                                            "size": "sm"
+                                                                        },
+                                                                        "elements": []
+                                                                    }
+                                                                ],
+                                                                "isInner": true
+                                                            }
+                                                        ],
+                                                        "isInner": true
+                                                    }
+                                                ],
+                                                "isInner": true
+                                            }
+                                        ],
+                                        "isInner": true
+                                    },
+                                    {
+                                        "id": "64ee355",
+                                        "elType": "container",
+                                        "settings": {
+                                            "bc_source": "fares-64ee355",
+                                            "_title": "Standard Pakage One Time Payment Base Charge: $2.30 Dis",
+                                            "html_tag": "div",
+                                            "content_width": "full",
+                                            "css_classes": "bc-native-node col-md-6 col-lg-4",
+                                            "flex_direction": "column",
+                                            "flex_gap": {
+                                                "unit": "px",
+                                                "size": 0,
+                                                "row": "0",
+                                                "column": "0"
+                                            },
+                                            "padding": {
+                                                "unit": "px",
+                                                "top": "",
+                                                "right": "",
+                                                "bottom": "",
+                                                "left": "",
+                                                "isLinked": false
+                                            },
+                                            "width": {
+                                                "unit": "%",
+                                                "size": 33.3333
+                                            },
+                                            "width_tablet": {
+                                                "unit": "%",
+                                                "size": 50
+                                            },
+                                            "width_mobile": {
+                                                "unit": "%",
+                                                "size": 100
+                                            }
+                                        },
+                                        "elements": [
+                                            {
+                                                "id": "141e14a",
+                                                "elType": "container",
+                                                "settings": {
+                                                    "bc_source": "fares-141e14a",
+                                                    "_title": "Standard Pakage One Time Payment Base Charge: $2.30 Dis",
+                                                    "html_tag": "div",
+                                                    "content_width": "full",
+                                                    "css_classes": "bc-native-node rate-item wow fadeInDown",
+                                                    "flex_direction": "column",
+                                                    "flex_gap": {
+                                                        "unit": "px",
+                                                        "size": 0,
+                                                        "row": "0",
+                                                        "column": "0"
+                                                    },
+                                                    "padding": {
+                                                        "unit": "px",
+                                                        "top": "",
+                                                        "right": "",
+                                                        "bottom": "",
+                                                        "left": "",
+                                                        "isLinked": false
+                                                    }
+                                                },
+                                                "elements": [
+                                                    {
+                                                        "id": "e607c7e",
+                                                        "elType": "container",
+                                                        "settings": {
+                                                            "bc_source": "fares-e607c7e",
+                                                            "_title": "rate-header",
+                                                            "html_tag": "div",
+                                                            "content_width": "full",
+                                                            "css_classes": "bc-native-node rate-header",
+                                                            "flex_direction": "column",
+                                                            "flex_gap": {
+                                                                "unit": "px",
+                                                                "size": 0,
+                                                                "row": "0",
+                                                                "column": "0"
+                                                            },
+                                                            "padding": {
+                                                                "unit": "px",
+                                                                "top": "",
+                                                                "right": "",
+                                                                "bottom": "",
+                                                                "left": "",
+                                                                "isLinked": false
+                                                            }
+                                                        },
+                                                        "elements": [
+                                                            {
+                                                                "id": "b5c1f33",
+                                                                "elType": "container",
+                                                                "settings": {
+                                                                    "bc_source": "fares-b5c1f33",
+                                                                    "_title": "rate-img",
+                                                                    "html_tag": "div",
+                                                                    "content_width": "full",
+                                                                    "css_classes": "bc-native-node rate-img",
+                                                                    "flex_direction": "column",
+                                                                    "flex_gap": {
+                                                                        "unit": "px",
+                                                                        "size": 0,
+                                                                        "row": "0",
+                                                                        "column": "0"
+                                                                    },
+                                                                    "padding": {
+                                                                        "unit": "px",
+                                                                        "top": "",
+                                                                        "right": "",
+                                                                        "bottom": "",
+                                                                        "left": "",
+                                                                        "isLinked": false
+                                                                    }
+                                                                },
+                                                                "elements": [
+                                                                    {
+                                                                        "id": "4a715ff",
+                                                                        "elType": "widget",
+                                                                        "widgetType": "image",
+                                                                        "settings": {
+                                                                            "__globals__": {
+                                                                                "title_color": "",
+                                                                                "typography_typography": "",
+                                                                                "text_color": "",
+                                                                                "button_text_color": "",
+                                                                                "background_color": ""
+                                                                            },
+                                                                            "_title": "Image",
+                                                                            "_css_classes": "bc-native-widget",
+                                                                            "_margin": {
+                                                                                "unit": "px",
+                                                                                "top": "0",
+                                                                                "right": "0",
+                                                                                "bottom": "0",
+                                                                                "left": "0",
+                                                                                "isLinked": true
+                                                                            },
+                                                                            "bc_source": "fares-4a715ff",
+                                                                            "image": {
+                                                                                "url": "{{BC_ASSETS}}/img/img/rate_01.png",
+                                                                                "id": 0
+                                                                            },
+                                                                            "image_size": "full",
+                                                                            "caption_source": "none",
+                                                                            "bc_image_alt": ""
+                                                                        },
+                                                                        "elements": []
+                                                                    }
+                                                                ],
+                                                                "isInner": true
+                                                            }
+                                                        ],
+                                                        "isInner": true
+                                                    },
+                                                    {
+                                                        "id": "30f702b",
+                                                        "elType": "container",
+                                                        "settings": {
+                                                            "bc_source": "fares-30f702b",
+                                                            "_title": "Standard Pakage One Time Payment",
+                                                            "html_tag": "div",
+                                                            "content_width": "full",
+                                                            "css_classes": "bc-native-node rate-header-content",
+                                                            "flex_direction": "column",
+                                                            "flex_gap": {
+                                                                "unit": "px",
+                                                                "size": 0,
+                                                                "row": "0",
+                                                                "column": "0"
+                                                            },
+                                                            "padding": {
+                                                                "unit": "px",
+                                                                "top": "",
+                                                                "right": "",
+                                                                "bottom": "",
+                                                                "left": "",
+                                                                "isLinked": false
+                                                            }
+                                                        },
+                                                        "elements": [
+                                                            {
+                                                                "id": "0eb5135",
+                                                                "elType": "widget",
+                                                                "widgetType": "heading",
+                                                                "settings": {
+                                                                    "__globals__": {
+                                                                        "title_color": "",
+                                                                        "typography_typography": "",
+                                                                        "text_color": "",
+                                                                        "button_text_color": "",
+                                                                        "background_color": ""
+                                                                    },
+                                                                    "_title": "Standard Pakage",
+                                                                    "_css_classes": "bc-native-widget",
+                                                                    "_margin": {
+                                                                        "unit": "px",
+                                                                        "top": "0",
+                                                                        "right": "0",
+                                                                        "bottom": "0",
+                                                                        "left": "0",
+                                                                        "isLinked": true
+                                                                    },
+                                                                    "bc_source": "fares-0eb5135",
+                                                                    "title": "Standard Pakage",
+                                                                    "header_size": "h4",
+                                                                    "size": "default"
+                                                                },
+                                                                "elements": []
+                                                            },
+                                                            {
+                                                                "id": "bcddba4",
+                                                                "elType": "widget",
+                                                                "widgetType": "text-editor",
+                                                                "settings": {
+                                                                    "__globals__": {
+                                                                        "title_color": "",
+                                                                        "typography_typography": "",
+                                                                        "text_color": "",
+                                                                        "button_text_color": "",
+                                                                        "background_color": ""
+                                                                    },
+                                                                    "_title": "One Time Payment",
+                                                                    "_css_classes": "bc-native-widget",
+                                                                    "_margin": {
+                                                                        "unit": "px",
+                                                                        "top": "0",
+                                                                        "right": "0",
+                                                                        "bottom": "0",
+                                                                        "left": "0",
+                                                                        "isLinked": true
+                                                                    },
+                                                                    "bc_source": "fares-bcddba4",
+                                                                    "editor": "<p class=\"rate-duration\">One Time Payment</p>"
+                                                                },
+                                                                "elements": []
+                                                            }
+                                                        ],
+                                                        "isInner": true
+                                                    },
+                                                    {
+                                                        "id": "c9a76b8",
+                                                        "elType": "container",
+                                                        "settings": {
+                                                            "bc_source": "fares-c9a76b8",
+                                                            "_title": "Base Charge: $2.30 Distance Allowance: 5000m Up To 50 k",
+                                                            "html_tag": "div",
+                                                            "content_width": "full",
+                                                            "css_classes": "bc-native-node rate-content",
+                                                            "flex_direction": "column",
+                                                            "flex_gap": {
+                                                                "unit": "px",
+                                                                "size": 0,
+                                                                "row": "0",
+                                                                "column": "0"
+                                                            },
+                                                            "padding": {
+                                                                "unit": "px",
+                                                                "top": "",
+                                                                "right": "",
+                                                                "bottom": "",
+                                                                "left": "",
+                                                                "isLinked": false
+                                                            }
+                                                        },
+                                                        "elements": [
+                                                            {
+                                                                "id": "7afc239",
+                                                                "elType": "container",
+                                                                "settings": {
+                                                                    "bc_source": "fares-7afc239",
+                                                                    "_title": "rate-icon",
+                                                                    "html_tag": "div",
+                                                                    "content_width": "full",
+                                                                    "css_classes": "bc-native-node rate-icon",
+                                                                    "flex_direction": "column",
+                                                                    "flex_gap": {
+                                                                        "unit": "px",
+                                                                        "size": 0,
+                                                                        "row": "0",
+                                                                        "column": "0"
+                                                                    },
+                                                                    "padding": {
+                                                                        "unit": "px",
+                                                                        "top": "",
+                                                                        "right": "",
+                                                                        "bottom": "",
+                                                                        "left": "",
+                                                                        "isLinked": false
+                                                                    }
+                                                                },
+                                                                "elements": [
+                                                                    {
+                                                                        "id": "9ed885b",
+                                                                        "elType": "widget",
+                                                                        "widgetType": "image",
+                                                                        "settings": {
+                                                                            "__globals__": {
+                                                                                "title_color": "",
+                                                                                "typography_typography": "",
+                                                                                "text_color": "",
+                                                                                "button_text_color": "",
+                                                                                "background_color": ""
+                                                                            },
+                                                                            "_title": "Image",
+                                                                            "_css_classes": "bc-native-widget",
+                                                                            "_margin": {
+                                                                                "unit": "px",
+                                                                                "top": "0",
+                                                                                "right": "0",
+                                                                                "bottom": "0",
+                                                                                "left": "0",
+                                                                                "isLinked": true
+                                                                            },
+                                                                            "bc_source": "fares-9ed885b",
+                                                                            "image": {
+                                                                                "url": "{{BC_ASSETS}}/img/img/icon_taxi-1.svg",
+                                                                                "id": 0
+                                                                            },
+                                                                            "image_size": "full",
+                                                                            "caption_source": "none",
+                                                                            "bc_image_alt": ""
+                                                                        },
+                                                                        "elements": []
+                                                                    }
+                                                                ],
+                                                                "isInner": true
+                                                            },
+                                                            {
+                                                                "id": "fd626a1",
+                                                                "elType": "container",
+                                                                "settings": {
+                                                                    "bc_source": "fares-fd626a1",
+                                                                    "_title": "Base Charge: $2.30 Distance Allowance: 5000m Up To 50 k",
+                                                                    "html_tag": "div",
+                                                                    "content_width": "full",
+                                                                    "css_classes": "bc-native-node rate-feature",
+                                                                    "flex_direction": "column",
+                                                                    "flex_gap": {
+                                                                        "unit": "px",
+                                                                        "size": 0,
+                                                                        "row": "0",
+                                                                        "column": "0"
+                                                                    },
+                                                                    "padding": {
+                                                                        "unit": "px",
+                                                                        "top": "",
+                                                                        "right": "",
+                                                                        "bottom": "",
+                                                                        "left": "",
+                                                                        "isLinked": false
+                                                                    }
+                                                                },
+                                                                "elements": [
+                                                                    {
+                                                                        "id": "3ba59c3",
+                                                                        "elType": "widget",
+                                                                        "widgetType": "text-editor",
+                                                                        "settings": {
+                                                                            "__globals__": {
+                                                                                "title_color": "",
+                                                                                "typography_typography": "",
+                                                                                "text_color": "",
+                                                                                "button_text_color": "",
+                                                                                "background_color": ""
+                                                                            },
+                                                                            "_title": "Base Charge: $2.30 Distance Allowance: 5000m Up To 50 k",
+                                                                            "_css_classes": "bc-native-widget",
+                                                                            "_margin": {
+                                                                                "unit": "px",
+                                                                                "top": "0",
+                                                                                "right": "0",
+                                                                                "bottom": "0",
+                                                                                "left": "0",
+                                                                                "isLinked": true
+                                                                            },
+                                                                            "bc_source": "fares-3ba59c3",
+                                                                            "editor": "<ul>\r\n                                        <li><i class=\"fas fa-check-double\"></i> Base Charge: <span>$2.30</span></li>\r\n                                        <li><i class=\"fas fa-check-double\"></i> Distance Allowance: <span>5000m</span></li>\r\n                                        <li><i class=\"fas fa-check-double\"></i> Up To 50 kms: <span>$1.38/km</span></li>\r\n                                        <li><i class=\"fas fa-check-double\"></i> Booking Fee: <span>$0.99</span></li>\r\n                                        <li><i class=\"fas fa-check-double\"></i> Extra Passangers: <span>$0.45</span></li>\r\n                                    </ul>"
+                                                                        },
+                                                                        "elements": []
+                                                                    },
+                                                                    {
+                                                                        "id": "3816720",
+                                                                        "elType": "widget",
+                                                                        "widgetType": "button",
+                                                                        "settings": {
+                                                                            "__globals__": {
+                                                                                "title_color": "",
+                                                                                "typography_typography": "",
+                                                                                "text_color": "",
+                                                                                "button_text_color": "",
+                                                                                "background_color": ""
+                                                                            },
+                                                                            "_title": "Choose Plan",
+                                                                            "_css_classes": "bc-native-widget",
+                                                                            "_margin": {
+                                                                                "unit": "px",
+                                                                                "top": "0",
+                                                                                "right": "0",
+                                                                                "bottom": "0",
+                                                                                "left": "0",
+                                                                                "isLinked": true
+                                                                            },
+                                                                            "bc_source": "fares-3816720",
+                                                                            "text": "Choose Plan<i class=\"fas fa-arrow-right\"></i>",
+                                                                            "link": {
+                                                                                "url": "#",
+                                                                                "is_external": false
+                                                                            },
+                                                                            "size": "sm"
+                                                                        },
+                                                                        "elements": []
+                                                                    }
+                                                                ],
+                                                                "isInner": true
+                                                            }
+                                                        ],
+                                                        "isInner": true
+                                                    }
+                                                ],
+                                                "isInner": true
+                                            }
+                                        ],
+                                        "isInner": true
+                                    },
+                                    {
+                                        "id": "f574fe3",
+                                        "elType": "container",
+                                        "settings": {
+                                            "bc_source": "fares-f574fe3",
+                                            "_title": "Premium Pakage One Time Payment Base Charge: $2.30 Dist",
+                                            "html_tag": "div",
+                                            "content_width": "full",
+                                            "css_classes": "bc-native-node col-md-6 col-lg-4",
+                                            "flex_direction": "column",
+                                            "flex_gap": {
+                                                "unit": "px",
+                                                "size": 0,
+                                                "row": "0",
+                                                "column": "0"
+                                            },
+                                            "padding": {
+                                                "unit": "px",
+                                                "top": "",
+                                                "right": "",
+                                                "bottom": "",
+                                                "left": "",
+                                                "isLinked": false
+                                            },
+                                            "width": {
+                                                "unit": "%",
+                                                "size": 33.3333
+                                            },
+                                            "width_tablet": {
+                                                "unit": "%",
+                                                "size": 50
+                                            },
+                                            "width_mobile": {
+                                                "unit": "%",
+                                                "size": 100
+                                            }
+                                        },
+                                        "elements": [
+                                            {
+                                                "id": "cd25236",
+                                                "elType": "container",
+                                                "settings": {
+                                                    "bc_source": "fares-cd25236",
+                                                    "_title": "Premium Pakage One Time Payment Base Charge: $2.30 Dist",
+                                                    "html_tag": "div",
+                                                    "content_width": "full",
+                                                    "css_classes": "bc-native-node rate-item wow fadeInUp",
+                                                    "flex_direction": "column",
+                                                    "flex_gap": {
+                                                        "unit": "px",
+                                                        "size": 0,
+                                                        "row": "0",
+                                                        "column": "0"
+                                                    },
+                                                    "padding": {
+                                                        "unit": "px",
+                                                        "top": "",
+                                                        "right": "",
+                                                        "bottom": "",
+                                                        "left": "",
+                                                        "isLinked": false
+                                                    }
+                                                },
+                                                "elements": [
+                                                    {
+                                                        "id": "03ce936",
+                                                        "elType": "container",
+                                                        "settings": {
+                                                            "bc_source": "fares-03ce936",
+                                                            "_title": "rate-header",
+                                                            "html_tag": "div",
+                                                            "content_width": "full",
+                                                            "css_classes": "bc-native-node rate-header",
+                                                            "flex_direction": "column",
+                                                            "flex_gap": {
+                                                                "unit": "px",
+                                                                "size": 0,
+                                                                "row": "0",
+                                                                "column": "0"
+                                                            },
+                                                            "padding": {
+                                                                "unit": "px",
+                                                                "top": "",
+                                                                "right": "",
+                                                                "bottom": "",
+                                                                "left": "",
+                                                                "isLinked": false
+                                                            }
+                                                        },
+                                                        "elements": [
+                                                            {
+                                                                "id": "67f909f",
+                                                                "elType": "container",
+                                                                "settings": {
+                                                                    "bc_source": "fares-67f909f",
+                                                                    "_title": "rate-img",
+                                                                    "html_tag": "div",
+                                                                    "content_width": "full",
+                                                                    "css_classes": "bc-native-node rate-img",
+                                                                    "flex_direction": "column",
+                                                                    "flex_gap": {
+                                                                        "unit": "px",
+                                                                        "size": 0,
+                                                                        "row": "0",
+                                                                        "column": "0"
+                                                                    },
+                                                                    "padding": {
+                                                                        "unit": "px",
+                                                                        "top": "",
+                                                                        "right": "",
+                                                                        "bottom": "",
+                                                                        "left": "",
+                                                                        "isLinked": false
+                                                                    }
+                                                                },
+                                                                "elements": [
+                                                                    {
+                                                                        "id": "445f48d",
+                                                                        "elType": "widget",
+                                                                        "widgetType": "image",
+                                                                        "settings": {
+                                                                            "__globals__": {
+                                                                                "title_color": "",
+                                                                                "typography_typography": "",
+                                                                                "text_color": "",
+                                                                                "button_text_color": "",
+                                                                                "background_color": ""
+                                                                            },
+                                                                            "_title": "Image",
+                                                                            "_css_classes": "bc-native-widget",
+                                                                            "_margin": {
+                                                                                "unit": "px",
+                                                                                "top": "0",
+                                                                                "right": "0",
+                                                                                "bottom": "0",
+                                                                                "left": "0",
+                                                                                "isLinked": true
+                                                                            },
+                                                                            "bc_source": "fares-445f48d",
+                                                                            "image": {
+                                                                                "url": "{{BC_ASSETS}}/img/img/rate_01.png",
+                                                                                "id": 0
+                                                                            },
+                                                                            "image_size": "full",
+                                                                            "caption_source": "none",
+                                                                            "bc_image_alt": ""
+                                                                        },
+                                                                        "elements": []
+                                                                    }
+                                                                ],
+                                                                "isInner": true
+                                                            }
+                                                        ],
+                                                        "isInner": true
+                                                    },
+                                                    {
+                                                        "id": "ffd3e70",
+                                                        "elType": "container",
+                                                        "settings": {
+                                                            "bc_source": "fares-ffd3e70",
+                                                            "_title": "Premium Pakage One Time Payment",
+                                                            "html_tag": "div",
+                                                            "content_width": "full",
+                                                            "css_classes": "bc-native-node rate-header-content",
+                                                            "flex_direction": "column",
+                                                            "flex_gap": {
+                                                                "unit": "px",
+                                                                "size": 0,
+                                                                "row": "0",
+                                                                "column": "0"
+                                                            },
+                                                            "padding": {
+                                                                "unit": "px",
+                                                                "top": "",
+                                                                "right": "",
+                                                                "bottom": "",
+                                                                "left": "",
+                                                                "isLinked": false
+                                                            }
+                                                        },
+                                                        "elements": [
+                                                            {
+                                                                "id": "efcfcf1",
+                                                                "elType": "widget",
+                                                                "widgetType": "heading",
+                                                                "settings": {
+                                                                    "__globals__": {
+                                                                        "title_color": "",
+                                                                        "typography_typography": "",
+                                                                        "text_color": "",
+                                                                        "button_text_color": "",
+                                                                        "background_color": ""
+                                                                    },
+                                                                    "_title": "Premium Pakage",
+                                                                    "_css_classes": "bc-native-widget",
+                                                                    "_margin": {
+                                                                        "unit": "px",
+                                                                        "top": "0",
+                                                                        "right": "0",
+                                                                        "bottom": "0",
+                                                                        "left": "0",
+                                                                        "isLinked": true
+                                                                    },
+                                                                    "bc_source": "fares-efcfcf1",
+                                                                    "title": "Premium Pakage",
+                                                                    "header_size": "h4",
+                                                                    "size": "default"
+                                                                },
+                                                                "elements": []
+                                                            },
+                                                            {
+                                                                "id": "8cb598d",
+                                                                "elType": "widget",
+                                                                "widgetType": "text-editor",
+                                                                "settings": {
+                                                                    "__globals__": {
+                                                                        "title_color": "",
+                                                                        "typography_typography": "",
+                                                                        "text_color": "",
+                                                                        "button_text_color": "",
+                                                                        "background_color": ""
+                                                                    },
+                                                                    "_title": "One Time Payment",
+                                                                    "_css_classes": "bc-native-widget",
+                                                                    "_margin": {
+                                                                        "unit": "px",
+                                                                        "top": "0",
+                                                                        "right": "0",
+                                                                        "bottom": "0",
+                                                                        "left": "0",
+                                                                        "isLinked": true
+                                                                    },
+                                                                    "bc_source": "fares-8cb598d",
+                                                                    "editor": "<p class=\"rate-duration\">One Time Payment</p>"
+                                                                },
+                                                                "elements": []
+                                                            }
+                                                        ],
+                                                        "isInner": true
+                                                    },
+                                                    {
+                                                        "id": "e67c9fe",
+                                                        "elType": "container",
+                                                        "settings": {
+                                                            "bc_source": "fares-e67c9fe",
+                                                            "_title": "Base Charge: $2.30 Distance Allowance: 5000m Up To 50 k",
+                                                            "html_tag": "div",
+                                                            "content_width": "full",
+                                                            "css_classes": "bc-native-node rate-content",
+                                                            "flex_direction": "column",
+                                                            "flex_gap": {
+                                                                "unit": "px",
+                                                                "size": 0,
+                                                                "row": "0",
+                                                                "column": "0"
+                                                            },
+                                                            "padding": {
+                                                                "unit": "px",
+                                                                "top": "",
+                                                                "right": "",
+                                                                "bottom": "",
+                                                                "left": "",
+                                                                "isLinked": false
+                                                            }
+                                                        },
+                                                        "elements": [
+                                                            {
+                                                                "id": "a357d6f",
+                                                                "elType": "container",
+                                                                "settings": {
+                                                                    "bc_source": "fares-a357d6f",
+                                                                    "_title": "rate-icon",
+                                                                    "html_tag": "div",
+                                                                    "content_width": "full",
+                                                                    "css_classes": "bc-native-node rate-icon",
+                                                                    "flex_direction": "column",
+                                                                    "flex_gap": {
+                                                                        "unit": "px",
+                                                                        "size": 0,
+                                                                        "row": "0",
+                                                                        "column": "0"
+                                                                    },
+                                                                    "padding": {
+                                                                        "unit": "px",
+                                                                        "top": "",
+                                                                        "right": "",
+                                                                        "bottom": "",
+                                                                        "left": "",
+                                                                        "isLinked": false
+                                                                    }
+                                                                },
+                                                                "elements": [
+                                                                    {
+                                                                        "id": "5fb415e",
+                                                                        "elType": "widget",
+                                                                        "widgetType": "image",
+                                                                        "settings": {
+                                                                            "__globals__": {
+                                                                                "title_color": "",
+                                                                                "typography_typography": "",
+                                                                                "text_color": "",
+                                                                                "button_text_color": "",
+                                                                                "background_color": ""
+                                                                            },
+                                                                            "_title": "Image",
+                                                                            "_css_classes": "bc-native-widget",
+                                                                            "_margin": {
+                                                                                "unit": "px",
+                                                                                "top": "0",
+                                                                                "right": "0",
+                                                                                "bottom": "0",
+                                                                                "left": "0",
+                                                                                "isLinked": true
+                                                                            },
+                                                                            "bc_source": "fares-5fb415e",
+                                                                            "image": {
+                                                                                "url": "{{BC_ASSETS}}/img/img/icon_taxi-1.svg",
+                                                                                "id": 0
+                                                                            },
+                                                                            "image_size": "full",
+                                                                            "caption_source": "none",
+                                                                            "bc_image_alt": ""
+                                                                        },
+                                                                        "elements": []
+                                                                    }
+                                                                ],
+                                                                "isInner": true
+                                                            },
+                                                            {
+                                                                "id": "f7f8ca7",
+                                                                "elType": "container",
+                                                                "settings": {
+                                                                    "bc_source": "fares-f7f8ca7",
+                                                                    "_title": "Base Charge: $2.30 Distance Allowance: 5000m Up To 50 k",
+                                                                    "html_tag": "div",
+                                                                    "content_width": "full",
+                                                                    "css_classes": "bc-native-node rate-feature",
+                                                                    "flex_direction": "column",
+                                                                    "flex_gap": {
+                                                                        "unit": "px",
+                                                                        "size": 0,
+                                                                        "row": "0",
+                                                                        "column": "0"
+                                                                    },
+                                                                    "padding": {
+                                                                        "unit": "px",
+                                                                        "top": "",
+                                                                        "right": "",
+                                                                        "bottom": "",
+                                                                        "left": "",
+                                                                        "isLinked": false
+                                                                    }
+                                                                },
+                                                                "elements": [
+                                                                    {
+                                                                        "id": "a7dd933",
+                                                                        "elType": "widget",
+                                                                        "widgetType": "text-editor",
+                                                                        "settings": {
+                                                                            "__globals__": {
+                                                                                "title_color": "",
+                                                                                "typography_typography": "",
+                                                                                "text_color": "",
+                                                                                "button_text_color": "",
+                                                                                "background_color": ""
+                                                                            },
+                                                                            "_title": "Base Charge: $2.30 Distance Allowance: 5000m Up To 50 k",
+                                                                            "_css_classes": "bc-native-widget",
+                                                                            "_margin": {
+                                                                                "unit": "px",
+                                                                                "top": "0",
+                                                                                "right": "0",
+                                                                                "bottom": "0",
+                                                                                "left": "0",
+                                                                                "isLinked": true
+                                                                            },
+                                                                            "bc_source": "fares-a7dd933",
+                                                                            "editor": "<ul>\r\n                                        <li><i class=\"fas fa-check-double\"></i> Base Charge: <span>$2.30</span></li>\r\n                                        <li><i class=\"fas fa-check-double\"></i> Distance Allowance: <span>5000m</span></li>\r\n                                        <li><i class=\"fas fa-check-double\"></i> Up To 50 kms: <span>$1.38/km</span></li>\r\n                                        <li><i class=\"fas fa-check-double\"></i> Booking Fee: <span>$0.99</span></li>\r\n                                        <li><i class=\"fas fa-check-double\"></i> Extra Passangers: <span>$0.45</span></li>\r\n                                    </ul>"
+                                                                        },
+                                                                        "elements": []
+                                                                    },
+                                                                    {
+                                                                        "id": "6a8749c",
+                                                                        "elType": "widget",
+                                                                        "widgetType": "button",
+                                                                        "settings": {
+                                                                            "__globals__": {
+                                                                                "title_color": "",
+                                                                                "typography_typography": "",
+                                                                                "text_color": "",
+                                                                                "button_text_color": "",
+                                                                                "background_color": ""
+                                                                            },
+                                                                            "_title": "Choose Plan",
+                                                                            "_css_classes": "bc-native-widget",
+                                                                            "_margin": {
+                                                                                "unit": "px",
+                                                                                "top": "0",
+                                                                                "right": "0",
+                                                                                "bottom": "0",
+                                                                                "left": "0",
+                                                                                "isLinked": true
+                                                                            },
+                                                                            "bc_source": "fares-6a8749c",
+                                                                            "text": "Choose Plan<i class=\"fas fa-arrow-right\"></i>",
+                                                                            "link": {
+                                                                                "url": "#",
+                                                                                "is_external": false
+                                                                            },
+                                                                            "size": "sm"
+                                                                        },
+                                                                        "elements": []
+                                                                    }
+                                                                ],
+                                                                "isInner": true
+                                                            }
+                                                        ],
+                                                        "isInner": true
+                                                    }
+                                                ],
+                                                "isInner": true
+                                            }
+                                        ],
+                                        "isInner": true
+                                    }
+                                ],
+                                "isInner": true
+                            }
+                        ],
+                        "isInner": true
+                    }
+                ],
+                "isInner": true
+            }
+        ],
+        "isInner": false
+    }
+]

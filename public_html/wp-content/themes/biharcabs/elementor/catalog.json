@@ -1,0 +1,4304 @@
+{
+    "nodes": {
+        "index-8df17c7": {
+            "tag": "section",
+            "attributes": {
+                "class": "custom-hero"
+            }
+        },
+        "index-032c085": {
+            "tag": "div",
+            "attributes": {
+                "class": "container position-relative",
+                "style": "z-index: 1;"
+            }
+        },
+        "index-72bca5b": {
+            "tag": "div",
+            "attributes": {
+                "class": "row align-items-center"
+            }
+        },
+        "index-61dfa6f": {
+            "tag": "div",
+            "attributes": {
+                "class": "col-lg-7 mb-5 mb-lg-0"
+            }
+        },
+        "index-a13c676": {
+            "tag": "div",
+            "attributes": {
+                "class": "hero-badge"
+            }
+        },
+        "index-00feeff": {
+            "tag": "h1",
+            "attributes": {
+                "class": "hero-title"
+            }
+        },
+        "index-e094f03": {
+            "tag": "p",
+            "attributes": {
+                "class": "hero-desc"
+            }
+        },
+        "index-247d75c": {
+            "tag": "div",
+            "attributes": {
+                "class": "hero-features"
+            }
+        },
+        "index-ae5f95d": {
+            "tag": "div",
+            "attributes": {
+                "class": "hf-item"
+            }
+        },
+        "index-f89bebc": {
+            "tag": "div",
+            "attributes": {
+                "class": "hf-icon"
+            }
+        },
+        "index-598d471": {
+            "tag": "div",
+            "attributes": {
+                "class": "hf-title"
+            }
+        },
+        "index-aaa07d7": {
+            "tag": "div",
+            "attributes": {
+                "class": "hf-sub"
+            }
+        },
+        "index-74216dd": {
+            "tag": "div",
+            "attributes": {
+                "class": "hf-item"
+            }
+        },
+        "index-b89eca3": {
+            "tag": "div",
+            "attributes": {
+                "class": "hf-icon"
+            }
+        },
+        "index-0f9916a": {
+            "tag": "div",
+            "attributes": {
+                "class": "hf-title"
+            }
+        },
+        "index-b69ad33": {
+            "tag": "div",
+            "attributes": {
+                "class": "hf-sub"
+            }
+        },
+        "index-26a685d": {
+            "tag": "div",
+            "attributes": {
+                "class": "hf-item"
+            }
+        },
+        "index-e70467d": {
+            "tag": "div",
+            "attributes": {
+                "class": "hf-icon"
+            }
+        },
+        "index-2f9f153": {
+            "tag": "div",
+            "attributes": {
+                "class": "hf-title"
+            }
+        },
+        "index-3b0d881": {
+            "tag": "div",
+            "attributes": {
+                "class": "hf-sub"
+            }
+        },
+        "index-edc9d8e": {
+            "tag": "div",
+            "attributes": {
+                "class": "col-lg-5"
+            }
+        },
+        "index-7bd6e3e": {
+            "tag": "div",
+            "attributes": {
+                "class": "hero-booking-card"
+            }
+        },
+        "index-5ffebdf": {
+            "tag": "div",
+            "attributes": {
+                "class": "hbc-title"
+            }
+        },
+        "index-5d18281": {
+            "tag": "div",
+            "attributes": {
+                "class": "hbc-tabs"
+            }
+        },
+        "index-8aad0fc": {
+            "tag": "div",
+            "attributes": {
+                "class": "hbc-tab active"
+            }
+        },
+        "index-9bddef9": {
+            "tag": "div",
+            "attributes": {
+                "class": "hbc-tab"
+            }
+        },
+        "index-4ebfca6": {
+            "tag": "form",
+            "attributes": {
+                "id": "heroBookingForm"
+            }
+        },
+        "index-4df8cd6": {
+            "tag": "section",
+            "attributes": {
+                "class": "section-padding trust-section"
+            }
+        },
+        "index-70805fd": {
+            "tag": "div",
+            "attributes": {
+                "class": "container"
+            }
+        },
+        "index-61a4dd1": {
+            "tag": "div",
+            "attributes": {
+                "class": "row align-items-center"
+            }
+        },
+        "index-6c6b87d": {
+            "tag": "div",
+            "attributes": {
+                "class": "col-lg-6 mb-5 mb-lg-0 pr-lg-5"
+            }
+        },
+        "index-f1a33c5": {
+            "tag": "h2",
+            "attributes": {
+                "class": "fw-bold mb-4",
+                "style": "font-family: 'Outfit', sans-serif; font-size: 2.5rem;"
+            }
+        },
+        "index-fa85bdf": {
+            "tag": "p",
+            "attributes": {
+                "class": "text-muted",
+                "style": "font-size: 1.1rem; line-height: 1.8;"
+            }
+        },
+        "index-5823abf": {
+            "tag": "ul",
+            "attributes": {
+                "class": "list-unstyled mt-4",
+                "style": "font-size: 1.1rem;"
+            }
+        },
+        "index-bedb36a": {
+            "tag": "div",
+            "attributes": {
+                "class": "col-lg-6"
+            }
+        },
+        "index-ebd6eb0": {
+            "tag": "div",
+            "attributes": {
+                "class": "row g-4"
+            }
+        },
+        "index-c7b05a1": {
+            "tag": "div",
+            "attributes": {
+                "class": "col-6"
+            }
+        },
+        "index-428de7b": {
+            "tag": "div",
+            "attributes": {
+                "class": "stat-box"
+            }
+        },
+        "index-d54e827": {
+            "tag": "h3",
+            "attributes": []
+        },
+        "index-36beb78": {
+            "tag": "p",
+            "attributes": {
+                "class": "text-muted mb-0 mt-2"
+            }
+        },
+        "index-248894b": {
+            "tag": "div",
+            "attributes": {
+                "class": "col-6"
+            }
+        },
+        "index-a9617e0": {
+            "tag": "div",
+            "attributes": {
+                "class": "stat-box"
+            }
+        },
+        "index-0721598": {
+            "tag": "h3",
+            "attributes": []
+        },
+        "index-73dc6cc": {
+            "tag": "p",
+            "attributes": {
+                "class": "text-muted mb-0 mt-2"
+            }
+        },
+        "index-e129db8": {
+            "tag": "div",
+            "attributes": {
+                "class": "col-6"
+            }
+        },
+        "index-525efc0": {
+            "tag": "div",
+            "attributes": {
+                "class": "stat-box"
+            }
+        },
+        "index-aeaab82": {
+            "tag": "h3",
+            "attributes": []
+        },
+        "index-c71b547": {
+            "tag": "p",
+            "attributes": {
+                "class": "text-muted mb-0 mt-2"
+            }
+        },
+        "index-ef7581e": {
+            "tag": "div",
+            "attributes": {
+                "class": "col-6"
+            }
+        },
+        "index-db66330": {
+            "tag": "div",
+            "attributes": {
+                "class": "stat-box"
+            }
+        },
+        "index-45c2a4c": {
+            "tag": "h3",
+            "attributes": []
+        },
+        "index-aa38ff1": {
+            "tag": "p",
+            "attributes": {
+                "class": "text-muted mb-0 mt-2"
+            }
+        },
+        "index-2102fe4": {
+            "tag": "section",
+            "attributes": {
+                "class": "section-padding bg-light"
+            }
+        },
+        "index-b7fd6bb": {
+            "tag": "div",
+            "attributes": {
+                "class": "container"
+            }
+        },
+        "index-b848c59": {
+            "tag": "div",
+            "attributes": {
+                "class": "text-center mb-5"
+            }
+        },
+        "index-a1e9a87": {
+            "tag": "h2",
+            "attributes": {
+                "class": "fw-bold",
+                "style": "font-family: 'Outfit', sans-serif;"
+            }
+        },
+        "index-0e5b8bc": {
+            "tag": "p",
+            "attributes": {
+                "class": "text-muted mt-3"
+            }
+        },
+        "index-6b4c032": {
+            "tag": "div",
+            "attributes": {
+                "class": "row g-4 mt-2"
+            }
+        },
+        "index-87a5059": {
+            "tag": "div",
+            "attributes": {
+                "class": "col-md-6 col-lg-3"
+            }
+        },
+        "index-147711b": {
+            "tag": "div",
+            "attributes": {
+                "class": "service-card"
+            }
+        },
+        "index-ac6cc8f": {
+            "tag": "div",
+            "attributes": {
+                "class": "service-img",
+                "style": "background: url('assets/img/img/taxi_indian_local_taxi.webp');"
+            }
+        },
+        "index-832f26f": {
+            "tag": "div",
+            "attributes": {
+                "class": "service-content"
+            }
+        },
+        "index-4ce5f8f": {
+            "tag": "h4",
+            "attributes": []
+        },
+        "index-b3b90cd": {
+            "tag": "ul",
+            "attributes": []
+        },
+        "index-5d25ccb": {
+            "tag": "a",
+            "attributes": {
+                "class": "btn-primary-custom d-block text-center text-decoration-none mt-4"
+            }
+        },
+        "index-22d64df": {
+            "tag": "div",
+            "attributes": {
+                "class": "col-md-6 col-lg-3"
+            }
+        },
+        "index-4f17f23": {
+            "tag": "div",
+            "attributes": {
+                "class": "service-card"
+            }
+        },
+        "index-3769e0f": {
+            "tag": "div",
+            "attributes": {
+                "class": "service-img",
+                "style": "background: url('assets/img/img/taxi_indian_outstation_taxi.webp');"
+            }
+        },
+        "index-c04966e": {
+            "tag": "div",
+            "attributes": {
+                "class": "service-content"
+            }
+        },
+        "index-1c90157": {
+            "tag": "h4",
+            "attributes": []
+        },
+        "index-b9f64ed": {
+            "tag": "ul",
+            "attributes": []
+        },
+        "index-dbf8667": {
+            "tag": "a",
+            "attributes": {
+                "class": "btn-primary-custom d-block text-center text-decoration-none mt-4"
+            }
+        },
+        "index-e098f7d": {
+            "tag": "div",
+            "attributes": {
+                "class": "col-md-6 col-lg-3"
+            }
+        },
+        "index-3bcf2e7": {
+            "tag": "div",
+            "attributes": {
+                "class": "service-card"
+            }
+        },
+        "index-3a56419": {
+            "tag": "div",
+            "attributes": {
+                "class": "service-img",
+                "style": "background: url('assets/img/img/taxi_indian_airport_taxi.webp');"
+            }
+        },
+        "index-d52f965": {
+            "tag": "div",
+            "attributes": {
+                "class": "service-content"
+            }
+        },
+        "index-6d3a9dd": {
+            "tag": "h4",
+            "attributes": []
+        },
+        "index-6df439b": {
+            "tag": "ul",
+            "attributes": []
+        },
+        "index-77945b1": {
+            "tag": "a",
+            "attributes": {
+                "class": "btn-primary-custom d-block text-center text-decoration-none mt-4"
+            }
+        },
+        "index-f0d6107": {
+            "tag": "div",
+            "attributes": {
+                "class": "col-md-6 col-lg-3"
+            }
+        },
+        "index-4dbb81b": {
+            "tag": "div",
+            "attributes": {
+                "class": "service-card"
+            }
+        },
+        "index-e68471b": {
+            "tag": "div",
+            "attributes": {
+                "class": "service-img",
+                "style": "background: url('assets/img/img/taxi_indian_corporate_taxi.webp');"
+            }
+        },
+        "index-d8018d5": {
+            "tag": "div",
+            "attributes": {
+                "class": "service-content"
+            }
+        },
+        "index-00c75b3": {
+            "tag": "h4",
+            "attributes": []
+        },
+        "index-acd8341": {
+            "tag": "ul",
+            "attributes": []
+        },
+        "index-1f1167d": {
+            "tag": "a",
+            "attributes": {
+                "class": "btn-primary-custom d-block text-center text-decoration-none mt-4"
+            }
+        },
+        "index-cd3dcd5": {
+            "tag": "section",
+            "attributes": {
+                "class": "section-padding"
+            }
+        },
+        "index-1ddcc21": {
+            "tag": "div",
+            "attributes": {
+                "class": "container"
+            }
+        },
+        "index-0b15198": {
+            "tag": "div",
+            "attributes": {
+                "class": "text-center mb-5"
+            }
+        },
+        "index-e10188c": {
+            "tag": "h2",
+            "attributes": {
+                "class": "fw-bold",
+                "style": "font-family: 'Outfit', sans-serif;"
+            }
+        },
+        "index-223fd6c": {
+            "tag": "p",
+            "attributes": {
+                "class": "text-muted mt-3"
+            }
+        },
+        "index-f83715d": {
+            "tag": "div",
+            "attributes": {
+                "class": "row g-4 mt-2"
+            }
+        },
+        "index-28aa497": {
+            "tag": "div",
+            "attributes": {
+                "class": "col-lg-4"
+            }
+        },
+        "index-7c2e6e6": {
+            "tag": "div",
+            "attributes": {
+                "class": "fleet-card"
+            }
+        },
+        "index-f7d1769": {
+            "tag": "img",
+            "attributes": {
+                "alt": "Sedan",
+                "class": "img-fluid rounded"
+            }
+        },
+        "index-54a6489": {
+            "tag": "h4",
+            "attributes": {
+                "style": "font-family: 'Outfit', sans-serif;"
+            }
+        },
+        "index-b351c51": {
+            "tag": "p",
+            "attributes": {
+                "class": "text-muted mb-4"
+            }
+        },
+        "index-51db0ef": {
+            "tag": "hr",
+            "attributes": []
+        },
+        "index-c07b891": {
+            "tag": "div",
+            "attributes": {
+                "class": "d-flex justify-content-between mb-4 mt-4"
+            }
+        },
+        "index-4008d62": {
+            "tag": "button",
+            "attributes": {
+                "class": "btn btn-dark w-100 py-3 font-weight-bold"
+            }
+        },
+        "index-7e664f7": {
+            "tag": "div",
+            "attributes": {
+                "class": "col-lg-4"
+            }
+        },
+        "index-c2e6604": {
+            "tag": "div",
+            "attributes": {
+                "class": "fleet-card border-warning shadow",
+                "style": "border-width: 2px;"
+            }
+        },
+        "index-b1b4f1e": {
+            "tag": "div",
+            "attributes": {
+                "class": "badge bg-warning text-dark mb-3 px-3 py-2"
+            }
+        },
+        "index-97b7e53": {
+            "tag": "img",
+            "attributes": {
+                "alt": "SUV",
+                "class": "img-fluid rounded"
+            }
+        },
+        "index-f4076c4": {
+            "tag": "h4",
+            "attributes": {
+                "style": "font-family: 'Outfit', sans-serif;"
+            }
+        },
+        "index-00f583b": {
+            "tag": "p",
+            "attributes": {
+                "class": "text-muted mb-4"
+            }
+        },
+        "index-9a73b06": {
+            "tag": "hr",
+            "attributes": []
+        },
+        "index-8011722": {
+            "tag": "div",
+            "attributes": {
+                "class": "d-flex justify-content-between mb-4 mt-4"
+            }
+        },
+        "index-da3dec0": {
+            "tag": "button",
+            "attributes": {
+                "class": "btn-primary-custom"
+            }
+        },
+        "index-2e377ff": {
+            "tag": "div",
+            "attributes": {
+                "class": "col-lg-4"
+            }
+        },
+        "index-f82fc95": {
+            "tag": "div",
+            "attributes": {
+                "class": "fleet-card"
+            }
+        },
+        "index-3111be4": {
+            "tag": "img",
+            "attributes": {
+                "alt": "Tempo",
+                "class": "img-fluid rounded"
+            }
+        },
+        "index-5b85232": {
+            "tag": "h4",
+            "attributes": {
+                "style": "font-family: 'Outfit', sans-serif;"
+            }
+        },
+        "index-4b5b447": {
+            "tag": "p",
+            "attributes": {
+                "class": "text-muted mb-4"
+            }
+        },
+        "index-287ee8b": {
+            "tag": "hr",
+            "attributes": []
+        },
+        "index-cb8a1d5": {
+            "tag": "div",
+            "attributes": {
+                "class": "d-flex justify-content-between mb-4 mt-4"
+            }
+        },
+        "index-5e12f86": {
+            "tag": "button",
+            "attributes": {
+                "class": "btn btn-dark w-100 py-3 font-weight-bold"
+            }
+        },
+        "index-ac48731": {
+            "tag": "section",
+            "attributes": {
+                "class": "section-padding bg-light"
+            }
+        },
+        "index-bb5da40": {
+            "tag": "div",
+            "attributes": {
+                "class": "container"
+            }
+        },
+        "index-3c1827d": {
+            "tag": "div",
+            "attributes": {
+                "class": "text-center mb-5"
+            }
+        },
+        "index-f35857c": {
+            "tag": "h2",
+            "attributes": {
+                "class": "fw-bold",
+                "style": "font-family: 'Outfit', sans-serif;"
+            }
+        },
+        "index-8ec864e": {
+            "tag": "div",
+            "attributes": {
+                "class": "features-grid mt-5"
+            }
+        },
+        "index-85e96b7": {
+            "tag": "div",
+            "attributes": {
+                "class": "feature-item"
+            }
+        },
+        "index-a9fb4ee": {
+            "tag": "h3",
+            "attributes": []
+        },
+        "index-7b169ed": {
+            "tag": "h4",
+            "attributes": {
+                "class": "mt-3 mb-3"
+            }
+        },
+        "index-c9c450a": {
+            "tag": "p",
+            "attributes": {
+                "class": "text-muted"
+            }
+        },
+        "index-8805f4e": {
+            "tag": "div",
+            "attributes": {
+                "class": "feature-item"
+            }
+        },
+        "index-decc8e8": {
+            "tag": "h3",
+            "attributes": []
+        },
+        "index-63a41d5": {
+            "tag": "h4",
+            "attributes": {
+                "class": "mt-3 mb-3"
+            }
+        },
+        "index-459e334": {
+            "tag": "p",
+            "attributes": {
+                "class": "text-muted"
+            }
+        },
+        "index-a23f4ec": {
+            "tag": "div",
+            "attributes": {
+                "class": "feature-item"
+            }
+        },
+        "index-9086d4c": {
+            "tag": "h3",
+            "attributes": []
+        },
+        "index-85e7a91": {
+            "tag": "h4",
+            "attributes": {
+                "class": "mt-3 mb-3"
+            }
+        },
+        "index-e5fd82a": {
+            "tag": "p",
+            "attributes": {
+                "class": "text-muted"
+            }
+        },
+        "index-85a0a09": {
+            "tag": "div",
+            "attributes": {
+                "class": "feature-item"
+            }
+        },
+        "index-5ae29d2": {
+            "tag": "h3",
+            "attributes": []
+        },
+        "index-0f8b59c": {
+            "tag": "h4",
+            "attributes": {
+                "class": "mt-3 mb-3"
+            }
+        },
+        "index-413435d": {
+            "tag": "p",
+            "attributes": {
+                "class": "text-muted"
+            }
+        },
+        "index-0a7e535": {
+            "tag": "section",
+            "attributes": {
+                "class": "section-padding"
+            }
+        },
+        "index-db9a5c4": {
+            "tag": "div",
+            "attributes": {
+                "class": "container"
+            }
+        },
+        "index-be2033c": {
+            "tag": "div",
+            "attributes": {
+                "class": "text-center mb-5"
+            }
+        },
+        "index-5669c54": {
+            "tag": "div",
+            "attributes": {
+                "class": "review-badge"
+            }
+        },
+        "index-d57b08c": {
+            "tag": "h2",
+            "attributes": {
+                "class": "fw-bold",
+                "style": "font-family: 'Outfit', sans-serif;"
+            }
+        },
+        "index-634bb04": {
+            "tag": "p",
+            "attributes": {
+                "class": "text-muted mt-2"
+            }
+        },
+        "index-4e33479": {
+            "tag": "div",
+            "attributes": {
+                "class": "row g-4 mt-2 align-items-stretch"
+            }
+        },
+        "index-eb6a508": {
+            "tag": "div",
+            "attributes": {
+                "class": "col-lg-5"
+            }
+        },
+        "index-fdfc638": {
+            "tag": "div",
+            "attributes": {
+                "class": "review-img-card"
+            }
+        },
+        "index-8d0a2a5": {
+            "tag": "div",
+            "attributes": {
+                "style": "color: #facc15; font-size: 20px; margin-bottom: 10px;"
+            }
+        },
+        "index-aae4898": {
+            "tag": "h4",
+            "attributes": {
+                "class": "text-white font-weight-bold",
+                "style": "font-family: 'Outfit', sans-serif;"
+            }
+        },
+        "index-7c579d1": {
+            "tag": "p",
+            "attributes": {
+                "style": "font-size: 14px; color: #d1d5db; line-height: 1.5; font-style: italic;"
+            }
+        },
+        "index-55ab763": {
+            "tag": "div",
+            "attributes": {
+                "class": "mt-3"
+            }
+        },
+        "index-14b0e64": {
+            "tag": "p",
+            "attributes": {
+                "class": "mt-2 mb-0",
+                "style": "font-size: 10px; color: #facc15; letter-spacing: 1px; font-weight: bold;"
+            }
+        },
+        "index-efbb635": {
+            "tag": "div",
+            "attributes": {
+                "class": "col-lg-7"
+            }
+        },
+        "index-57f9d68": {
+            "tag": "div",
+            "attributes": {
+                "class": "review-card"
+            }
+        },
+        "index-8357087": {
+            "tag": "div",
+            "attributes": {
+                "style": "color: #facc15; font-size: 20px; margin-bottom: 10px;"
+            }
+        },
+        "index-9b1e2f7": {
+            "tag": "p",
+            "attributes": {
+                "class": "review-text"
+            }
+        },
+        "index-404c454": {
+            "tag": "div",
+            "attributes": {
+                "class": "d-flex justify-content-between align-items-center mt-4 border-top pt-3"
+            }
+        },
+        "index-7c5673a": {
+            "tag": "div",
+            "attributes": []
+        },
+        "index-883baf5": {
+            "tag": "div",
+            "attributes": {
+                "class": "review-tag"
+            }
+        },
+        "index-f994b27": {
+            "tag": "div",
+            "attributes": {
+                "class": "review-card mb-0"
+            }
+        },
+        "index-5e4e4b7": {
+            "tag": "div",
+            "attributes": {
+                "style": "color: #facc15; font-size: 20px; margin-bottom: 10px;"
+            }
+        },
+        "index-4193650": {
+            "tag": "p",
+            "attributes": {
+                "class": "review-text"
+            }
+        },
+        "index-9c10d32": {
+            "tag": "div",
+            "attributes": {
+                "class": "d-flex justify-content-between align-items-center mt-4 border-top pt-3"
+            }
+        },
+        "index-4bef304": {
+            "tag": "div",
+            "attributes": []
+        },
+        "index-26b2696": {
+            "tag": "div",
+            "attributes": {
+                "class": "review-tag"
+            }
+        },
+        "index-44c8c2f": {
+            "tag": "section",
+            "attributes": {
+                "class": "section-padding bg-white"
+            }
+        },
+        "index-dc1f4a5": {
+            "tag": "div",
+            "attributes": {
+                "class": "container"
+            }
+        },
+        "index-c884947": {
+            "tag": "div",
+            "attributes": {
+                "class": "text-center mb-5"
+            }
+        },
+        "index-142f74e": {
+            "tag": "div",
+            "attributes": {
+                "class": "coverage-badge"
+            }
+        },
+        "index-06f03c8": {
+            "tag": "h2",
+            "attributes": {
+                "class": "fw-bold",
+                "style": "font-family: 'Outfit', sans-serif;"
+            }
+        },
+        "index-0e7c2fe": {
+            "tag": "p",
+            "attributes": {
+                "class": "text-muted mt-2"
+            }
+        },
+        "index-e6e291a": {
+            "tag": "div",
+            "attributes": {
+                "class": "row g-4 mt-4 align-items-stretch"
+            }
+        },
+        "index-d850840": {
+            "tag": "div",
+            "attributes": {
+                "class": "col-lg-8"
+            }
+        },
+        "index-b0073e4": {
+            "tag": "div",
+            "attributes": {
+                "class": "row g-4"
+            }
+        },
+        "index-416dfca": {
+            "tag": "div",
+            "attributes": {
+                "class": "col-md-6"
+            }
+        },
+        "index-05a5366": {
+            "tag": "div",
+            "attributes": {
+                "class": "coverage-hub-card"
+            }
+        },
+        "index-24910a0": {
+            "tag": "div",
+            "attributes": {
+                "class": "d-flex justify-content-between align-items-start"
+            }
+        },
+        "index-0a2a090": {
+            "tag": "div",
+            "attributes": {
+                "class": "hub-icon"
+            }
+        },
+        "index-5988d2b": {
+            "tag": "div",
+            "attributes": {
+                "class": "hub-badge"
+            }
+        },
+        "index-5f9ba7b": {
+            "tag": "div",
+            "attributes": []
+        },
+        "index-e64f86b": {
+            "tag": "div",
+            "attributes": {
+                "class": "hub-title"
+            }
+        },
+        "index-031e217": {
+            "tag": "div",
+            "attributes": {
+                "class": "hub-desc"
+            }
+        },
+        "index-6e5cbb2": {
+            "tag": "a",
+            "attributes": {
+                "class": "hub-link"
+            }
+        },
+        "index-153ddcb": {
+            "tag": "div",
+            "attributes": {
+                "class": "col-md-6"
+            }
+        },
+        "index-f94770f": {
+            "tag": "div",
+            "attributes": {
+                "class": "coverage-hub-card"
+            }
+        },
+        "index-353f731": {
+            "tag": "div",
+            "attributes": {
+                "class": "d-flex justify-content-between align-items-start"
+            }
+        },
+        "index-d9c1294": {
+            "tag": "div",
+            "attributes": {
+                "class": "hub-icon"
+            }
+        },
+        "index-d5a887d": {
+            "tag": "div",
+            "attributes": {
+                "class": "hub-badge"
+            }
+        },
+        "index-95de8be": {
+            "tag": "div",
+            "attributes": []
+        },
+        "index-17710c1": {
+            "tag": "div",
+            "attributes": {
+                "class": "hub-title"
+            }
+        },
+        "index-2c04efd": {
+            "tag": "div",
+            "attributes": {
+                "class": "hub-desc"
+            }
+        },
+        "index-9b93e0d": {
+            "tag": "a",
+            "attributes": {
+                "class": "hub-link"
+            }
+        },
+        "index-0cfd05b": {
+            "tag": "div",
+            "attributes": {
+                "class": "col-md-6"
+            }
+        },
+        "index-3c142a6": {
+            "tag": "div",
+            "attributes": {
+                "class": "coverage-city-card"
+            }
+        },
+        "index-7268eb4": {
+            "tag": "div",
+            "attributes": {
+                "class": "d-flex justify-content-between align-items-start"
+            }
+        },
+        "index-1336036": {
+            "tag": "div",
+            "attributes": {
+                "class": "city-icon"
+            }
+        },
+        "index-249547e": {
+            "tag": "div",
+            "attributes": []
+        },
+        "index-85bc0c0": {
+            "tag": "div",
+            "attributes": {
+                "class": "city-title"
+            }
+        },
+        "index-ca0594d": {
+            "tag": "div",
+            "attributes": {
+                "class": "city-desc"
+            }
+        },
+        "index-9599163": {
+            "tag": "a",
+            "attributes": {
+                "class": "city-link"
+            }
+        },
+        "index-e356eec": {
+            "tag": "div",
+            "attributes": {
+                "class": "col-md-6"
+            }
+        },
+        "index-19b6898": {
+            "tag": "div",
+            "attributes": {
+                "class": "coverage-city-card"
+            }
+        },
+        "index-6e2221d": {
+            "tag": "div",
+            "attributes": {
+                "class": "d-flex justify-content-between align-items-start"
+            }
+        },
+        "index-4549d79": {
+            "tag": "div",
+            "attributes": {
+                "class": "city-icon"
+            }
+        },
+        "index-918837e": {
+            "tag": "div",
+            "attributes": []
+        },
+        "index-4c075eb": {
+            "tag": "div",
+            "attributes": {
+                "class": "city-title"
+            }
+        },
+        "index-f87f91b": {
+            "tag": "div",
+            "attributes": {
+                "class": "city-desc"
+            }
+        },
+        "index-f9af7dd": {
+            "tag": "a",
+            "attributes": {
+                "class": "city-link"
+            }
+        },
+        "index-551de7c": {
+            "tag": "div",
+            "attributes": {
+                "class": "col-md-6"
+            }
+        },
+        "index-f6605ec": {
+            "tag": "div",
+            "attributes": {
+                "class": "coverage-city-card"
+            }
+        },
+        "index-fea5881": {
+            "tag": "div",
+            "attributes": {
+                "class": "d-flex justify-content-between align-items-start"
+            }
+        },
+        "index-5d4f46a": {
+            "tag": "div",
+            "attributes": {
+                "class": "city-icon"
+            }
+        },
+        "index-1534a79": {
+            "tag": "div",
+            "attributes": []
+        },
+        "index-117f7f0": {
+            "tag": "div",
+            "attributes": {
+                "class": "city-title"
+            }
+        },
+        "index-544ffb7": {
+            "tag": "div",
+            "attributes": {
+                "class": "city-desc"
+            }
+        },
+        "index-b7f7106": {
+            "tag": "a",
+            "attributes": {
+                "class": "city-link"
+            }
+        },
+        "index-7f674a6": {
+            "tag": "div",
+            "attributes": {
+                "class": "col-md-6"
+            }
+        },
+        "index-24f3bc4": {
+            "tag": "div",
+            "attributes": {
+                "class": "coverage-city-card"
+            }
+        },
+        "index-c3bac5a": {
+            "tag": "div",
+            "attributes": {
+                "class": "d-flex justify-content-between align-items-start"
+            }
+        },
+        "index-118dd9d": {
+            "tag": "div",
+            "attributes": {
+                "class": "city-icon"
+            }
+        },
+        "index-577f2d0": {
+            "tag": "div",
+            "attributes": []
+        },
+        "index-93d0626": {
+            "tag": "div",
+            "attributes": {
+                "class": "city-title"
+            }
+        },
+        "index-b22e4da": {
+            "tag": "div",
+            "attributes": {
+                "class": "city-desc"
+            }
+        },
+        "index-fb67c0a": {
+            "tag": "a",
+            "attributes": {
+                "class": "city-link"
+            }
+        },
+        "index-d9e31aa": {
+            "tag": "div",
+            "attributes": {
+                "class": "col-lg-4"
+            }
+        },
+        "index-cf87275": {
+            "tag": "div",
+            "attributes": {
+                "class": "map-card"
+            }
+        },
+        "index-f8f44fc": {
+            "tag": "div",
+            "attributes": {
+                "class": "map-badge"
+            }
+        },
+        "index-53e1555": {
+            "tag": "img",
+            "attributes": {
+                "alt": "Bihar Route Network Map",
+                "class": "map-image"
+            }
+        },
+        "index-f869879": {
+            "tag": "div",
+            "attributes": []
+        },
+        "index-d343aea": {
+            "tag": "div",
+            "attributes": {
+                "class": "map-title"
+            }
+        },
+        "index-b36f77b": {
+            "tag": "p",
+            "attributes": {
+                "class": "map-desc"
+            }
+        },
+        "index-026830e": {
+            "tag": "section",
+            "attributes": {
+                "class": "section-padding bg-white"
+            }
+        },
+        "index-419bc73": {
+            "tag": "div",
+            "attributes": {
+                "class": "container"
+            }
+        },
+        "index-daeb470": {
+            "tag": "div",
+            "attributes": {
+                "class": "text-center mb-5"
+            }
+        },
+        "index-c6690f6": {
+            "tag": "div",
+            "attributes": {
+                "class": "faq-badge"
+            }
+        },
+        "index-073f092": {
+            "tag": "h2",
+            "attributes": {
+                "class": "fw-bold mb-3",
+                "style": "font-family: 'Outfit', sans-serif;"
+            }
+        },
+        "index-19c2d12": {
+            "tag": "p",
+            "attributes": {
+                "class": "text-muted"
+            }
+        },
+        "index-a2c4bf4": {
+            "tag": "div",
+            "attributes": {
+                "class": "row justify-content-center"
+            }
+        },
+        "index-69de972": {
+            "tag": "div",
+            "attributes": {
+                "class": "col-lg-9"
+            }
+        },
+        "index-201c71e": {
+            "tag": "div",
+            "attributes": {
+                "class": "accordion custom-accordion",
+                "id": "faqAccordion"
+            }
+        },
+        "index-d1baf18": {
+            "tag": "section",
+            "attributes": {
+                "class": "section-padding",
+                "style": "background: #fafafa;"
+            }
+        },
+        "index-ca77232": {
+            "tag": "div",
+            "attributes": {
+                "class": "container"
+            }
+        },
+        "index-f96d5ce": {
+            "tag": "div",
+            "attributes": {
+                "class": "row g-5 align-items-center"
+            }
+        },
+        "index-1bf7f9c": {
+            "tag": "div",
+            "attributes": {
+                "class": "col-lg-5"
+            }
+        },
+        "index-957c53b": {
+            "tag": "div",
+            "attributes": {
+                "class": "fast-booking-badge"
+            }
+        },
+        "index-9c5d087": {
+            "tag": "h2",
+            "attributes": {
+                "class": "fw-bold mb-4",
+                "style": "font-family: 'Outfit', sans-serif; font-size: 2.8rem; line-height: 1.2;"
+            }
+        },
+        "index-218e6b6": {
+            "tag": "div",
+            "attributes": {
+                "class": "driver-img-box"
+            }
+        },
+        "index-a3bda2b": {
+            "tag": "img",
+            "attributes": {
+                "alt": "Verified Driver"
+            }
+        },
+        "index-aef71b4": {
+            "tag": "div",
+            "attributes": {
+                "class": "verified-driver-badge"
+            }
+        },
+        "index-54980c4": {
+            "tag": "p",
+            "attributes": {
+                "class": "text-muted mb-4",
+                "style": "font-size: 15px;"
+            }
+        },
+        "index-4e3c507": {
+            "tag": "a",
+            "attributes": {
+                "class": "text-decoration-none"
+            }
+        },
+        "index-0d076e8": {
+            "tag": "div",
+            "attributes": {
+                "class": "contact-box"
+            }
+        },
+        "index-857fa1b": {
+            "tag": "div",
+            "attributes": {
+                "class": "contact-icon"
+            }
+        },
+        "index-565d9a9": {
+            "tag": "div",
+            "attributes": []
+        },
+        "index-88eb656": {
+            "tag": "div",
+            "attributes": {
+                "class": "contact-title"
+            }
+        },
+        "index-f3ad54c": {
+            "tag": "h4",
+            "attributes": {
+                "class": "contact-value"
+            }
+        },
+        "index-a8c1078": {
+            "tag": "a",
+            "attributes": {
+                "class": "text-decoration-none"
+            }
+        },
+        "index-052be80": {
+            "tag": "div",
+            "attributes": {
+                "class": "contact-box whatsapp-box"
+            }
+        },
+        "index-ad785bf": {
+            "tag": "div",
+            "attributes": {
+                "class": "contact-icon"
+            }
+        },
+        "index-6476696": {
+            "tag": "div",
+            "attributes": []
+        },
+        "index-a118c00": {
+            "tag": "div",
+            "attributes": {
+                "class": "contact-title"
+            }
+        },
+        "index-6cd13d5": {
+            "tag": "h4",
+            "attributes": {
+                "class": "contact-value"
+            }
+        },
+        "index-b93a986": {
+            "tag": "div",
+            "attributes": {
+                "class": "d-flex align-items-start mt-4"
+            }
+        },
+        "index-5c75319": {
+            "tag": "div",
+            "attributes": {
+                "style": "color: #facc15; font-size: 20px; margin-right: 12px;"
+            }
+        },
+        "index-7c8ed9f": {
+            "tag": "div",
+            "attributes": []
+        },
+        "index-9d803e3": {
+            "tag": "h6",
+            "attributes": {
+                "class": "fw-bold mb-1",
+                "style": "font-size: 14px;"
+            }
+        },
+        "index-47f4139": {
+            "tag": "p",
+            "attributes": {
+                "class": "text-muted mb-0",
+                "style": "font-size: 12px;"
+            }
+        },
+        "index-97c3f7d": {
+            "tag": "div",
+            "attributes": {
+                "class": "col-lg-7"
+            }
+        },
+        "index-3afce93": {
+            "tag": "div",
+            "attributes": {
+                "class": "booking-form-card"
+            }
+        },
+        "index-92ad45b": {
+            "tag": "h4",
+            "attributes": {
+                "class": "fw-bold mb-4",
+                "style": "font-family: 'Outfit', sans-serif;"
+            }
+        },
+        "index-d37e31f": {
+            "tag": "form",
+            "attributes": []
+        },
+        "service-0a39b2b": {
+            "tag": "section",
+            "attributes": {
+                "class": "services-hero"
+            }
+        },
+        "service-fb3ed34": {
+            "tag": "div",
+            "attributes": {
+                "class": "container"
+            }
+        },
+        "service-ec2fbc3": {
+            "tag": "span",
+            "attributes": {
+                "class": "catalog-badge"
+            }
+        },
+        "service-342aced": {
+            "tag": "h1",
+            "attributes": {
+                "style": "color: white;"
+            }
+        },
+        "service-385f36e": {
+            "tag": "p",
+            "attributes": []
+        },
+        "service-3dca197": {
+            "tag": "section",
+            "attributes": {
+                "class": "service-grid-section"
+            }
+        },
+        "service-9ce4441": {
+            "tag": "div",
+            "attributes": {
+                "class": "container"
+            }
+        },
+        "service-45f449d": {
+            "tag": "div",
+            "attributes": {
+                "class": "text-center mb-5"
+            }
+        },
+        "service-db1e7b4": {
+            "tag": "span",
+            "attributes": {
+                "class": "section-badge"
+            }
+        },
+        "service-ab7c62c": {
+            "tag": "h2",
+            "attributes": {
+                "class": "fw-bold mb-3",
+                "style": "font-family: 'Outfit', sans-serif;"
+            }
+        },
+        "service-6d91141": {
+            "tag": "p",
+            "attributes": {
+                "class": "text-muted mx-auto",
+                "style": "max-width: 700px;"
+            }
+        },
+        "service-728c47a": {
+            "tag": "div",
+            "attributes": {
+                "class": "row g-4"
+            }
+        },
+        "service-3dea15f": {
+            "tag": "div",
+            "attributes": {
+                "class": "col-lg-3 col-md-6"
+            }
+        },
+        "service-2b1df46": {
+            "tag": "div",
+            "attributes": {
+                "class": "service-card"
+            }
+        },
+        "service-3c17be7": {
+            "tag": "div",
+            "attributes": {
+                "class": "service-img-wrapper"
+            }
+        },
+        "service-3d4e24a": {
+            "tag": "img",
+            "attributes": {
+                "alt": "Local Taxi Service"
+            }
+        },
+        "service-2b86a5e": {
+            "tag": "div",
+            "attributes": {
+                "class": "service-icon-bubble"
+            }
+        },
+        "service-4b5de44": {
+            "tag": "div",
+            "attributes": {
+                "class": "service-card-body"
+            }
+        },
+        "service-ee56903": {
+            "tag": "h4",
+            "attributes": []
+        },
+        "service-684741e": {
+            "tag": "p",
+            "attributes": {
+                "class": "desc"
+            }
+        },
+        "service-a9598ae": {
+            "tag": "ul",
+            "attributes": {
+                "class": "service-features"
+            }
+        },
+        "service-426c9a1": {
+            "tag": "div",
+            "attributes": {
+                "class": "service-footer"
+            }
+        },
+        "service-14fdf99": {
+            "tag": "div",
+            "attributes": {
+                "class": "col-lg-3 col-md-6"
+            }
+        },
+        "service-bedb5c4": {
+            "tag": "div",
+            "attributes": {
+                "class": "service-card"
+            }
+        },
+        "service-c8f085f": {
+            "tag": "div",
+            "attributes": {
+                "class": "service-img-wrapper"
+            }
+        },
+        "service-3dedd5b": {
+            "tag": "img",
+            "attributes": {
+                "alt": "Airport Transfer"
+            }
+        },
+        "service-7d38685": {
+            "tag": "div",
+            "attributes": {
+                "class": "service-icon-bubble"
+            }
+        },
+        "service-c821ada": {
+            "tag": "div",
+            "attributes": {
+                "class": "service-card-body"
+            }
+        },
+        "service-123de5f": {
+            "tag": "h4",
+            "attributes": []
+        },
+        "service-cafb0a0": {
+            "tag": "p",
+            "attributes": {
+                "class": "desc"
+            }
+        },
+        "service-f627a9e": {
+            "tag": "ul",
+            "attributes": {
+                "class": "service-features"
+            }
+        },
+        "service-cf02312": {
+            "tag": "div",
+            "attributes": {
+                "class": "service-footer"
+            }
+        },
+        "service-7dc11b1": {
+            "tag": "div",
+            "attributes": {
+                "class": "col-lg-3 col-md-6"
+            }
+        },
+        "service-0dff987": {
+            "tag": "div",
+            "attributes": {
+                "class": "service-card"
+            }
+        },
+        "service-168c0c6": {
+            "tag": "div",
+            "attributes": {
+                "class": "service-img-wrapper"
+            }
+        },
+        "service-cc57efd": {
+            "tag": "img",
+            "attributes": {
+                "alt": "Railway Station Taxi"
+            }
+        },
+        "service-799ebe4": {
+            "tag": "div",
+            "attributes": {
+                "class": "service-icon-bubble"
+            }
+        },
+        "service-5ef29e9": {
+            "tag": "div",
+            "attributes": {
+                "class": "service-card-body"
+            }
+        },
+        "service-6c22c19": {
+            "tag": "h4",
+            "attributes": []
+        },
+        "service-28433e8": {
+            "tag": "p",
+            "attributes": {
+                "class": "desc"
+            }
+        },
+        "service-2c71dc9": {
+            "tag": "ul",
+            "attributes": {
+                "class": "service-features"
+            }
+        },
+        "service-d2ec471": {
+            "tag": "div",
+            "attributes": {
+                "class": "service-footer"
+            }
+        },
+        "service-3819912": {
+            "tag": "div",
+            "attributes": {
+                "class": "col-lg-3 col-md-6"
+            }
+        },
+        "service-fdca5e8": {
+            "tag": "div",
+            "attributes": {
+                "class": "service-card"
+            }
+        },
+        "service-cd76d19": {
+            "tag": "div",
+            "attributes": {
+                "class": "service-img-wrapper"
+            }
+        },
+        "service-99d49b4": {
+            "tag": "img",
+            "attributes": {
+                "alt": "Outstation Cab Rentals"
+            }
+        },
+        "service-28a3115": {
+            "tag": "div",
+            "attributes": {
+                "class": "service-icon-bubble"
+            }
+        },
+        "service-83e9679": {
+            "tag": "div",
+            "attributes": {
+                "class": "service-card-body"
+            }
+        },
+        "service-609b92d": {
+            "tag": "h4",
+            "attributes": []
+        },
+        "service-b6d77d0": {
+            "tag": "p",
+            "attributes": {
+                "class": "desc"
+            }
+        },
+        "service-13363d5": {
+            "tag": "ul",
+            "attributes": {
+                "class": "service-features"
+            }
+        },
+        "service-b791c68": {
+            "tag": "div",
+            "attributes": {
+                "class": "service-footer"
+            }
+        },
+        "service-14ee500": {
+            "tag": "div",
+            "attributes": {
+                "class": "col-lg-3 col-md-6"
+            }
+        },
+        "service-0077371": {
+            "tag": "div",
+            "attributes": {
+                "class": "service-card"
+            }
+        },
+        "service-c9a3b55": {
+            "tag": "div",
+            "attributes": {
+                "class": "service-img-wrapper"
+            }
+        },
+        "service-f7b2198": {
+            "tag": "img",
+            "attributes": {
+                "alt": "Corporate Taxi Leases"
+            }
+        },
+        "service-92d3f21": {
+            "tag": "div",
+            "attributes": {
+                "class": "service-icon-bubble"
+            }
+        },
+        "service-7b5a127": {
+            "tag": "div",
+            "attributes": {
+                "class": "service-card-body"
+            }
+        },
+        "service-45cc24d": {
+            "tag": "h4",
+            "attributes": []
+        },
+        "service-6f2282f": {
+            "tag": "p",
+            "attributes": {
+                "class": "desc"
+            }
+        },
+        "service-7e53a97": {
+            "tag": "ul",
+            "attributes": {
+                "class": "service-features"
+            }
+        },
+        "service-024480a": {
+            "tag": "div",
+            "attributes": {
+                "class": "service-footer"
+            }
+        },
+        "service-1cb5809": {
+            "tag": "div",
+            "attributes": {
+                "class": "col-lg-3 col-md-6"
+            }
+        },
+        "service-fb93e84": {
+            "tag": "div",
+            "attributes": {
+                "class": "service-card"
+            }
+        },
+        "service-5b106cb": {
+            "tag": "div",
+            "attributes": {
+                "class": "service-img-wrapper"
+            }
+        },
+        "service-67d88ff": {
+            "tag": "img",
+            "attributes": {
+                "alt": "Nalanda Local Cabs"
+            }
+        },
+        "service-32d6fc1": {
+            "tag": "div",
+            "attributes": {
+                "class": "service-icon-bubble"
+            }
+        },
+        "service-3845a23": {
+            "tag": "div",
+            "attributes": {
+                "class": "service-card-body"
+            }
+        },
+        "service-c72e3e6": {
+            "tag": "h4",
+            "attributes": []
+        },
+        "service-9091aaa": {
+            "tag": "p",
+            "attributes": {
+                "class": "desc"
+            }
+        },
+        "service-9233adc": {
+            "tag": "ul",
+            "attributes": {
+                "class": "service-features"
+            }
+        },
+        "service-e063138": {
+            "tag": "div",
+            "attributes": {
+                "class": "service-footer"
+            }
+        },
+        "service-7ac8552": {
+            "tag": "div",
+            "attributes": {
+                "class": "col-lg-3 col-md-6"
+            }
+        },
+        "service-dce73b9": {
+            "tag": "div",
+            "attributes": {
+                "class": "service-card"
+            }
+        },
+        "service-9fdc9be": {
+            "tag": "div",
+            "attributes": {
+                "class": "service-img-wrapper"
+            }
+        },
+        "service-9de0a2f": {
+            "tag": "img",
+            "attributes": {
+                "alt": "Patna JPNI Airport Drop"
+            }
+        },
+        "service-453aa9c": {
+            "tag": "div",
+            "attributes": {
+                "class": "service-icon-bubble"
+            }
+        },
+        "service-b118044": {
+            "tag": "div",
+            "attributes": {
+                "class": "service-card-body"
+            }
+        },
+        "service-8ddbb52": {
+            "tag": "h4",
+            "attributes": []
+        },
+        "service-f689613": {
+            "tag": "p",
+            "attributes": {
+                "class": "desc"
+            }
+        },
+        "service-b34d9ec": {
+            "tag": "ul",
+            "attributes": {
+                "class": "service-features"
+            }
+        },
+        "service-09fec38": {
+            "tag": "div",
+            "attributes": {
+                "class": "service-footer"
+            }
+        },
+        "service-dea7067": {
+            "tag": "div",
+            "attributes": {
+                "class": "col-lg-3 col-md-6"
+            }
+        },
+        "service-8957627": {
+            "tag": "div",
+            "attributes": {
+                "class": "service-card"
+            }
+        },
+        "service-93e3f1c": {
+            "tag": "div",
+            "attributes": {
+                "class": "service-img-wrapper"
+            }
+        },
+        "service-a4beabf": {
+            "tag": "img",
+            "attributes": {
+                "alt": "Faraut / Araut Taxi Hub"
+            }
+        },
+        "service-81b80bb": {
+            "tag": "div",
+            "attributes": {
+                "class": "service-icon-bubble"
+            }
+        },
+        "service-66d5779": {
+            "tag": "div",
+            "attributes": {
+                "class": "service-card-body"
+            }
+        },
+        "service-ef2aafb": {
+            "tag": "h4",
+            "attributes": []
+        },
+        "service-785bf06": {
+            "tag": "p",
+            "attributes": {
+                "class": "desc"
+            }
+        },
+        "service-8149591": {
+            "tag": "ul",
+            "attributes": {
+                "class": "service-features"
+            }
+        },
+        "service-170b2f1": {
+            "tag": "div",
+            "attributes": {
+                "class": "service-footer"
+            }
+        },
+        "service-e174856": {
+            "tag": "div",
+            "attributes": {
+                "id": "book"
+            }
+        },
+        "service-abeee66": {
+            "tag": "section",
+            "attributes": {
+                "class": "section-padding",
+                "style": "background: #fafafa;"
+            }
+        },
+        "service-81d0ed0": {
+            "tag": "div",
+            "attributes": {
+                "class": "container"
+            }
+        },
+        "service-9bb197b": {
+            "tag": "div",
+            "attributes": {
+                "class": "row g-5 align-items-center"
+            }
+        },
+        "service-5722e01": {
+            "tag": "div",
+            "attributes": {
+                "class": "col-lg-5"
+            }
+        },
+        "service-509103e": {
+            "tag": "div",
+            "attributes": {
+                "class": "fast-booking-badge"
+            }
+        },
+        "service-e86870f": {
+            "tag": "h2",
+            "attributes": {
+                "class": "fw-bold mb-4",
+                "style": "font-family: 'Outfit', sans-serif; font-size: 2.8rem; line-height: 1.2;"
+            }
+        },
+        "service-7c7b09b": {
+            "tag": "div",
+            "attributes": {
+                "class": "driver-img-box"
+            }
+        },
+        "service-fbbeddb": {
+            "tag": "img",
+            "attributes": {
+                "alt": "Verified Driver"
+            }
+        },
+        "service-aa454d1": {
+            "tag": "div",
+            "attributes": {
+                "class": "verified-driver-badge"
+            }
+        },
+        "service-e036477": {
+            "tag": "p",
+            "attributes": {
+                "class": "text-muted mb-4",
+                "style": "font-size: 15px;"
+            }
+        },
+        "service-79949ab": {
+            "tag": "a",
+            "attributes": {
+                "class": "text-decoration-none"
+            }
+        },
+        "service-4994e8a": {
+            "tag": "div",
+            "attributes": {
+                "class": "contact-box"
+            }
+        },
+        "service-905c008": {
+            "tag": "div",
+            "attributes": {
+                "class": "contact-icon"
+            }
+        },
+        "service-06a6c6d": {
+            "tag": "div",
+            "attributes": []
+        },
+        "service-90d03ca": {
+            "tag": "div",
+            "attributes": {
+                "class": "contact-title"
+            }
+        },
+        "service-b10a79c": {
+            "tag": "h4",
+            "attributes": {
+                "class": "contact-value"
+            }
+        },
+        "service-7b3e441": {
+            "tag": "a",
+            "attributes": {
+                "class": "text-decoration-none"
+            }
+        },
+        "service-3129798": {
+            "tag": "div",
+            "attributes": {
+                "class": "contact-box whatsapp-box"
+            }
+        },
+        "service-6c3cdc0": {
+            "tag": "div",
+            "attributes": {
+                "class": "contact-icon"
+            }
+        },
+        "service-bc0dfd4": {
+            "tag": "div",
+            "attributes": []
+        },
+        "service-c026f7b": {
+            "tag": "div",
+            "attributes": {
+                "class": "contact-title"
+            }
+        },
+        "service-9d596bd": {
+            "tag": "h4",
+            "attributes": {
+                "class": "contact-value"
+            }
+        },
+        "service-48f6c61": {
+            "tag": "div",
+            "attributes": {
+                "class": "d-flex align-items-start mt-4"
+            }
+        },
+        "service-bc94baf": {
+            "tag": "div",
+            "attributes": {
+                "style": "color: #facc15; font-size: 20px; margin-right: 12px;"
+            }
+        },
+        "service-7e9dbc1": {
+            "tag": "div",
+            "attributes": []
+        },
+        "service-1a7c0a6": {
+            "tag": "h6",
+            "attributes": {
+                "class": "fw-bold mb-1",
+                "style": "font-size: 14px;"
+            }
+        },
+        "service-549b480": {
+            "tag": "p",
+            "attributes": {
+                "class": "text-muted mb-0",
+                "style": "font-size: 12px;"
+            }
+        },
+        "service-513f501": {
+            "tag": "div",
+            "attributes": {
+                "class": "col-lg-7"
+            }
+        },
+        "service-5bf3c59": {
+            "tag": "div",
+            "attributes": {
+                "class": "booking-form-card"
+            }
+        },
+        "service-3df2c03": {
+            "tag": "h4",
+            "attributes": {
+                "class": "fw-bold mb-4",
+                "style": "font-family: 'Outfit', sans-serif;"
+            }
+        },
+        "service-b38c4dc": {
+            "tag": "form",
+            "attributes": []
+        },
+        "cities-693f287": {
+            "tag": "section",
+            "attributes": {
+                "class": "custom-cities-hero text-center"
+            }
+        },
+        "cities-e83ceca": {
+            "tag": "div",
+            "attributes": {
+                "class": "container"
+            }
+        },
+        "cities-c6fc824": {
+            "tag": "span",
+            "attributes": {
+                "class": "d-inline-block px-4 py-2 rounded-pill mb-3",
+                "style": "background: rgba(250, 204, 21, 0.2); color: #facc15; font-weight: 700; font-size: 12px; letter-spacing: 1px;"
+            }
+        },
+        "cities-8808144": {
+            "tag": "h1",
+            "attributes": {
+                "class": "fw-bold text-white mb-3",
+                "style": "font-family: 'Outfit', sans-serif; font-size: 3.5rem;"
+            }
+        },
+        "cities-ea88541": {
+            "tag": "p",
+            "attributes": {
+                "class": "text-white mx-auto",
+                "style": "max-width: 600px; font-size: 18px; line-height: 1.6; color: #d1d5db !important;"
+            }
+        },
+        "cities-f9c2bf3": {
+            "tag": "section",
+            "attributes": {
+                "class": "section-padding bg-light",
+                "style": "padding-top: 80px; padding-bottom: 80px;"
+            }
+        },
+        "cities-3517eb4": {
+            "tag": "div",
+            "attributes": {
+                "class": "container"
+            }
+        },
+        "cities-124a1d7": {
+            "tag": "div",
+            "attributes": {
+                "class": "row g-4"
+            }
+        },
+        "cities-581be30": {
+            "tag": "div",
+            "attributes": {
+                "class": "col-lg-4 col-md-6"
+            }
+        },
+        "cities-b13a874": {
+            "tag": "div",
+            "attributes": {
+                "class": "col-lg-4 col-md-6"
+            }
+        },
+        "cities-4b6182a": {
+            "tag": "div",
+            "attributes": {
+                "class": "col-lg-4 col-md-6"
+            }
+        },
+        "cities-26656da": {
+            "tag": "div",
+            "attributes": {
+                "class": "col-lg-4 col-md-6"
+            }
+        },
+        "cities-de385d9": {
+            "tag": "div",
+            "attributes": {
+                "class": "col-lg-4 col-md-6"
+            }
+        },
+        "cities-6fde54c": {
+            "tag": "div",
+            "attributes": {
+                "class": "col-lg-4 col-md-6"
+            }
+        },
+        "cities-5b4e816": {
+            "tag": "div",
+            "attributes": {
+                "class": "col-lg-4 col-md-6"
+            }
+        },
+        "cities-dc6decc": {
+            "tag": "div",
+            "attributes": {
+                "class": "col-lg-4 col-md-6"
+            }
+        },
+        "cities-e4e8ba9": {
+            "tag": "div",
+            "attributes": {
+                "class": "col-lg-4 col-md-6"
+            }
+        },
+        "cities-fc4eac2": {
+            "tag": "div",
+            "attributes": {
+                "class": "col-lg-4 col-md-6"
+            }
+        },
+        "cities-43881bb": {
+            "tag": "div",
+            "attributes": {
+                "class": "col-lg-4 col-md-6"
+            }
+        },
+        "cities-dfa0ea9": {
+            "tag": "div",
+            "attributes": {
+                "id": "book"
+            }
+        },
+        "cities-8be1287": {
+            "tag": "section",
+            "attributes": {
+                "class": "section-padding",
+                "style": "background: #fafafa;"
+            }
+        },
+        "cities-8edde92": {
+            "tag": "div",
+            "attributes": {
+                "class": "container"
+            }
+        },
+        "cities-9b25b0f": {
+            "tag": "div",
+            "attributes": {
+                "class": "row g-5 align-items-center"
+            }
+        },
+        "cities-097157f": {
+            "tag": "div",
+            "attributes": {
+                "class": "col-lg-5"
+            }
+        },
+        "cities-81d7dec": {
+            "tag": "div",
+            "attributes": {
+                "class": "fast-booking-badge"
+            }
+        },
+        "cities-327ea3b": {
+            "tag": "h2",
+            "attributes": {
+                "class": "fw-bold mb-4",
+                "style": "font-family: 'Outfit', sans-serif; font-size: 2.8rem; line-height: 1.2;"
+            }
+        },
+        "cities-422de0a": {
+            "tag": "div",
+            "attributes": {
+                "class": "driver-img-box"
+            }
+        },
+        "cities-97f9259": {
+            "tag": "img",
+            "attributes": {
+                "alt": "Verified Driver"
+            }
+        },
+        "cities-6a2ce26": {
+            "tag": "div",
+            "attributes": {
+                "class": "verified-driver-badge"
+            }
+        },
+        "cities-e94cec4": {
+            "tag": "p",
+            "attributes": {
+                "class": "text-muted mb-4",
+                "style": "font-size: 15px;"
+            }
+        },
+        "cities-0a33ce3": {
+            "tag": "a",
+            "attributes": {
+                "class": "text-decoration-none"
+            }
+        },
+        "cities-a294a6b": {
+            "tag": "div",
+            "attributes": {
+                "class": "contact-box"
+            }
+        },
+        "cities-41ea04f": {
+            "tag": "div",
+            "attributes": {
+                "class": "contact-icon"
+            }
+        },
+        "cities-4cf677f": {
+            "tag": "div",
+            "attributes": []
+        },
+        "cities-74a62e0": {
+            "tag": "div",
+            "attributes": {
+                "class": "contact-title"
+            }
+        },
+        "cities-62d78a5": {
+            "tag": "h4",
+            "attributes": {
+                "class": "contact-value"
+            }
+        },
+        "cities-5f019d4": {
+            "tag": "a",
+            "attributes": {
+                "class": "text-decoration-none"
+            }
+        },
+        "cities-8e398d1": {
+            "tag": "div",
+            "attributes": {
+                "class": "contact-box whatsapp-box"
+            }
+        },
+        "cities-09ff93b": {
+            "tag": "div",
+            "attributes": {
+                "class": "contact-icon"
+            }
+        },
+        "cities-c9ae222": {
+            "tag": "div",
+            "attributes": []
+        },
+        "cities-3d532a2": {
+            "tag": "div",
+            "attributes": {
+                "class": "contact-title"
+            }
+        },
+        "cities-ca12c0f": {
+            "tag": "h4",
+            "attributes": {
+                "class": "contact-value"
+            }
+        },
+        "cities-914ded5": {
+            "tag": "div",
+            "attributes": {
+                "class": "d-flex align-items-start mt-4"
+            }
+        },
+        "cities-ef4c9da": {
+            "tag": "div",
+            "attributes": {
+                "style": "color: #facc15; font-size: 20px; margin-right: 12px;"
+            }
+        },
+        "cities-ad48ed2": {
+            "tag": "div",
+            "attributes": []
+        },
+        "cities-58b47b8": {
+            "tag": "h6",
+            "attributes": {
+                "class": "fw-bold mb-1",
+                "style": "font-size: 14px;"
+            }
+        },
+        "cities-c1506a1": {
+            "tag": "p",
+            "attributes": {
+                "class": "text-muted mb-0",
+                "style": "font-size: 12px;"
+            }
+        },
+        "cities-802a485": {
+            "tag": "div",
+            "attributes": {
+                "class": "col-lg-7"
+            }
+        },
+        "cities-5582bdb": {
+            "tag": "div",
+            "attributes": {
+                "class": "booking-form-card"
+            }
+        },
+        "cities-5d552e6": {
+            "tag": "h4",
+            "attributes": {
+                "class": "fw-bold mb-4",
+                "style": "font-family: 'Outfit', sans-serif;"
+            }
+        },
+        "cities-a5b32e4": {
+            "tag": "form",
+            "attributes": []
+        },
+        "about-fc49620": {
+            "tag": "section",
+            "attributes": {
+                "class": "custom-hero text-center",
+                "style": "padding: 120px 0 80px 0;"
+            }
+        },
+        "about-164d06a": {
+            "tag": "div",
+            "attributes": {
+                "class": "container"
+            }
+        },
+        "about-53f2c96": {
+            "tag": "h1",
+            "attributes": {
+                "class": "fw-bold text-white mb-3",
+                "style": "font-family: 'Outfit', sans-serif;"
+            }
+        },
+        "about-a6dbd61": {
+            "tag": "p",
+            "attributes": {
+                "class": "text-white mx-auto",
+                "style": "max-width: 600px; font-size: 18px; line-height: 1.6;"
+            }
+        },
+        "about-94d355d": {
+            "tag": "section",
+            "attributes": {
+                "class": "section-padding bg-white"
+            }
+        },
+        "about-0bc9206": {
+            "tag": "div",
+            "attributes": {
+                "class": "container"
+            }
+        },
+        "about-c9b9ba7": {
+            "tag": "div",
+            "attributes": {
+                "class": "row align-items-center"
+            }
+        },
+        "about-7dc8368": {
+            "tag": "div",
+            "attributes": {
+                "class": "col-lg-6 mb-4 mb-lg-0"
+            }
+        },
+        "about-a507f71": {
+            "tag": "img",
+            "attributes": {
+                "alt": "BiharCabs SUV",
+                "class": "img-fluid rounded",
+                "style": "border-radius: 20px !important; box-shadow: 0 10px 30px rgba(0,0,0,0.1);"
+            }
+        },
+        "about-885519d": {
+            "tag": "div",
+            "attributes": {
+                "class": "col-lg-6 ps-lg-5"
+            }
+        },
+        "about-385b38b": {
+            "tag": "h4",
+            "attributes": {
+                "class": "text-warning mb-2 fw-bold",
+                "style": "letter-spacing: 2px;"
+            }
+        },
+        "about-88696b2": {
+            "tag": "h2",
+            "attributes": {
+                "class": "fw-bold mb-4",
+                "style": "font-family: 'Outfit', sans-serif; color: #1f2937;"
+            }
+        },
+        "about-3d77cdc": {
+            "tag": "p",
+            "attributes": {
+                "class": "text-muted mb-4",
+                "style": "line-height: 1.8; font-size: 16px;"
+            }
+        },
+        "about-0bc8f89": {
+            "tag": "p",
+            "attributes": {
+                "class": "text-muted mb-4",
+                "style": "line-height: 1.8; font-size: 16px;"
+            }
+        },
+        "about-12866ca": {
+            "tag": "ul",
+            "attributes": {
+                "class": "list-unstyled mb-0"
+            }
+        },
+        "about-dad4be8": {
+            "tag": "section",
+            "attributes": {
+                "class": "section-padding",
+                "style": "background-color: #f9fafb;"
+            }
+        },
+        "about-981586d": {
+            "tag": "div",
+            "attributes": {
+                "class": "container"
+            }
+        },
+        "about-800c1fc": {
+            "tag": "div",
+            "attributes": {
+                "class": "row g-4"
+            }
+        },
+        "about-2eb35c0": {
+            "tag": "div",
+            "attributes": {
+                "class": "col-md-6"
+            }
+        },
+        "about-f88224e": {
+            "tag": "div",
+            "attributes": {
+                "class": "bg-white p-5 h-100 rounded",
+                "style": "box-shadow: 0 5px 20px rgba(0,0,0,0.05); border-radius: 16px !important; border-bottom: 4px solid #facc15;"
+            }
+        },
+        "about-342b520": {
+            "tag": "div",
+            "attributes": {
+                "class": "mb-4"
+            }
+        },
+        "about-8d8e5c0": {
+            "tag": "h3",
+            "attributes": {
+                "class": "fw-bold mb-3",
+                "style": "font-family: 'Outfit', sans-serif;"
+            }
+        },
+        "about-152c315": {
+            "tag": "p",
+            "attributes": {
+                "class": "text-muted",
+                "style": "line-height: 1.8;"
+            }
+        },
+        "about-c5b6d1f": {
+            "tag": "div",
+            "attributes": {
+                "class": "col-md-6"
+            }
+        },
+        "about-d78c6dc": {
+            "tag": "div",
+            "attributes": {
+                "class": "bg-white p-5 h-100 rounded",
+                "style": "box-shadow: 0 5px 20px rgba(0,0,0,0.05); border-radius: 16px !important; border-bottom: 4px solid #1f2937;"
+            }
+        },
+        "about-6fe3c0e": {
+            "tag": "div",
+            "attributes": {
+                "class": "mb-4"
+            }
+        },
+        "about-392ba03": {
+            "tag": "h3",
+            "attributes": {
+                "class": "fw-bold mb-3",
+                "style": "font-family: 'Outfit', sans-serif;"
+            }
+        },
+        "about-a1a0626": {
+            "tag": "p",
+            "attributes": {
+                "class": "text-muted",
+                "style": "line-height: 1.8;"
+            }
+        },
+        "about-473550f": {
+            "tag": "section",
+            "attributes": {
+                "class": "section-padding bg-white"
+            }
+        },
+        "about-0b19cdc": {
+            "tag": "div",
+            "attributes": {
+                "class": "container"
+            }
+        },
+        "about-abf3a60": {
+            "tag": "div",
+            "attributes": {
+                "class": "text-center mb-5"
+            }
+        },
+        "about-b81b0cc": {
+            "tag": "h4",
+            "attributes": {
+                "class": "text-warning mb-2 fw-bold",
+                "style": "letter-spacing: 2px;"
+            }
+        },
+        "about-838a5c8": {
+            "tag": "h2",
+            "attributes": {
+                "class": "fw-bold mb-3",
+                "style": "font-family: 'Outfit', sans-serif;"
+            }
+        },
+        "about-b0e2a43": {
+            "tag": "p",
+            "attributes": {
+                "class": "text-muted mx-auto",
+                "style": "max-width: 600px;"
+            }
+        },
+        "about-3f08905": {
+            "tag": "div",
+            "attributes": {
+                "class": "row g-4 text-center"
+            }
+        },
+        "about-68c5b95": {
+            "tag": "div",
+            "attributes": {
+                "class": "col-lg-3 col-sm-6"
+            }
+        },
+        "about-b717535": {
+            "tag": "div",
+            "attributes": {
+                "class": "p-4 rounded h-100",
+                "style": "background: #fff; box-shadow: 0 10px 30px rgba(0,0,0,0.08); border-radius: 16px !important;"
+            }
+        },
+        "about-13d0418": {
+            "tag": "div",
+            "attributes": {
+                "class": "mb-3 d-inline-block p-3 rounded-circle",
+                "style": "background: rgba(250,204,21,0.1);"
+            }
+        },
+        "about-03f8632": {
+            "tag": "h5",
+            "attributes": {
+                "class": "fw-bold mb-3"
+            }
+        },
+        "about-e3628e4": {
+            "tag": "p",
+            "attributes": {
+                "class": "text-muted mb-0",
+                "style": "font-size: 14px;"
+            }
+        },
+        "about-71205c8": {
+            "tag": "div",
+            "attributes": {
+                "class": "col-lg-3 col-sm-6"
+            }
+        },
+        "about-1d47757": {
+            "tag": "div",
+            "attributes": {
+                "class": "p-4 rounded h-100",
+                "style": "background: #fff; box-shadow: 0 10px 30px rgba(0,0,0,0.08); border-radius: 16px !important;"
+            }
+        },
+        "about-afa7774": {
+            "tag": "div",
+            "attributes": {
+                "class": "mb-3 d-inline-block p-3 rounded-circle",
+                "style": "background: rgba(250,204,21,0.1);"
+            }
+        },
+        "about-6c20f55": {
+            "tag": "h5",
+            "attributes": {
+                "class": "fw-bold mb-3"
+            }
+        },
+        "about-5c589a5": {
+            "tag": "p",
+            "attributes": {
+                "class": "text-muted mb-0",
+                "style": "font-size: 14px;"
+            }
+        },
+        "about-a9dcf91": {
+            "tag": "div",
+            "attributes": {
+                "class": "col-lg-3 col-sm-6"
+            }
+        },
+        "about-0d05215": {
+            "tag": "div",
+            "attributes": {
+                "class": "p-4 rounded h-100",
+                "style": "background: #fff; box-shadow: 0 10px 30px rgba(0,0,0,0.08); border-radius: 16px !important;"
+            }
+        },
+        "about-fb5d406": {
+            "tag": "div",
+            "attributes": {
+                "class": "mb-3 d-inline-block p-3 rounded-circle",
+                "style": "background: rgba(250,204,21,0.1);"
+            }
+        },
+        "about-66b8bbb": {
+            "tag": "h5",
+            "attributes": {
+                "class": "fw-bold mb-3"
+            }
+        },
+        "about-be8c13e": {
+            "tag": "p",
+            "attributes": {
+                "class": "text-muted mb-0",
+                "style": "font-size: 14px;"
+            }
+        },
+        "about-26804fa": {
+            "tag": "div",
+            "attributes": {
+                "class": "col-lg-3 col-sm-6"
+            }
+        },
+        "about-7e2ff33": {
+            "tag": "div",
+            "attributes": {
+                "class": "p-4 rounded h-100",
+                "style": "background: #fff; box-shadow: 0 10px 30px rgba(0,0,0,0.08); border-radius: 16px !important;"
+            }
+        },
+        "about-a0fea76": {
+            "tag": "div",
+            "attributes": {
+                "class": "mb-3 d-inline-block p-3 rounded-circle",
+                "style": "background: rgba(250,204,21,0.1);"
+            }
+        },
+        "about-79c70b9": {
+            "tag": "h5",
+            "attributes": {
+                "class": "fw-bold mb-3"
+            }
+        },
+        "about-9cbd385": {
+            "tag": "p",
+            "attributes": {
+                "class": "text-muted mb-0",
+                "style": "font-size: 14px;"
+            }
+        },
+        "about-177b712": {
+            "tag": "section",
+            "attributes": {
+                "class": "section-padding text-center",
+                "style": "background: var(--bg-dark); color: white;"
+            }
+        },
+        "about-30fc760": {
+            "tag": "div",
+            "attributes": {
+                "class": "container"
+            }
+        },
+        "about-f744a0a": {
+            "tag": "h2",
+            "attributes": {
+                "class": "fw-bold mb-4",
+                "style": "font-family: 'Outfit', sans-serif;color: white;"
+            }
+        },
+        "about-a115cee": {
+            "tag": "p",
+            "attributes": {
+                "class": "mb-5 mx-auto",
+                "style": "max-width: 600px; font-size: 18px; color: #d1d5db;"
+            }
+        },
+        "about-6966e78": {
+            "tag": "div",
+            "attributes": {
+                "class": "d-flex justify-content-center gap-3 flex-wrap"
+            }
+        },
+        "contact-c3a1bce": {
+            "tag": "section",
+            "attributes": {
+                "class": "custom-contact-hero text-center"
+            }
+        },
+        "contact-9123db3": {
+            "tag": "div",
+            "attributes": {
+                "class": "container"
+            }
+        },
+        "contact-b08d663": {
+            "tag": "span",
+            "attributes": {
+                "class": "d-inline-block px-4 py-2 rounded-pill mb-3",
+                "style": "background: rgba(250, 204, 21, 0.2); color: #facc15; font-weight: 700; font-size: 12px; letter-spacing: 1px;"
+            }
+        },
+        "contact-8bff3da": {
+            "tag": "h1",
+            "attributes": {
+                "class": "fw-bold text-white mb-3",
+                "style": "font-family: 'Outfit', sans-serif; font-size: 3.5rem;"
+            }
+        },
+        "contact-4adcc02": {
+            "tag": "p",
+            "attributes": {
+                "class": "text-white mx-auto",
+                "style": "max-width: 600px; font-size: 18px; line-height: 1.6; color: #d1d5db !important;"
+            }
+        },
+        "contact-3fcaef9": {
+            "tag": "section",
+            "attributes": {
+                "class": "section-padding bg-light",
+                "style": "padding-top: 80px; padding-bottom: 80px;"
+            }
+        },
+        "contact-69c1c9d": {
+            "tag": "div",
+            "attributes": {
+                "class": "container"
+            }
+        },
+        "contact-bb8ba10": {
+            "tag": "div",
+            "attributes": {
+                "class": "row g-5"
+            }
+        },
+        "contact-b136d28": {
+            "tag": "div",
+            "attributes": {
+                "class": "col-lg-5"
+            }
+        },
+        "contact-befc0bb": {
+            "tag": "h2",
+            "attributes": {
+                "class": "fw-bold mb-4",
+                "style": "font-family: 'Outfit', sans-serif; color: #111827;"
+            }
+        },
+        "contact-d7f870c": {
+            "tag": "p",
+            "attributes": {
+                "class": "text-muted mb-5",
+                "style": "font-size: 16px; line-height: 1.8;"
+            }
+        },
+        "contact-6601d48": {
+            "tag": "div",
+            "attributes": {
+                "class": "contact-info-card"
+            }
+        },
+        "contact-efbab5e": {
+            "tag": "div",
+            "attributes": {
+                "class": "contact-icon-box"
+            }
+        },
+        "contact-0c34119": {
+            "tag": "div",
+            "attributes": []
+        },
+        "contact-86b28b6": {
+            "tag": "h4",
+            "attributes": []
+        },
+        "contact-892d279": {
+            "tag": "p",
+            "attributes": []
+        },
+        "contact-c93bf81": {
+            "tag": "a",
+            "attributes": {
+                "class": "fw-bold mt-1 d-block text-dark",
+                "style": "font-size: 18px;"
+            }
+        },
+        "contact-b903272": {
+            "tag": "div",
+            "attributes": {
+                "class": "contact-info-card"
+            }
+        },
+        "contact-b6f9abb": {
+            "tag": "div",
+            "attributes": {
+                "class": "contact-icon-box"
+            }
+        },
+        "contact-dc9203e": {
+            "tag": "div",
+            "attributes": []
+        },
+        "contact-cf47010": {
+            "tag": "h4",
+            "attributes": []
+        },
+        "contact-d53fc3b": {
+            "tag": "p",
+            "attributes": []
+        },
+        "contact-9de39e9": {
+            "tag": "a",
+            "attributes": {
+                "class": "fw-bold mt-1 d-block text-dark",
+                "style": "font-size: 18px;"
+            }
+        },
+        "contact-6def9e4": {
+            "tag": "div",
+            "attributes": {
+                "class": "contact-info-card"
+            }
+        },
+        "contact-534d9d8": {
+            "tag": "div",
+            "attributes": {
+                "class": "contact-icon-box"
+            }
+        },
+        "contact-99b10d2": {
+            "tag": "div",
+            "attributes": []
+        },
+        "contact-f3302eb": {
+            "tag": "h4",
+            "attributes": []
+        },
+        "contact-8475905": {
+            "tag": "p",
+            "attributes": []
+        },
+        "contact-4dded48": {
+            "tag": "a",
+            "attributes": {
+                "class": "fw-bold mt-1 d-block text-dark",
+                "style": "font-size: 16px;"
+            }
+        },
+        "contact-4aa4fd2": {
+            "tag": "div",
+            "attributes": {
+                "class": "contact-info-card mb-0"
+            }
+        },
+        "contact-9a58a81": {
+            "tag": "div",
+            "attributes": {
+                "class": "contact-icon-box"
+            }
+        },
+        "contact-492ed66": {
+            "tag": "div",
+            "attributes": []
+        },
+        "contact-ae6d5ee": {
+            "tag": "h4",
+            "attributes": []
+        },
+        "contact-843605f": {
+            "tag": "p",
+            "attributes": []
+        },
+        "contact-9193700": {
+            "tag": "div",
+            "attributes": {
+                "class": "col-lg-7"
+            }
+        },
+        "contact-c03fe98": {
+            "tag": "div",
+            "attributes": {
+                "class": "contact-form-wrapper"
+            }
+        },
+        "contact-d0e587d": {
+            "tag": "h3",
+            "attributes": {
+                "class": "fw-bold mb-2",
+                "style": "font-family: 'Outfit', sans-serif;"
+            }
+        },
+        "contact-2a2c34b": {
+            "tag": "p",
+            "attributes": {
+                "class": "text-muted mb-4"
+            }
+        },
+        "contact-08edb8c": {
+            "tag": "form",
+            "attributes": {
+                "id": "lf-form"
+            }
+        },
+        "fares-43be68f": {
+            "tag": "div",
+            "attributes": {
+                "class": "site-breadcrumb",
+                "style": "background: url(assets/img/img/new_hero_bg.webp)"
+            }
+        },
+        "fares-91115d0": {
+            "tag": "div",
+            "attributes": {
+                "class": "container"
+            }
+        },
+        "fares-4199e92": {
+            "tag": "h1",
+            "attributes": {
+                "class": "breadcrumb-title"
+            }
+        },
+        "fares-f198193": {
+            "tag": "ul",
+            "attributes": {
+                "class": "breadcrumb-menu"
+            }
+        },
+        "fares-cbdf7e4": {
+            "tag": "div",
+            "attributes": {
+                "class": "taxi-rate py-120"
+            }
+        },
+        "fares-e52dfa7": {
+            "tag": "div",
+            "attributes": {
+                "class": "container"
+            }
+        },
+        "fares-fd95f1f": {
+            "tag": "div",
+            "attributes": {
+                "class": "row"
+            }
+        },
+        "fares-3de1487": {
+            "tag": "div",
+            "attributes": {
+                "class": "col-lg-6 mx-auto"
+            }
+        },
+        "fares-780bc7e": {
+            "tag": "div",
+            "attributes": {
+                "class": "site-heading text-center"
+            }
+        },
+        "fares-1db7b88": {
+            "tag": "span",
+            "attributes": {
+                "class": "site-title-tagline"
+            }
+        },
+        "fares-57784ef": {
+            "tag": "h2",
+            "attributes": {
+                "class": "site-title"
+            }
+        },
+        "fares-a354710": {
+            "tag": "div",
+            "attributes": {
+                "class": "heading-divider"
+            }
+        },
+        "fares-b07d02c": {
+            "tag": "div",
+            "attributes": {
+                "class": "row"
+            }
+        },
+        "fares-9571f95": {
+            "tag": "div",
+            "attributes": {
+                "class": "col-md-6 col-lg-4"
+            }
+        },
+        "fares-c64db6f": {
+            "tag": "div",
+            "attributes": {
+                "class": "rate-item wow fadeInUp"
+            }
+        },
+        "fares-ac69dfe": {
+            "tag": "div",
+            "attributes": {
+                "class": "rate-header"
+            }
+        },
+        "fares-e522ac5": {
+            "tag": "div",
+            "attributes": {
+                "class": "rate-img"
+            }
+        },
+        "fares-d1f0b22": {
+            "tag": "img",
+            "attributes": {
+                "alt": ""
+            }
+        },
+        "fares-e1bbb79": {
+            "tag": "div",
+            "attributes": {
+                "class": "rate-header-content"
+            }
+        },
+        "fares-8db1dc6": {
+            "tag": "h4",
+            "attributes": []
+        },
+        "fares-e6e33c0": {
+            "tag": "p",
+            "attributes": {
+                "class": "rate-duration"
+            }
+        },
+        "fares-4ad01aa": {
+            "tag": "div",
+            "attributes": {
+                "class": "rate-content"
+            }
+        },
+        "fares-8e323a7": {
+            "tag": "div",
+            "attributes": {
+                "class": "rate-icon"
+            }
+        },
+        "fares-915312a": {
+            "tag": "img",
+            "attributes": {
+                "alt": ""
+            }
+        },
+        "fares-9c0f5fb": {
+            "tag": "div",
+            "attributes": {
+                "class": "rate-feature"
+            }
+        },
+        "fares-ec9e543": {
+            "tag": "ul",
+            "attributes": []
+        },
+        "fares-f73b20a": {
+            "tag": "a",
+            "attributes": {
+                "class": "theme-btn",
+                "data-bs-toggle": "modal",
+                "data-bs-target": "#bookingModal"
+            }
+        },
+        "fares-64ee355": {
+            "tag": "div",
+            "attributes": {
+                "class": "col-md-6 col-lg-4"
+            }
+        },
+        "fares-141e14a": {
+            "tag": "div",
+            "attributes": {
+                "class": "rate-item wow fadeInDown"
+            }
+        },
+        "fares-e607c7e": {
+            "tag": "div",
+            "attributes": {
+                "class": "rate-header"
+            }
+        },
+        "fares-b5c1f33": {
+            "tag": "div",
+            "attributes": {
+                "class": "rate-img"
+            }
+        },
+        "fares-4a715ff": {
+            "tag": "img",
+            "attributes": {
+                "alt": ""
+            }
+        },
+        "fares-30f702b": {
+            "tag": "div",
+            "attributes": {
+                "class": "rate-header-content"
+            }
+        },
+        "fares-0eb5135": {
+            "tag": "h4",
+            "attributes": []
+        },
+        "fares-bcddba4": {
+            "tag": "p",
+            "attributes": {
+                "class": "rate-duration"
+            }
+        },
+        "fares-c9a76b8": {
+            "tag": "div",
+            "attributes": {
+                "class": "rate-content"
+            }
+        },
+        "fares-7afc239": {
+            "tag": "div",
+            "attributes": {
+                "class": "rate-icon"
+            }
+        },
+        "fares-9ed885b": {
+            "tag": "img",
+            "attributes": {
+                "alt": ""
+            }
+        },
+        "fares-fd626a1": {
+            "tag": "div",
+            "attributes": {
+                "class": "rate-feature"
+            }
+        },
+        "fares-3ba59c3": {
+            "tag": "ul",
+            "attributes": []
+        },
+        "fares-3816720": {
+            "tag": "a",
+            "attributes": {
+                "class": "theme-btn",
+                "data-bs-toggle": "modal",
+                "data-bs-target": "#bookingModal"
+            }
+        },
+        "fares-f574fe3": {
+            "tag": "div",
+            "attributes": {
+                "class": "col-md-6 col-lg-4"
+            }
+        },
+        "fares-cd25236": {
+            "tag": "div",
+            "attributes": {
+                "class": "rate-item wow fadeInUp"
+            }
+        },
+        "fares-03ce936": {
+            "tag": "div",
+            "attributes": {
+                "class": "rate-header"
+            }
+        },
+        "fares-67f909f": {
+            "tag": "div",
+            "attributes": {
+                "class": "rate-img"
+            }
+        },
+        "fares-445f48d": {
+            "tag": "img",
+            "attributes": {
+                "alt": ""
+            }
+        },
+        "fares-ffd3e70": {
+            "tag": "div",
+            "attributes": {
+                "class": "rate-header-content"
+            }
+        },
+        "fares-efcfcf1": {
+            "tag": "h4",
+            "attributes": []
+        },
+        "fares-8cb598d": {
+            "tag": "p",
+            "attributes": {
+                "class": "rate-duration"
+            }
+        },
+        "fares-e67c9fe": {
+            "tag": "div",
+            "attributes": {
+                "class": "rate-content"
+            }
+        },
+        "fares-a357d6f": {
+            "tag": "div",
+            "attributes": {
+                "class": "rate-icon"
+            }
+        },
+        "fares-5fb415e": {
+            "tag": "img",
+            "attributes": {
+                "alt": ""
+            }
+        },
+        "fares-f7f8ca7": {
+            "tag": "div",
+            "attributes": {
+                "class": "rate-feature"
+            }
+        },
+        "fares-a7dd933": {
+            "tag": "ul",
+            "attributes": []
+        },
+        "fares-6a8749c": {
+            "tag": "a",
+            "attributes": {
+                "class": "theme-btn",
+                "data-bs-toggle": "modal",
+                "data-bs-target": "#bookingModal"
+            }
+        }
+    },
+    "forms": {
+        "index-form-4ebfca6": {
+            "html": "<form id=\"heroBookingForm\">\n                                <div class=\"hbc-input-group position-relative\">\n                                    <label>{{BC_COPY_copy_1}}</label>\n                                    <i class=\"fas fa-circle hbc-icon green\"></i>\n                                    <input type=\"text\" id=\"pickup_location\" class=\"hbc-input pe-5\" placeholder=\"{{BC_COPY_copy_2}}\" required>\n                                    <i class=\"fas fa-crosshairs text-primary position-absolute\" id=\"auto_detect_btn\" style=\"right: 15px; top: 38px; cursor: pointer; font-size: 18px; z-index: 10;\" title=\"{{BC_COPY_copy_3}}\"></i>\n                                </div>\n                                <div class=\"hbc-input-group\">\n                                    <label>{{BC_COPY_copy_4}}</label>\n                                    <i class=\"fas fa-circle hbc-icon red\"></i>\n                                    <input type=\"text\" id=\"drop_location\" class=\"hbc-input\" placeholder=\"{{BC_COPY_copy_5}}\" required>\n                                </div>\n\n                                <div class=\"row g-3 mb-3 mt-1\">\n                                    <div class=\"col-6\">\n                                        <div class=\"modern-dt-group\">\n                                            <i class=\"fas fa-calendar-alt\"></i>\n                                            <div class=\"modern-dt-content\">\n                                                <label>{{BC_COPY_copy_6}}</label>\n                                                <input type=\"date\" id=\"pickup_date\" class=\"modern-dt-input\" required>\n                                            </div>\n                                        </div>\n                                    </div>\n                                    <div class=\"col-6\">\n                                        <div class=\"modern-dt-group\">\n                                            <i class=\"fas fa-clock\"></i>\n                                            <div class=\"modern-dt-content\">\n                                                <label>{{BC_COPY_copy_7}}</label>\n                                                <input type=\"time\" id=\"pickup_time\" class=\"modern-dt-input\" required>\n                                            </div>\n                                        </div>\n                                    </div>\n                                </div>\n                                <div id=\"fare_estimate_box\" class=\"mb-3 p-3 rounded text-center\" style=\"display: none; background: rgba(250, 204, 21, 0.1); border: 1px dashed #facc15;\">\n                                    <small class=\"text-muted text-uppercase fw-bold\" style=\"letter-spacing: 1px;\">{{BC_COPY_copy_8}}</small>\n                                    <div class=\"mt-1\">\n                                        <i class=\"fas fa-route text-warning me-2\" style=\"font-size: 20px;\"></i>\n                                        <strong id=\"estimated_distance\" class=\"text-dark\" style=\"font-size: 24px;\">{{BC_COPY_copy_9}}</strong>\n                                    </div>\n                                    <small class=\"text-muted mt-2 d-block\" style=\"font-size: 11px;\">{{BC_COPY_copy_10}}</small>\n                                </div>\n\n                                <button type=\"button\" class=\"hbc-btn\" onclick=\"submitHeroBooking()\">{{BC_COPY_copy_11}}</button>\n                            </form>",
+            "fields": [
+                {
+                    "key": "copy_1",
+                    "label": "Pickup Location",
+                    "value": "Pickup Location"
+                },
+                {
+                    "key": "copy_2",
+                    "label": "Placeholder: Enter pickup location",
+                    "value": "Enter pickup location"
+                },
+                {
+                    "key": "copy_3",
+                    "label": "Title: Auto Detect Location",
+                    "value": "Auto Detect Location"
+                },
+                {
+                    "key": "copy_4",
+                    "label": "Drop Location",
+                    "value": "Drop Location"
+                },
+                {
+                    "key": "copy_5",
+                    "label": "Placeholder: Enter drop location",
+                    "value": "Enter drop location"
+                },
+                {
+                    "key": "copy_6",
+                    "label": "Date",
+                    "value": "Date"
+                },
+                {
+                    "key": "copy_7",
+                    "label": "Time",
+                    "value": "Time"
+                },
+                {
+                    "key": "copy_8",
+                    "label": "Total Driving Distance",
+                    "value": "Total Driving Distance"
+                },
+                {
+                    "key": "copy_9",
+                    "label": "-",
+                    "value": "-"
+                },
+                {
+                    "key": "copy_10",
+                    "label": "*Our team will contact you shortly with the best fare for th",
+                    "value": "*Our team will contact you shortly with the best fare for this trip."
+                },
+                {
+                    "key": "copy_11",
+                    "label": "Book Now",
+                    "value": "Book Now"
+                }
+            ],
+            "page": "index",
+            "kind": "booking"
+        },
+        "index-form-d37e31f": {
+            "html": "<form action=\"#\">\n                                <div class=\"row g-3\">\n                                    <div class=\"col-md-6\">\n                                        <label class=\"form-label-custom\">{{BC_COPY_copy_1}}<span>{{BC_COPY_copy_2}}</span></label>\n                                        <input type=\"text\" id=\"name_instant\" class=\"custom-input\" placeholder=\"{{BC_COPY_copy_3}}\">\n                                    </div>\n                                    <div class=\"col-md-6\">\n                                        <label class=\"form-label-custom\">{{BC_COPY_copy_4}}<span>{{BC_COPY_copy_5}}</span></label>\n                                        <input type=\"tel\" id=\"phone_instant\" class=\"custom-input\" placeholder=\"{{BC_COPY_copy_6}}\">\n                                    </div>\n\n                                    <div class=\"col-md-6 position-relative\">\n                                        <label class=\"form-label-custom\">{{BC_COPY_copy_7}}<span>{{BC_COPY_copy_8}}</span></label>\n                                        <input type=\"text\" id=\"pickup_location_instant\" class=\"custom-input pe-5\" placeholder=\"{{BC_COPY_copy_9}}\">\n                                        <i class=\"fas fa-crosshairs text-primary position-absolute\" id=\"auto_detect_btn_instant\" style=\"right: 25px; top: 40px; cursor: pointer; font-size: 18px; z-index: 10;\" title=\"{{BC_COPY_copy_10}}\"></i>\n                                    </div>\n                                    <div class=\"col-md-6\">\n                                        <label class=\"form-label-custom\">{{BC_COPY_copy_11}}<span>{{BC_COPY_copy_12}}</span></label>\n                                        <input type=\"text\" id=\"drop_location_instant\" class=\"custom-input\" placeholder=\"{{BC_COPY_copy_13}}\">\n                                    </div>\n\n                                    <div class=\"col-md-6\">\n                                        <label class=\"form-label-custom\">{{BC_COPY_copy_14}}<span>{{BC_COPY_copy_15}}</span></label>\n                                        <input type=\"date\" id=\"date_instant\" class=\"custom-input\">\n                                    </div>\n                                    <div class=\"col-md-6\">\n                                        <label class=\"form-label-custom\">{{BC_COPY_copy_16}}<span>{{BC_COPY_copy_17}}</span></label>\n                                        <input type=\"time\" id=\"time_instant\" class=\"custom-input\">\n                                    </div>\n\n                                    <div class=\"col-md-6\">\n                                        <label class=\"form-label-custom\">{{BC_COPY_copy_18}}<span>{{BC_COPY_copy_19}}</span></label>\n                                        <select id=\"passengers_instant\" class=\"custom-input custom-select\">\n                                            <option>{{BC_COPY_copy_20}}</option>\n                                            <option>{{BC_COPY_copy_21}}</option>\n                                            <option>{{BC_COPY_copy_22}}</option>\n                                            <option>{{BC_COPY_copy_23}}</option>\n                                            <option>{{BC_COPY_copy_24}}</option>\n                                        </select>\n                                    </div>\n                                    <div class=\"col-md-6\">\n                                        <label class=\"form-label-custom\">{{BC_COPY_copy_25}}<span>{{BC_COPY_copy_26}}</span></label>\n                                        <select id=\"category_instant\" class=\"custom-input custom-select\">\n                                            <option>{{BC_COPY_copy_27}}</option>\n                                            <option>{{BC_COPY_copy_28}}</option>\n                                            <option>{{BC_COPY_copy_29}}</option>\n                                            <option>{{BC_COPY_copy_30}}</option>\n                                        </select>\n                                    </div>\n\n                                    <div class=\"col-12\">\n                                        <label class=\"form-label-custom\">{{BC_COPY_copy_31}}</label>\n                                        <input type=\"text\" id=\"instructions_instant\" class=\"custom-input\" placeholder=\"{{BC_COPY_copy_32}}\">\n                                    </div>\n\n                                    <div class=\"col-12 mt-4\">\n                                        <div id=\"fare_estimate_box_instant\" class=\"mb-3 p-3 rounded text-center\" style=\"display: none; background: rgba(250, 204, 21, 0.1); border: 1px dashed #facc15;\">\n                                            <small class=\"text-muted text-uppercase fw-bold\" style=\"letter-spacing: 1px;\">{{BC_COPY_copy_33}}</small>\n                                            <div class=\"mt-1\">\n                                                <i class=\"fas fa-route text-warning me-2\" style=\"font-size: 20px;\"></i>\n                                                <strong id=\"estimated_distance_instant\" class=\"text-dark\" style=\"font-size: 24px;\">{{BC_COPY_copy_34}}</strong>\n                                            </div>\n                                            <small class=\"text-muted mt-2 d-block\" style=\"font-size: 11px;\">{{BC_COPY_copy_35}}</small>\n                                        </div>\n                                    \n                                        <button type=\"button\" class=\"btn-whatsapp-submit\" onclick=\"submitInstantBooking()\"><i class=\"fas fa-comment-dots me-1\"></i>{{BC_COPY_copy_36}}</button>\n                                        <p class=\"text-center text-muted mt-3 mb-0\" style=\"font-size: 12px; font-weight: 600;\">{{BC_COPY_copy_37}}</p>\n                                    </div>\n                                </div>\n                            </form>",
+            "fields": [
+                {
+                    "key": "copy_1",
+                    "label": "Your Name",
+                    "value": "Your Name"
+                },
+                {
+                    "key": "copy_2",
+                    "label": "*",
+                    "value": "*"
+                },
+                {
+                    "key": "copy_3",
+                    "label": "Placeholder: Enter full name",
+                    "value": "Enter full name"
+                },
+                {
+                    "key": "copy_4",
+                    "label": "Phone Number",
+                    "value": "Phone Number"
+                },
+                {
+                    "key": "copy_5",
+                    "label": "*",
+                    "value": "*"
+                },
+                {
+                    "key": "copy_6",
+                    "label": "Placeholder: +91 Mobile Number",
+                    "value": "+91 Mobile Number"
+                },
+                {
+                    "key": "copy_7",
+                    "label": "Pickup Location",
+                    "value": "Pickup Location"
+                },
+                {
+                    "key": "copy_8",
+                    "label": "*",
+                    "value": "*"
+                },
+                {
+                    "key": "copy_9",
+                    "label": "Placeholder: Type pickup spot or city...",
+                    "value": "Type pickup spot or city..."
+                },
+                {
+                    "key": "copy_10",
+                    "label": "Title: Auto Detect Location",
+                    "value": "Auto Detect Location"
+                },
+                {
+                    "key": "copy_11",
+                    "label": "Drop Location",
+                    "value": "Drop Location"
+                },
+                {
+                    "key": "copy_12",
+                    "label": "*",
+                    "value": "*"
+                },
+                {
+                    "key": "copy_13",
+                    "label": "Placeholder: Type drop destination or city...",
+                    "value": "Type drop destination or city..."
+                },
+                {
+                    "key": "copy_14",
+                    "label": "Travel Date",
+                    "value": "Travel Date"
+                },
+                {
+                    "key": "copy_15",
+                    "label": "*",
+                    "value": "*"
+                },
+                {
+                    "key": "copy_16",
+                    "label": "Pickup Time",
+                    "value": "Pickup Time"
+                },
+                {
+                    "key": "copy_17",
+                    "label": "*",
+                    "value": "*"
+                },
+                {
+                    "key": "copy_18",
+                    "label": "Total Passengers",
+                    "value": "Total Passengers"
+                },
+                {
+                    "key": "copy_19",
+                    "label": "*",
+                    "value": "*"
+                },
+                {
+                    "key": "copy_20",
+                    "label": "1 Person",
+                    "value": "1 Person"
+                },
+                {
+                    "key": "copy_21",
+                    "label": "2 Persons",
+                    "value": "2 Persons"
+                },
+                {
+                    "key": "copy_22",
+                    "label": "3 Persons",
+                    "value": "3 Persons"
+                },
+                {
+                    "key": "copy_23",
+                    "label": "4 Persons",
+                    "value": "4 Persons"
+                },
+                {
+                    "key": "copy_24",
+                    "label": "5+ Persons",
+                    "value": "5+ Persons"
+                },
+                {
+                    "key": "copy_25",
+                    "label": "Trip Category",
+                    "value": "Trip Category"
+                },
+                {
+                    "key": "copy_26",
+                    "label": "*",
+                    "value": "*"
+                },
+                {
+                    "key": "copy_27",
+                    "label": "One Way (Drop)",
+                    "value": "One Way (Drop)"
+                },
+                {
+                    "key": "copy_28",
+                    "label": "Round Trip",
+                    "value": "Round Trip"
+                },
+                {
+                    "key": "copy_29",
+                    "label": "Local Rental",
+                    "value": "Local Rental"
+                },
+                {
+                    "key": "copy_30",
+                    "label": "Airport Transfer",
+                    "value": "Airport Transfer"
+                },
+                {
+                    "key": "copy_31",
+                    "label": "Special Instructions / Luggage (Optional)",
+                    "value": "Special Instructions / Luggage (Optional)"
+                },
+                {
+                    "key": "copy_32",
+                    "label": "Placeholder: e.g. AC Sedan required, 3 big suitcases",
+                    "value": "e.g. AC Sedan required, 3 big suitcases"
+                },
+                {
+                    "key": "copy_33",
+                    "label": "Total Driving Distance",
+                    "value": "Total Driving Distance"
+                },
+                {
+                    "key": "copy_34",
+                    "label": "-",
+                    "value": "-"
+                },
+                {
+                    "key": "copy_35",
+                    "label": "*Our team will contact you shortly with the best fare for th",
+                    "value": "*Our team will contact you shortly with the best fare for this trip."
+                },
+                {
+                    "key": "copy_36",
+                    "label": "Send Booking on WhatsApp",
+                    "value": "Send Booking on WhatsApp"
+                },
+                {
+                    "key": "copy_37",
+                    "label": "We'll reply with exact fare & confirm in 2 minutes!",
+                    "value": "We'll reply with exact fare & confirm in 2 minutes!"
+                }
+            ],
+            "page": "index",
+            "kind": "booking"
+        },
+        "service-form-b38c4dc": {
+            "html": "<form action=\"#\">\n                                    <div class=\"row g-3\">\n                                        <div class=\"col-md-6\">\n                                            <label class=\"form-label-custom\">{{BC_COPY_copy_1}}<span>{{BC_COPY_copy_2}}</span></label>\n                                            <input type=\"text\" id=\"name_instant\" class=\"custom-input\" placeholder=\"{{BC_COPY_copy_3}}\">\n                                        </div>\n                                        <div class=\"col-md-6\">\n                                            <label class=\"form-label-custom\">{{BC_COPY_copy_4}}<span>{{BC_COPY_copy_5}}</span></label>\n                                            <input type=\"tel\" id=\"phone_instant\" class=\"custom-input\" placeholder=\"{{BC_COPY_copy_6}}\">\n                                        </div>\n\n                                        <div class=\"col-md-6 position-relative\">\n                                            <label class=\"form-label-custom\">{{BC_COPY_copy_7}}<span>{{BC_COPY_copy_8}}</span></label>\n                                            <input type=\"text\" id=\"pickup_location_instant\" class=\"custom-input pe-5\" placeholder=\"{{BC_COPY_copy_9}}\">\n                                            <i class=\"fas fa-crosshairs text-primary position-absolute\" id=\"auto_detect_btn_instant\" style=\"right: 25px; top: 40px; cursor: pointer; font-size: 18px; z-index: 10;\" title=\"{{BC_COPY_copy_10}}\"></i>\n                                        </div>\n                                        <div class=\"col-md-6\">\n                                            <label class=\"form-label-custom\">{{BC_COPY_copy_11}}<span>{{BC_COPY_copy_12}}</span></label>\n                                            <input type=\"text\" id=\"drop_location_instant\" class=\"custom-input\" placeholder=\"{{BC_COPY_copy_13}}\">\n                                        </div>\n\n                                        <div class=\"col-md-6\">\n                                            <label class=\"form-label-custom\">{{BC_COPY_copy_14}}<span>{{BC_COPY_copy_15}}</span></label>\n                                            <input type=\"date\" id=\"date_instant\" class=\"custom-input\">\n                                        </div>\n                                        <div class=\"col-md-6\">\n                                            <label class=\"form-label-custom\">{{BC_COPY_copy_16}}<span>{{BC_COPY_copy_17}}</span></label>\n                                            <input type=\"time\" id=\"time_instant\" class=\"custom-input\">\n                                        </div>\n\n                                        <div class=\"col-md-6\">\n                                            <label class=\"form-label-custom\">{{BC_COPY_copy_18}}<span>{{BC_COPY_copy_19}}</span></label>\n                                            <select id=\"passengers_instant\" class=\"custom-input custom-select\">\n                                                <option>{{BC_COPY_copy_20}}</option>\n                                                <option>{{BC_COPY_copy_21}}</option>\n                                                <option>{{BC_COPY_copy_22}}</option>\n                                                <option>{{BC_COPY_copy_23}}</option>\n                                                <option>{{BC_COPY_copy_24}}</option>\n                                            </select>\n                                        </div>\n                                        <div class=\"col-md-6\">\n                                            <label class=\"form-label-custom\">{{BC_COPY_copy_25}}<span>{{BC_COPY_copy_26}}</span></label>\n                                            <select id=\"category_instant\" class=\"custom-input custom-select\">\n                                                <option>{{BC_COPY_copy_27}}</option>\n                                                <option>{{BC_COPY_copy_28}}</option>\n                                                <option>{{BC_COPY_copy_29}}</option>\n                                                <option>{{BC_COPY_copy_30}}</option>\n                                            </select>\n                                        </div>\n\n                                        <div class=\"col-12\">\n                                            <label class=\"form-label-custom\">{{BC_COPY_copy_31}}</label>\n                                            <input type=\"text\" id=\"instructions_instant\" class=\"custom-input\" placeholder=\"{{BC_COPY_copy_32}}\">\n                                        </div>\n\n                                        <div class=\"col-12 mt-4\">\n                                            <div id=\"fare_estimate_box_instant\" class=\"mb-3 p-3 rounded text-center\" style=\"display: none; background: rgba(250, 204, 21, 0.1); border: 1px dashed #facc15;\">\n                                                <small class=\"text-muted text-uppercase fw-bold\" style=\"letter-spacing: 1px;\">{{BC_COPY_copy_33}}</small>\n                                                <div class=\"mt-1\">\n                                                    <i class=\"fas fa-route text-warning me-2\" style=\"font-size: 20px;\"></i>\n                                                    <strong id=\"estimated_distance_instant\" class=\"text-dark\" style=\"font-size: 24px;\">{{BC_COPY_copy_34}}</strong>\n                                                </div>\n                                                <small class=\"text-muted mt-2 d-block\" style=\"font-size: 11px;\">{{BC_COPY_copy_35}}</small>\n                                            </div>\n\n                                            <button type=\"button\" class=\"btn-whatsapp-submit\" onclick=\"submitInstantBooking()\"><i class=\"fas fa-comment-dots me-1\"></i>{{BC_COPY_copy_36}}</button>\n                                            <p class=\"text-center text-muted mt-3 mb-0\" style=\"font-size: 12px; font-weight: 600;\">{{BC_COPY_copy_37}}</p>\n                                        </div>\n                                    </div>\n                                </form>",
+            "fields": [
+                {
+                    "key": "copy_1",
+                    "label": "Your Name",
+                    "value": "Your Name"
+                },
+                {
+                    "key": "copy_2",
+                    "label": "*",
+                    "value": "*"
+                },
+                {
+                    "key": "copy_3",
+                    "label": "Placeholder: Enter full name",
+                    "value": "Enter full name"
+                },
+                {
+                    "key": "copy_4",
+                    "label": "Phone Number",
+                    "value": "Phone Number"
+                },
+                {
+                    "key": "copy_5",
+                    "label": "*",
+                    "value": "*"
+                },
+                {
+                    "key": "copy_6",
+                    "label": "Placeholder: +91 Mobile Number",
+                    "value": "+91 Mobile Number"
+                },
+                {
+                    "key": "copy_7",
+                    "label": "Pickup Location",
+                    "value": "Pickup Location"
+                },
+                {
+                    "key": "copy_8",
+                    "label": "*",
+                    "value": "*"
+                },
+                {
+                    "key": "copy_9",
+                    "label": "Placeholder: Type pickup spot or city...",
+                    "value": "Type pickup spot or city..."
+                },
+                {
+                    "key": "copy_10",
+                    "label": "Title: Auto Detect Location",
+                    "value": "Auto Detect Location"
+                },
+                {
+                    "key": "copy_11",
+                    "label": "Drop Location",
+                    "value": "Drop Location"
+                },
+                {
+                    "key": "copy_12",
+                    "label": "*",
+                    "value": "*"
+                },
+                {
+                    "key": "copy_13",
+                    "label": "Placeholder: Type drop destination or city...",
+                    "value": "Type drop destination or city..."
+                },
+                {
+                    "key": "copy_14",
+                    "label": "Travel Date",
+                    "value": "Travel Date"
+                },
+                {
+                    "key": "copy_15",
+                    "label": "*",
+                    "value": "*"
+                },
+                {
+                    "key": "copy_16",
+                    "label": "Pickup Time",
+                    "value": "Pickup Time"
+                },
+                {
+                    "key": "copy_17",
+                    "label": "*",
+                    "value": "*"
+                },
+                {
+                    "key": "copy_18",
+                    "label": "Total Passengers",
+                    "value": "Total Passengers"
+                },
+                {
+                    "key": "copy_19",
+                    "label": "*",
+                    "value": "*"
+                },
+                {
+                    "key": "copy_20",
+                    "label": "1 Person",
+                    "value": "1 Person"
+                },
+                {
+                    "key": "copy_21",
+                    "label": "2 Persons",
+                    "value": "2 Persons"
+                },
+                {
+                    "key": "copy_22",
+                    "label": "3 Persons",
+                    "value": "3 Persons"
+                },
+                {
+                    "key": "copy_23",
+                    "label": "4 Persons",
+                    "value": "4 Persons"
+                },
+                {
+                    "key": "copy_24",
+                    "label": "5+ Persons",
+                    "value": "5+ Persons"
+                },
+                {
+                    "key": "copy_25",
+                    "label": "Trip Category",
+                    "value": "Trip Category"
+                },
+                {
+                    "key": "copy_26",
+                    "label": "*",
+                    "value": "*"
+                },
+                {
+                    "key": "copy_27",
+                    "label": "One Way (Drop)",
+                    "value": "One Way (Drop)"
+                },
+                {
+                    "key": "copy_28",
+                    "label": "Round Trip",
+                    "value": "Round Trip"
+                },
+                {
+                    "key": "copy_29",
+                    "label": "Local Rental",
+                    "value": "Local Rental"
+                },
+                {
+                    "key": "copy_30",
+                    "label": "Airport Transfer",
+                    "value": "Airport Transfer"
+                },
+                {
+                    "key": "copy_31",
+                    "label": "Special Instructions / Luggage (Optional)",
+                    "value": "Special Instructions / Luggage (Optional)"
+                },
+                {
+                    "key": "copy_32",
+                    "label": "Placeholder: e.g. AC Sedan required, 3 big suitcases",
+                    "value": "e.g. AC Sedan required, 3 big suitcases"
+                },
+                {
+                    "key": "copy_33",
+                    "label": "Total Driving Distance",
+                    "value": "Total Driving Distance"
+                },
+                {
+                    "key": "copy_34",
+                    "label": "-",
+                    "value": "-"
+                },
+                {
+                    "key": "copy_35",
+                    "label": "*Our team will contact you shortly with the best fare for th",
+                    "value": "*Our team will contact you shortly with the best fare for this trip."
+                },
+                {
+                    "key": "copy_36",
+                    "label": "Send Booking on WhatsApp",
+                    "value": "Send Booking on WhatsApp"
+                },
+                {
+                    "key": "copy_37",
+                    "label": "We'll reply with exact fare & confirm in 2 minutes!",
+                    "value": "We'll reply with exact fare & confirm in 2 minutes!"
+                }
+            ],
+            "page": "service",
+            "kind": "booking"
+        },
+        "cities-form-a5b32e4": {
+            "html": "<form action=\"#\">\n                                <div class=\"row g-3\">\n                                    <div class=\"col-md-6\">\n                                        <label class=\"form-label-custom\">{{BC_COPY_copy_1}}<span>{{BC_COPY_copy_2}}</span></label>\n                                        <input type=\"text\" id=\"name_instant\" class=\"custom-input\" placeholder=\"{{BC_COPY_copy_3}}\">\n                                    </div>\n                                    <div class=\"col-md-6\">\n                                        <label class=\"form-label-custom\">{{BC_COPY_copy_4}}<span>{{BC_COPY_copy_5}}</span></label>\n                                        <input type=\"tel\" id=\"phone_instant\" class=\"custom-input\" placeholder=\"{{BC_COPY_copy_6}}\">\n                                    </div>\n\n                                    <div class=\"col-md-6 position-relative\">\n                                        <label class=\"form-label-custom\">{{BC_COPY_copy_7}}<span>{{BC_COPY_copy_8}}</span></label>\n                                        <input type=\"text\" id=\"pickup_location_instant\" class=\"custom-input pe-5\" placeholder=\"{{BC_COPY_copy_9}}\">\n                                        <i class=\"fas fa-crosshairs text-primary position-absolute\" id=\"auto_detect_btn_instant\" style=\"right: 25px; top: 40px; cursor: pointer; font-size: 18px; z-index: 10;\" title=\"{{BC_COPY_copy_10}}\"></i>\n                                    </div>\n                                    <div class=\"col-md-6\">\n                                        <label class=\"form-label-custom\">{{BC_COPY_copy_11}}<span>{{BC_COPY_copy_12}}</span></label>\n                                        <input type=\"text\" id=\"drop_location_instant\" class=\"custom-input\" placeholder=\"{{BC_COPY_copy_13}}\">\n                                    </div>\n\n                                    <div class=\"col-md-6\">\n                                        <label class=\"form-label-custom\">{{BC_COPY_copy_14}}<span>{{BC_COPY_copy_15}}</span></label>\n                                        <input type=\"date\" id=\"date_instant\" class=\"custom-input\">\n                                    </div>\n                                    <div class=\"col-md-6\">\n                                        <label class=\"form-label-custom\">{{BC_COPY_copy_16}}<span>{{BC_COPY_copy_17}}</span></label>\n                                        <input type=\"time\" id=\"time_instant\" class=\"custom-input\">\n                                    </div>\n\n                                    <div class=\"col-md-6\">\n                                        <label class=\"form-label-custom\">{{BC_COPY_copy_18}}<span>{{BC_COPY_copy_19}}</span></label>\n                                        <select id=\"passengers_instant\" class=\"custom-input custom-select\">\n                                            <option>{{BC_COPY_copy_20}}</option>\n                                            <option>{{BC_COPY_copy_21}}</option>\n                                            <option>{{BC_COPY_copy_22}}</option>\n                                            <option>{{BC_COPY_copy_23}}</option>\n                                            <option>{{BC_COPY_copy_24}}</option>\n                                        </select>\n                                    </div>\n                                    <div class=\"col-md-6\">\n                                        <label class=\"form-label-custom\">{{BC_COPY_copy_25}}<span>{{BC_COPY_copy_26}}</span></label>\n                                        <select id=\"category_instant\" class=\"custom-input custom-select\">\n                                            <option>{{BC_COPY_copy_27}}</option>\n                                            <option>{{BC_COPY_copy_28}}</option>\n                                            <option>{{BC_COPY_copy_29}}</option>\n                                            <option>{{BC_COPY_copy_30}}</option>\n                                        </select>\n                                    </div>\n\n                                    <div class=\"col-12\">\n                                        <label class=\"form-label-custom\">{{BC_COPY_copy_31}}</label>\n                                        <input type=\"text\" id=\"instructions_instant\" class=\"custom-input\" placeholder=\"{{BC_COPY_copy_32}}\">\n                                    </div>\n\n                                    <div class=\"col-12 mt-4\">\n                                        <div id=\"fare_estimate_box_instant\" class=\"mb-3 p-3 rounded text-center\" style=\"display: none; background: rgba(250, 204, 21, 0.1); border: 1px dashed #facc15;\">\n                                            <small class=\"text-muted text-uppercase fw-bold\" style=\"letter-spacing: 1px;\">{{BC_COPY_copy_33}}</small>\n                                            <div class=\"mt-1\">\n                                                <i class=\"fas fa-route text-warning me-2\" style=\"font-size: 20px;\"></i>\n                                                <strong id=\"estimated_distance_instant\" class=\"text-dark\" style=\"font-size: 24px;\">{{BC_COPY_copy_34}}</strong>\n                                            </div>\n                                            <small class=\"text-muted mt-2 d-block\" style=\"font-size: 11px;\">{{BC_COPY_copy_35}}</small>\n                                        </div>\n                                    \n                                        <button type=\"button\" class=\"btn-whatsapp-submit\" onclick=\"submitInstantBooking()\"><i class=\"fas fa-comment-dots me-1\"></i>{{BC_COPY_copy_36}}</button>\n                                        <p class=\"text-center text-muted mt-3 mb-0\" style=\"font-size: 12px; font-weight: 600;\">{{BC_COPY_copy_37}}</p>\n                                    </div>\n                                </div>\n                            </form>",
+            "fields": [
+                {
+                    "key": "copy_1",
+                    "label": "Your Name",
+                    "value": "Your Name"
+                },
+                {
+                    "key": "copy_2",
+                    "label": "*",
+                    "value": "*"
+                },
+                {
+                    "key": "copy_3",
+                    "label": "Placeholder: Enter full name",
+                    "value": "Enter full name"
+                },
+                {
+                    "key": "copy_4",
+                    "label": "Phone Number",
+                    "value": "Phone Number"
+                },
+                {
+                    "key": "copy_5",
+                    "label": "*",
+                    "value": "*"
+                },
+                {
+                    "key": "copy_6",
+                    "label": "Placeholder: +91 Mobile Number",
+                    "value": "+91 Mobile Number"
+                },
+                {
+                    "key": "copy_7",
+                    "label": "Pickup Location",
+                    "value": "Pickup Location"
+                },
+                {
+                    "key": "copy_8",
+                    "label": "*",
+                    "value": "*"
+                },
+                {
+                    "key": "copy_9",
+                    "label": "Placeholder: Type pickup spot or city...",
+                    "value": "Type pickup spot or city..."
+                },
+                {
+                    "key": "copy_10",
+                    "label": "Title: Auto Detect Location",
+                    "value": "Auto Detect Location"
+                },
+                {
+                    "key": "copy_11",
+                    "label": "Drop Location",
+                    "value": "Drop Location"
+                },
+                {
+                    "key": "copy_12",
+                    "label": "*",
+                    "value": "*"
+                },
+                {
+                    "key": "copy_13",
+                    "label": "Placeholder: Type drop destination or city...",
+                    "value": "Type drop destination or city..."
+                },
+                {
+                    "key": "copy_14",
+                    "label": "Travel Date",
+                    "value": "Travel Date"
+                },
+                {
+                    "key": "copy_15",
+                    "label": "*",
+                    "value": "*"
+                },
+                {
+                    "key": "copy_16",
+                    "label": "Pickup Time",
+                    "value": "Pickup Time"
+                },
+                {
+                    "key": "copy_17",
+                    "label": "*",
+                    "value": "*"
+                },
+                {
+                    "key": "copy_18",
+                    "label": "Total Passengers",
+                    "value": "Total Passengers"
+                },
+                {
+                    "key": "copy_19",
+                    "label": "*",
+                    "value": "*"
+                },
+                {
+                    "key": "copy_20",
+                    "label": "1 Person",
+                    "value": "1 Person"
+                },
+                {
+                    "key": "copy_21",
+                    "label": "2 Persons",
+                    "value": "2 Persons"
+                },
+                {
+                    "key": "copy_22",
+                    "label": "3 Persons",
+                    "value": "3 Persons"
+                },
+                {
+                    "key": "copy_23",
+                    "label": "4 Persons",
+                    "value": "4 Persons"
+                },
+                {
+                    "key": "copy_24",
+                    "label": "5+ Persons",
+                    "value": "5+ Persons"
+                },
+                {
+                    "key": "copy_25",
+                    "label": "Trip Category",
+                    "value": "Trip Category"
+                },
+                {
+                    "key": "copy_26",
+                    "label": "*",
+                    "value": "*"
+                },
+                {
+                    "key": "copy_27",
+                    "label": "One Way (Drop)",
+                    "value": "One Way (Drop)"
+                },
+                {
+                    "key": "copy_28",
+                    "label": "Round Trip",
+                    "value": "Round Trip"
+                },
+                {
+                    "key": "copy_29",
+                    "label": "Local Rental",
+                    "value": "Local Rental"
+                },
+                {
+                    "key": "copy_30",
+                    "label": "Airport Transfer",
+                    "value": "Airport Transfer"
+                },
+                {
+                    "key": "copy_31",
+                    "label": "Special Instructions / Luggage (Optional)",
+                    "value": "Special Instructions / Luggage (Optional)"
+                },
+                {
+                    "key": "copy_32",
+                    "label": "Placeholder: e.g. AC Sedan required, 3 big suitcases",
+                    "value": "e.g. AC Sedan required, 3 big suitcases"
+                },
+                {
+                    "key": "copy_33",
+                    "label": "Total Driving Distance",
+                    "value": "Total Driving Distance"
+                },
+                {
+                    "key": "copy_34",
+                    "label": "-",
+                    "value": "-"
+                },
+                {
+                    "key": "copy_35",
+                    "label": "*Our team will contact you shortly with the best fare for th",
+                    "value": "*Our team will contact you shortly with the best fare for this trip."
+                },
+                {
+                    "key": "copy_36",
+                    "label": "Send Booking on WhatsApp",
+                    "value": "Send Booking on WhatsApp"
+                },
+                {
+                    "key": "copy_37",
+                    "label": "We'll reply with exact fare & confirm in 2 minutes!",
+                    "value": "We'll reply with exact fare & confirm in 2 minutes!"
+                }
+            ],
+            "page": "cities",
+            "kind": "booking"
+        },
+        "contact-form-08edb8c": {
+            "html": "<form id=\"lf-form\">\n                                <div class=\"row g-4\">\n                                    <div class=\"col-md-6\">\n                                        <label class=\"contact-form-label\">{{BC_COPY_copy_1}}<span class=\"text-danger\">{{BC_COPY_copy_2}}</span></label>\n                                        <input type=\"text\" name=\"name\" class=\"contact-form-input\" placeholder=\"{{BC_COPY_copy_3}}\" required>\n                                    </div>\n                                    <div class=\"col-md-6\">\n                                        <label class=\"contact-form-label\">{{BC_COPY_copy_4}}<span class=\"text-danger\">{{BC_COPY_copy_5}}</span></label>\n                                        <input type=\"tel\" name=\"phone\" class=\"contact-form-input\" placeholder=\"{{BC_COPY_copy_6}}\" required>\n                                    </div>\n                                    <div class=\"col-12\">\n                                        <label class=\"contact-form-label\">{{BC_COPY_copy_7}}</label>\n                                        <input type=\"email\" name=\"email\" class=\"contact-form-input\" placeholder=\"{{BC_COPY_copy_8}}\">\n                                    </div>\n                                    <div class=\"col-12\">\n                                        <label class=\"contact-form-label\">{{BC_COPY_copy_9}}<span class=\"text-danger\">{{BC_COPY_copy_10}}</span></label>\n                                        <select name=\"subject_dropdown\" class=\"contact-form-input\" style=\"appearance: auto;\">\n                                            <option>{{BC_COPY_copy_11}}</option>\n                                            <option>{{BC_COPY_copy_12}}</option>\n                                            <option>{{BC_COPY_copy_13}}</option>\n                                            <option>{{BC_COPY_copy_14}}</option>\n                                        </select>\n                                    </div>\n                                    <div class=\"col-12\">\n                                        <label class=\"contact-form-label\">{{BC_COPY_copy_15}}<span class=\"text-danger\">{{BC_COPY_copy_16}}</span></label>\n                                        <textarea name=\"message\" class=\"contact-form-input\" rows=\"5\" placeholder=\"{{BC_COPY_copy_17}}\" required></textarea>\n                                    </div>\n                                    <div class=\"col-12 mt-4\">\n                                        <button type=\"submit\" class=\"contact-submit-btn w-100\">{{BC_COPY_copy_18}}<i class=\"fas fa-paper-plane ms-2\"></i></button>\n                                    </div>\n                                </div>\n                            </form>",
+            "fields": [
+                {
+                    "key": "copy_1",
+                    "label": "Full Name",
+                    "value": "Full Name"
+                },
+                {
+                    "key": "copy_2",
+                    "label": "*",
+                    "value": "*"
+                },
+                {
+                    "key": "copy_3",
+                    "label": "Placeholder: Enter your full name",
+                    "value": "Enter your full name"
+                },
+                {
+                    "key": "copy_4",
+                    "label": "Phone Number",
+                    "value": "Phone Number"
+                },
+                {
+                    "key": "copy_5",
+                    "label": "*",
+                    "value": "*"
+                },
+                {
+                    "key": "copy_6",
+                    "label": "Placeholder: +91 Your mobile number",
+                    "value": "+91 Your mobile number"
+                },
+                {
+                    "key": "copy_7",
+                    "label": "Email Address (Optional)",
+                    "value": "Email Address (Optional)"
+                },
+                {
+                    "key": "copy_8",
+                    "label": "Placeholder: Enter your email address",
+                    "value": "Enter your email address"
+                },
+                {
+                    "key": "copy_9",
+                    "label": "Subject",
+                    "value": "Subject"
+                },
+                {
+                    "key": "copy_10",
+                    "label": "*",
+                    "value": "*"
+                },
+                {
+                    "key": "copy_11",
+                    "label": "General Enquiry",
+                    "value": "General Enquiry"
+                },
+                {
+                    "key": "copy_12",
+                    "label": "Taxi Booking Issue",
+                    "value": "Taxi Booking Issue"
+                },
+                {
+                    "key": "copy_13",
+                    "label": "Corporate Tie-up",
+                    "value": "Corporate Tie-up"
+                },
+                {
+                    "key": "copy_14",
+                    "label": "Feedback / Complaint",
+                    "value": "Feedback / Complaint"
+                },
+                {
+                    "key": "copy_15",
+                    "label": "Your Message",
+                    "value": "Your Message"
+                },
+                {
+                    "key": "copy_16",
+                    "label": "*",
+                    "value": "*"
+                },
+                {
+                    "key": "copy_17",
+                    "label": "Placeholder: Write your message here...",
+                    "value": "Write your message here..."
+                },
+                {
+                    "key": "copy_18",
+                    "label": "Send Message",
+                    "value": "Send Message"
+                }
+            ],
+            "page": "contact",
+            "kind": "contact"
+        }
+    }
+}

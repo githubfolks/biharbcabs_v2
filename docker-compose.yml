@@ -1,0 +1,89 @@
+services:
+  db:
+    image: mariadb:11.4
+    container_name: biharcabs_db
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: biharcabs_local
+      MYSQL_USER: biharcabs
+      MYSQL_PASSWORD: biharcabs_local_pass
+      MYSQL_ROOT_PASSWORD: root_local_pass
+    ports:
+      - "3307:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./docker/db-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  wordpress:
+    image: wordpress:php8.3-apache
+    container_name: biharcabs_wp
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8081:80"
+    environment:
+      WORDPRESS_DB_HOST: db:3306
+      WORDPRESS_DB_NAME: biharcabs_local
+      WORDPRESS_DB_USER: biharcabs
+      WORDPRESS_DB_PASSWORD: biharcabs_local_pass
+      WP_HOME: http://localhost:8081
+      WP_SITEURL: http://localhost:8081
+      WP_ENVIRONMENT_TYPE: local
+    volumes:
+      - ./public_html:/var/www/html
+
+  wpcli:
+    image: wordpress:cli-php8.3
+    container_name: biharcabs_wpcli
+    depends_on:
+      db:
+        condition: service_healthy
+      wordpress:
+        condition: service_started
+    user: "33:33"
+    environment:
+      WORDPRESS_DB_HOST: db:3306
+      WORDPRESS_DB_NAME: biharcabs_local
+      WORDPRESS_DB_USER: biharcabs
+      WORDPRESS_DB_PASSWORD: biharcabs_local_pass
+    volumes:
+      - ./public_html:/var/www/html
+    entrypoint: >
+      /bin/sh -c "
+      sleep 4 &&
+      wp search-replace 'https://biharcabs.com' 'http://localhost:8081' --path=/var/www/html --all-tables --precise --skip-columns=guid --allow-root || true;
+      wp plugin activate biharcabs-growth-engine --path=/var/www/html --allow-root || true;
+      wp cache flush --path=/var/www/html --allow-root || true;
+      echo 'BiharCabs Local Docker Initialization Complete!';
+      "
+
+  crm:
+    build:
+      context: ./crm
+      dockerfile: Dockerfile
+    container_name: biharcabs_crm
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      DATABASE_URL: postgresql://vikram@host.docker.internal:5432/biharcabs_crm
+      PGHOST: host.docker.internal
+      PGPORT: 5432
+      PGDATABASE: biharcabs_crm
+      PGUSER: vikram
+      PGPASSWORD: ""
+      WP_API_BASE_URL: http://wordpress:80
+      PORT: 3001
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+volumes:
+  db_data:
+

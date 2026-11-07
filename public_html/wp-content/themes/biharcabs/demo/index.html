@@ -1,0 +1,1176 @@
+        <!-- 1. Hero Section -->
+        <section class="custom-hero">
+            <div class="container position-relative" style="z-index: 1;">
+                <div class="row align-items-center">
+                    <!-- Left Content -->
+                    <div class="col-lg-7 mb-5 mb-lg-0">
+                        
+                        <h1 class="hero-title"> BiharCabs-<span>
+Cab service in Bihar</span> </h1>
+                        <p class="hero-desc">Book a ride in minutes, travel in comfort and reach your destination safely
+                            across Bihar.</p>
+
+                        <div class="hero-features">
+                            <div class="hf-item">
+                                <div class="hf-icon"><i class="fas fa-shield-check"></i></div>
+                                <div class="hf-title">Safe Rides</div>
+                                <div class="hf-sub">100% Verified</div>
+                            </div>
+                            <div class="hf-item">
+                                <div class="hf-icon"><i class="fas fa-clock"></i></div>
+                                <div class="hf-title">24/7 Service</div>
+                                <div class="hf-sub">Always Available</div>
+                            </div>
+                            <div class="hf-item">
+                                <div class="hf-icon"><i class="fas fa-route"></i></div>
+                                <div class="hf-title">On-time Pickup</div>
+                                <div class="hf-sub">Every Time</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Content (Booking Form) -->
+                    <div class="col-lg-5">
+                        <div class="hero-booking-card">
+                            <div class="hbc-title">Book Your Ride</div>
+                            <div class="hbc-tabs">
+                                <div class="hbc-tab active">One Way</div>
+                                <div class="hbc-tab">Round Trip</div>
+                            </div>
+
+                            <form id="heroBookingForm">
+                                <div class="hbc-input-group position-relative">
+                                    <label>Pickup Location</label>
+                                    <i class="fas fa-circle hbc-icon green"></i>
+                                    <input type="text" id="pickup_location" class="hbc-input pe-5"
+                                        placeholder="Enter pickup location" required>
+                                    <i class="fas fa-crosshairs text-primary position-absolute" id="auto_detect_btn" style="right: 15px; top: 38px; cursor: pointer; font-size: 18px; z-index: 10;" title="Auto Detect Location"></i>
+                                </div>
+                                <div class="hbc-input-group">
+                                    <label>Drop Location</label>
+                                    <i class="fas fa-circle hbc-icon red"></i>
+                                    <input type="text" id="drop_location" class="hbc-input"
+                                        placeholder="Enter drop location" required>
+                                </div>
+
+                                <div class="row g-3 mb-3 mt-1">
+                                    <div class="col-6">
+                                        <div class="modern-dt-group">
+                                            <i class="fas fa-calendar-alt"></i>
+                                            <div class="modern-dt-content">
+                                                <label>Date</label>
+                                                <input type="date" id="pickup_date" class="modern-dt-input" required>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="modern-dt-group">
+                                            <i class="fas fa-clock"></i>
+                                            <div class="modern-dt-content">
+                                                <label>Time</label>
+                                                <input type="time" id="pickup_time" class="modern-dt-input" required>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div id="fare_estimate_box" class="mb-3 p-3 rounded text-center" style="display: none; background: rgba(250, 204, 21, 0.1); border: 1px dashed #facc15;">
+                                    <small class="text-muted text-uppercase fw-bold" style="letter-spacing: 1px;">Total Driving Distance</small>
+                                    <div class="mt-1">
+                                        <i class="fas fa-route text-warning me-2" style="font-size: 20px;"></i>
+                                        <strong id="estimated_distance" class="text-dark" style="font-size: 24px;">-</strong>
+                                    </div>
+                                    <small class="text-muted mt-2 d-block" style="font-size: 11px;">*Our team will contact you shortly with the best fare for this trip.</small>
+                                </div>
+
+                                <button type="button" class="hbc-btn" onclick="submitHeroBooking()">Book Now</button>
+                            </form>
+
+                            <script>
+                                function submitHeroBooking() {
+                                    const pickup = document.getElementById('pickup_location').value;
+                                    const drop = document.getElementById('drop_location').value;
+                                    const date = document.getElementById('pickup_date').value;
+                                    const time = document.getElementById('pickup_time').value;
+                                    
+                                    const estDist = document.getElementById('estimated_distance') ? document.getElementById('estimated_distance').innerText : '';
+
+                                    if (!pickup || !drop || !date || !time) {
+                                        alert("Please fill in all details (Pickup, Drop, Date, Time) before booking.");
+                                        return;
+                                    }
+
+                                    // Determine the active tab
+                                    const activeTab = document.querySelector('.hbc-tab.active').innerText;
+
+                                    let message = `Hello BiharCabs! I would like to book a ride.\n\n*Trip Type:* ${activeTab}\n*Pickup:* ${pickup}\n*Drop:* ${drop}\n*Date:* ${date}\n*Time:* ${time}`;
+                                    
+                                    if (estDist && estDist !== '-') {
+                                        message += `\n*Distance:* ${estDist}`;
+                                    }
+                                    
+                                    message += `\n\nPlease confirm availability and fare.`;
+                                    
+                                    const whatsappUrl = `https://wa.me/917070992170?text=${encodeURIComponent(message)}`;
+
+                                    window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+                                }
+
+                                // Tab switching logic
+                                document.querySelectorAll('.hbc-tab').forEach(tab => {
+                                    tab.addEventListener('click', function () {
+                                        document.querySelectorAll('.hbc-tab').forEach(t => t.classList.remove('active'));
+                                        this.classList.add('active');
+                                    });
+                                });
+                            </script>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 2. Trust Metrics -->
+        <section class="section-padding trust-section">
+            <div class="container">
+                <div class="row align-items-center">
+                    <div class="col-lg-6 mb-5 mb-lg-0 pr-lg-5">
+                        <h2 class="fw-bold mb-4" style="font-family: 'Outfit', sans-serif; font-size: 2.5rem;">Patna &
+                            Bihar Sharif's Most Trusted Cab Service</h2>
+                        <p class="text-muted" style="font-size: 1.1rem; line-height: 1.8;">Experience the most reliable
+                            transportation network in Bihar. We operate central dispatch desks in Patna and Bihar
+                            Sharif, catering to local commutes, corporate contracts, and urgent highway intercity
+                            travel.</p>
+                        <ul class="list-unstyled mt-4" style="font-size: 1.1rem;">
+                            <li class="mb-3"><i class="fas fa-check-circle text-success me-1"></i> No hidden costs or
+                                surge pricing</li>
+                            <li class="mb-3"><i class="fas fa-check-circle text-success me-1"></i> Experienced,
+                                background-verified drivers</li>
+                            <li class="mb-3"><i class="fas fa-check-circle text-success me-1"></i> 24x7 roadside
+                                assistance and support</li>
+                        </ul>
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="row g-4">
+                            <div class="col-6">
+                                <div class="stat-box">
+                                    <h3>10,000+</h3>
+                                    <p class="text-muted mb-0 mt-2">Happy Customers</p>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="stat-box">
+                                    <h3>2014</h3>
+                                    <p class="text-muted mb-0 mt-2">Established</p>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="stat-box">
+                                    <h3>4.9 <i class="fas fa-star text-warning"></i></h3>
+                                    <p class="text-muted mb-0 mt-2">User Ratings</p>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="stat-box">
+                                    <h3>24/7</h3>
+                                    <p class="text-muted mb-0 mt-2">Active Support</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3. Services Grid -->
+        <section class="section-padding bg-light">
+            <div class="container">
+                <div class="text-center mb-5">
+                    <h2 class="fw-bold" style="font-family: 'Outfit', sans-serif;">Tailored Taxi Solutions For Every
+                        Journey</h2>
+                    <p class="text-muted mt-3">Choose from our wide range of premium services designed for comfort and
+                        efficiency.</p>
+                </div>
+                <div class="row g-4 mt-2">
+                    <!-- Service Cards -->
+                    <div class="col-md-6 col-lg-3">
+                        <div class="service-card">
+                            <div class="service-img"
+                                style="background: url('assets/img/img/taxi_indian_local_taxi.webp');">
+                            </div>
+                            <div class="service-content">
+                                <h4>Local Taxi Service</h4>
+                                <ul>
+                                    <li>City sightseeing tours</li>
+                                    <li>Local market visits</li>
+                                </ul>
+                                <a href="#"
+                                    class="btn-primary-custom d-block text-center text-decoration-none mt-4">Book
+                                    Now</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 col-lg-3">
+                        <div class="service-card">
+                            <div class="service-img"
+                                style="background: url('assets/img/img/taxi_indian_outstation_taxi.webp');"></div>
+                            <div class="service-content">
+                                <h4>Outstation Travel</h4>
+                                <ul>
+                                    <li>Round trip booking</li>
+                                    <li>Intercity transfers</li>
+                                </ul>
+                                <a href="#"
+                                    class="btn-primary-custom d-block text-center text-decoration-none mt-4">Book
+                                    Now</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 col-lg-3">
+                        <div class="service-card">
+                            <div class="service-img"
+                                style="background: url('assets/img/img/taxi_indian_airport_taxi.webp');"></div>
+                            <div class="service-content">
+                                <h4>Airport Transfers</h4>
+                                <ul>
+                                    <li>Timely pickups</li>
+                                    <li>Luggage assistance</li>
+                                </ul>
+                                <a href="#"
+                                    class="btn-primary-custom d-block text-center text-decoration-none mt-4">Book
+                                    Now</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 col-lg-3">
+                        <div class="service-card">
+                            <div class="service-img"
+                                style="background: url('assets/img/img/taxi_indian_corporate_taxi.webp');"></div>
+                            <div class="service-content">
+                                <h4>Corporate Cabs</h4>
+                                <ul>
+                                    <li>Monthly rentals</li>
+                                    <li>Employee transport</li>
+                                </ul>
+                                <a href="#"
+                                    class="btn-primary-custom d-block text-center text-decoration-none mt-4">Book
+                                    Now</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 4. Fleet Section -->
+        <section class="section-padding">
+            <div class="container">
+                <div class="text-center mb-5">
+                    <h2 class="fw-bold" style="font-family: 'Outfit', sans-serif;">Select Your Preferred Ride</h2>
+                    <p class="text-muted mt-3">Our diverse fleet of well-maintained vehicles ensures a perfect ride for
+                        every occasion.</p>
+                </div>
+                <div class="row g-4 mt-2">
+                    <div class="col-lg-4">
+                        <div class="fleet-card">
+                            <img src="assets/img/img/taxi_sedan_with_logo.webp" alt="Sedan" class="img-fluid rounded">
+                            <h4 style="font-family: 'Outfit', sans-serif;">Premium AC Sedan</h4>
+                            <p class="text-muted mb-4">Swift / Dzire / Etios</p>
+                            <hr>
+                            <div class="d-flex justify-content-between mb-4 mt-4">
+                                <span class="text-muted"><i class="fas fa-user-friends me-1"></i> 4 Seats</span>
+                                <span class="text-muted"><i class="fas fa-suitcase me-1"></i> 2 Bags</span>
+                            </div>
+                            <button class="btn btn-dark w-100 py-3 font-weight-bold">Book Premium Sedan</button>
+                        </div>
+                    </div>
+                    <div class="col-lg-4">
+                        <div class="fleet-card border-warning shadow" style="border-width: 2px;">
+                            <div class="badge bg-warning text-dark mb-3 px-3 py-2">Most Popular</div>
+                            <img src="assets/img/img/taxi_suv_with_logo.webp" alt="SUV" class="img-fluid rounded">
+                            <h4 style="font-family: 'Outfit', sans-serif;">Premium SUV</h4>
+                            <p class="text-muted mb-4">Innova / Ertiga / Crysta</p>
+                            <hr>
+                            <div class="d-flex justify-content-between mb-4 mt-4">
+                                <span class="text-muted"><i class="fas fa-user-friends me-1"></i> 6-7 Seats</span>
+                                <span class="text-muted"><i class="fas fa-suitcase me-1"></i> 4 Bags</span>
+                            </div>
+                            <button class="btn-primary-custom">Book Premium SUV</button>
+                        </div>
+                    </div>
+                    <div class="col-lg-4">
+                        <div class="fleet-card">
+                            <img src="assets/img/img/taxi_tempo_with_logo.webp" alt="Tempo" class="img-fluid rounded">
+                            <h4 style="font-family: 'Outfit', sans-serif;">Luxury Tempo Traveller</h4>
+                            <p class="text-muted mb-4">13/17/26 Seater AC</p>
+                            <hr>
+                            <div class="d-flex justify-content-between mb-4 mt-4">
+                                <span class="text-muted"><i class="fas fa-user-friends me-1"></i> 13+ Seats</span>
+                                <span class="text-muted"><i class="fas fa-suitcase me-1"></i> 10+ Bags</span>
+                            </div>
+                            <button class="btn btn-dark w-100 py-3 font-weight-bold">Book Tempo Traveller</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 5. Features -->
+        <section class="section-padding bg-light">
+            <div class="container">
+                <div class="text-center mb-5">
+                    <h2 class="fw-bold" style="font-family: 'Outfit', sans-serif;">Built for Comfort, Punctuality &
+                        Trust</h2>
+                </div>
+                <div class="features-grid mt-5">
+                    <div class="feature-item">
+                        <h3><i class="fas fa-shield-alt text-primary me-1"></i></h3>
+                        <h4 class="mt-3 mb-3">Verified Drivers</h4>
+                        <p class="text-muted">Background checked, experienced professionals for a safe journey.</p>
+                    </div>
+                    <div class="feature-item">
+                        <h3><i class="fas fa-star text-warning me-1"></i></h3>
+                        <h4 class="mt-3 mb-3">Clean & AC Cars</h4>
+                        <p class="text-muted">Well-maintained, sanitized fleet ensuring maximum comfort.</p>
+                    </div>
+                    <div class="feature-item">
+                        <h3><i class="fas fa-rupee-sign text-success me-1"></i></h3>
+                        <h4 class="mt-3 mb-3">Transparent Fares</h4>
+                        <p class="text-muted">No hidden charges, pay what you see before booking.</p>
+                    </div>
+                    <div class="feature-item">
+                        <h3><i class="fas fa-clock me-1"></i></h3>
+                        <h4 class="mt-3 mb-3">24/7 Support</h4>
+                        <p class="text-muted">Round the clock assistance for all your travel queries.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 6. Reviews -->
+        <style>
+            .review-badge {
+                display: inline-block;
+                background: #fef3c7;
+                color: #d97706;
+                font-size: 12px;
+                font-weight: 700;
+                padding: 6px 12px;
+                border-radius: 9999px;
+                margin-bottom: 15px;
+                letter-spacing: 0.5px;
+            }
+
+            .review-card {
+                background: white;
+                border-radius: 16px;
+                padding: 30px;
+                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+                border: 1px solid #f3f4f6;
+                margin-bottom: 20px;
+            }
+
+            .review-text {
+                font-size: 16px;
+                color: #4b5563;
+                font-style: italic;
+                margin-bottom: 20px;
+                line-height: 1.6;
+            }
+
+            .review-author {
+                font-weight: 700;
+                color: #111827;
+            }
+
+            .review-tag {
+                background: #f3f4f6;
+                padding: 4px 10px;
+                border-radius: 6px;
+                font-size: 12px;
+                font-weight: 600;
+                color: #4b5563;
+            }
+
+            .review-img-card {
+                position: relative;
+                border-radius: 16px;
+                overflow: hidden;
+                height: 100%;
+                min-height: 400px;
+                background: linear-gradient(to top, rgba(0, 0, 0, 0.9) 0%, transparent 100%), url('assets/img/img/review_family.webp') center/cover;
+                color: white;
+                padding: 30px;
+                display: flex;
+                flex-direction: column;
+                justify-content: flex-end;
+            }
+        </style>
+        <section class="section-padding">
+            <div class="container">
+                <div class="text-center mb-5">
+                    <div class="review-badge"> VERIFIED PASSENGER REVIEWS</div>
+                    <h2 class="fw-bold" style="font-family: 'Outfit', sans-serif;">Loved by Families, Trusted by
+                        Businesses</h2>
+                    <p class="text-muted mt-2">Real experiences from passengers traveling between Patna, Bihar Sharif,
+                        and nearby airport terminals.</p>
+                </div>
+                <div class="row g-4 mt-2 align-items-stretch">
+                    <div class="col-lg-5">
+                        <div class="review-img-card">
+                            <div style="color: #facc15; font-size: 20px; margin-bottom: 10px;"><i
+                                    class="fas fa-star text-warning"></i><i class="fas fa-star text-warning"></i><i
+                                    class="fas fa-star text-warning"></i><i class="fas fa-star text-warning"></i><i
+                                    class="fas fa-star text-warning"></i></div>
+                            <h4 class="text-white font-weight-bold" style="font-family: 'Outfit', sans-serif;">Akshay
+                                Cabs Experience</h4>
+                            <p style="font-size: 14px; color: #d1d5db; line-height: 1.5; font-style: italic;">"Our
+                                driver was extremely courteous and loaded all our heavy airport bags. The ride from
+                                Patna JPNI Airport to Bihar Sharif was incredibly smooth!"</p>
+                            <div class="mt-3">
+                                <span class="badge bg-warning text-dark px-2 py-1">GOOGLE 4.9</span>
+                                <span style="font-size: 12px; color: #9ca3af; margin-left: 10px;">1,250+ Verified
+                                    Passenger Reviews</span>
+                            </div>
+                            <p class="mt-2 mb-0"
+                                style="font-size: 10px; color: #facc15; letter-spacing: 1px; font-weight: bold;">
+                                VERIFIED HIGHWAY PASSENGER</p>
+                        </div>
+                    </div>
+                    <div class="col-lg-7">
+                        <div class="review-card">
+                            <div style="color: #facc15; font-size: 20px; margin-bottom: 10px;"><i
+                                    class="fas fa-star text-warning"></i><i class="fas fa-star text-warning"></i><i
+                                    class="fas fa-star text-warning"></i><i class="fas fa-star text-warning"></i><i
+                                    class="fas fa-star text-warning"></i></div>
+                            <p class="review-text">"Excellent taxi service! The driver was punctual, polite, and the
+                                vehicle was very clean. Highly recommend."</p>
+                            <div class="d-flex justify-content-between align-items-center mt-4 border-top pt-3">
+                                <div>
+                                    <span class="review-author">Rajesh Kumar <span
+                                            class="text-success">&#10004;</span></span><br>
+                                    <span style="font-size: 12px; color: #9ca3af;"><i
+                                            class="fas fa-map-marker-alt text-danger me-1"></i> Patna</span>
+                                </div>
+                                <div class="review-tag">Patna to Bihar Sharif</div>
+                            </div>
+                        </div>
+                        <div class="review-card mb-0">
+                            <div style="color: #facc15; font-size: 20px; margin-bottom: 10px;"><i
+                                    class="fas fa-star text-warning"></i><i class="fas fa-star text-warning"></i><i
+                                    class="fas fa-star text-warning"></i><i class="fas fa-star text-warning"></i><i
+                                    class="fas fa-star text-warning"></i></div>
+                            <p class="review-text">"I booked an airport transfer and the experience was smooth from
+                                start to finish. Safe and professional."</p>
+                            <div class="d-flex justify-content-between align-items-center mt-4 border-top pt-3">
+                                <div>
+                                    <span class="review-author">Priya Singh <span
+                                            class="text-success">&#10004;</span></span><br>
+                                    <span style="font-size: 12px; color: #9ca3af;"><i
+                                            class="fas fa-map-marker-alt text-danger me-1"></i> Bihar Sharif</span>
+                                </div>
+                                <div class="review-tag">Bihar Sharif to Patna Airport</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 7. Coverage Area -->
+        <style>
+            .coverage-badge {
+                display: inline-block;
+                color: #d97706;
+                font-size: 12px;
+                font-weight: 700;
+                padding: 6px 16px;
+                border-radius: 9999px;
+                margin-bottom: 15px;
+                letter-spacing: 0.5px;
+                border: 1px solid #fde047;
+                background: #fffbeb;
+                text-transform: uppercase;
+            }
+
+            .coverage-hub-card {
+                background: #000;
+                color: white;
+                border-radius: 16px;
+                padding: 24px;
+                height: 100%;
+                display: flex;
+                flex-direction: column;
+                justify-content: space-between;
+                box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+            }
+
+            .hub-icon {
+                width: 40px;
+                height: 40px;
+                background: #facc15;
+                color: black;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 18px;
+                margin-bottom: 20px;
+            }
+
+            .hub-badge {
+                background: #facc15;
+                color: black;
+                font-weight: 700;
+                font-size: 10px;
+                padding: 4px 12px;
+                border-radius: 20px;
+            }
+
+            .hub-title {
+                font-family: 'Outfit', sans-serif;
+                font-weight: 700;
+                font-size: 20px;
+                margin-bottom: 8px;
+            }
+
+            .hub-desc {
+                font-size: 13px;
+                color: #9ca3af;
+                margin-bottom: 20px;
+            }
+
+            .hub-link {
+                color: #facc15;
+                font-weight: 700;
+                font-size: 13px;
+                text-decoration: none;
+                display: flex;
+                align-items: center;
+            }
+
+            .hub-link i {
+                margin-left: 5px;
+                font-size: 10px;
+                font-style: normal;
+            }
+
+            .coverage-city-card {
+                background: #f9fafb;
+                border: 1px solid #f3f4f6;
+                border-radius: 16px;
+                padding: 24px;
+                height: 100%;
+                display: flex;
+                flex-direction: column;
+                justify-content: space-between;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.02);
+                transition: 0.3s;
+            }
+
+            .coverage-city-card:hover {
+                border-color: #e5e7eb;
+                box-shadow: 0 10px 20px rgba(0, 0, 0, 0.05);
+            }
+
+            .city-icon {
+                width: 40px;
+                height: 40px;
+                background: #e5e7eb;
+                color: #9ca3af;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 18px;
+                margin-bottom: 20px;
+            }
+
+            .city-title {
+                font-family: 'Outfit', sans-serif;
+                font-weight: 700;
+                font-size: 18px;
+                color: #111827;
+                margin-bottom: 8px;
+            }
+
+            .city-desc {
+                font-size: 13px;
+                color: #6b7280;
+                margin-bottom: 20px;
+            }
+
+            .city-link {
+                color: #111827;
+                font-weight: 700;
+                font-size: 13px;
+                text-decoration: none;
+                display: flex;
+                align-items: center;
+            }
+
+            .city-link i {
+                margin-left: 5px;
+                font-size: 10px;
+                font-style: normal;
+            }
+
+            .map-card {
+                background: #f8fafc;
+                border: 1px solid #f1f5f9;
+                border-radius: 20px;
+                padding: 24px;
+                height: 100%;
+                display: flex;
+                flex-direction: column;
+            }
+
+            .map-badge {
+                background: #111827;
+                color: #facc15;
+                font-weight: 700;
+                font-size: 10px;
+                padding: 4px 12px;
+                border-radius: 4px;
+                display: inline-block;
+                letter-spacing: 0.5px;
+                text-transform: uppercase;
+                align-self: flex-start;
+                margin-bottom: 20px;
+            }
+
+            .map-image {
+                width: 100%;
+                border-radius: 12px;
+                margin-bottom: 24px;
+                object-fit: cover;
+            }
+
+            .map-title {
+                color: #64748b;
+                font-weight: 700;
+                font-size: 12px;
+                letter-spacing: 0.5px;
+                text-transform: uppercase;
+                margin-bottom: 8px;
+            }
+
+            .map-desc {
+                font-size: 13px;
+                color: #475569;
+                line-height: 1.6;
+                margin-bottom: 0;
+            }
+        </style>
+
+        <section class="section-padding bg-white">
+            <div class="container">
+                <div class="text-center mb-5">
+                    <div class="coverage-badge"><i class="fas fa-check-circle text-success me-1"></i> EXTENSIVE SERVICE
+                        NETWORK</div>
+                    <h2 class="fw-bold" style="font-family: 'Outfit', sans-serif;">Serving Patna & Surrounding Districts
+                    </h2>
+                    <p class="text-muted mt-2">Continuous cab network covering major highway corridors, airport drop
+                        zones, railway stations, and local towns.</p>
+                </div>
+
+                <div class="row g-4 mt-4 align-items-stretch">
+                    <!-- Left Column (Grid) -->
+                    <div class="col-lg-8">
+                        <div class="row g-4">
+                            <!-- Patna -->
+                            <div class="col-md-6">
+                                <div class="coverage-hub-card">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div class="hub-icon"><i class="fas fa-map-marker-alt text-danger me-1"></i>
+                                        </div>
+                                        <div class="hub-badge">Primary Hub</div>
+                                    </div>
+                                    <div>
+                                        <div class="hub-title">Patna</div>
+                                        <div class="hub-desc">Capital Hub & Jayprakash Narayan Airport (PAT)</div>
+                                        <a href="#" class="hub-link">Book Ride to Patna <i
+                                                class="fas fa-arrow-right"></i></a>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Bihar Sharif -->
+                            <div class="col-md-6">
+                                <div class="coverage-hub-card">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div class="hub-icon"><i class="fas fa-map-marker-alt text-danger me-1"></i>
+                                        </div>
+                                        <div class="hub-badge">Primary Hub</div>
+                                    </div>
+                                    <div>
+                                        <div class="hub-title">Purnia</div>
+                                        <div class="hub-desc">Heart of Seemanchal & Main Dispatch HQ</div>
+                                        <a href="#" class="hub-link">Book Ride to Purnia <i
+                                                class="fas fa-arrow-right"></i></a>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Nawada -->
+                            <div class="col-md-6">
+                                <div class="coverage-city-card">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div class="city-icon"><i class="fas fa-map-marker-alt text-danger me-1"></i>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div class="city-title">Darbhanga</div>
+                                        <div class="city-desc">Direct Outstation Route via NH27</div>
+                                        <a href="#" class="city-link">Book Ride to Darbhanga <i
+                                                class="fas fa-arrow-right"></i></a>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Gaya -->
+                            <div class="col-md-6">
+                                <div class="coverage-city-card">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div class="city-icon"><i class="fas fa-map-marker-alt text-danger me-1"></i>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div class="city-title">Gaya</div>
+                                        <div class="city-desc">Bodhgaya Pilgrimage & Station Transfers</div>
+                                        <a href="#" class="city-link">Book Ride to Gaya <i
+                                                class="fas fa-arrow-right"></i></a>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Rajgir -->
+                            <div class="col-md-6">
+                                <div class="coverage-city-card">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div class="city-icon"><i class="fas fa-map-marker-alt text-danger me-1"></i>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div class="city-title">Rajgir</div>
+                                        <div class="city-desc">Vishwa Shanti Stupa & Hot Springs Route</div>
+                                        <a href="#" class="city-link">Book Ride to Rajgir <i
+                                                class="fas fa-arrow-right"></i></a>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Muzaffarpur -->
+                            <div class="col-md-6">
+                                <div class="coverage-city-card">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div class="city-icon"><i class="fas fa-map-marker-alt text-danger me-1"></i>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div class="city-title">Muzaffarpur</div>
+                                        <div class="city-desc">Litchi Kingdom & Key North Bihar Industrial Hub</div>
+                                        <a href="#" class="city-link">Book Ride to Muzaffarpur <i
+                                                class="fas fa-arrow-right"></i></a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Column (Map) -->
+                    <div class="col-lg-4">
+                        <div class="map-card">
+                            <div class="map-badge">ROUTE NETWORK</div>
+                            <img src="assets/img/img/coverage_map.webp" alt="Bihar Route Network Map" class="map-image">
+                            <div>
+                                <div class="map-title">CONTINUOUS SERVICE CORRIDOR</div>
+                                <p class="map-desc">Our drivers are stationed along NH-31, NH-2, and major state
+                                    highways to dispatch cabs within 15 minutes of booking confirmation.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 8. FAQ Area -->
+        <style>
+            .faq-badge {
+                display: inline-block;
+                background: #fef9c3;
+                /* lighter yellow */
+                color: #b45309;
+                /* amber */
+                font-size: 12px;
+                font-weight: 700;
+                padding: 6px 16px;
+                border-radius: 9999px;
+                margin-bottom: 15px;
+                letter-spacing: 0.5px;
+                border: 1px solid #fde047;
+            }
+
+            .custom-accordion .accordion-item {
+                border: 1px solid #e5e7eb;
+                border-radius: 12px !important;
+                margin-bottom: 16px;
+                overflow: hidden;
+                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            }
+
+            .custom-accordion .accordion-button {
+                font-weight: 700;
+                color: #1f2937;
+                padding: 20px 24px;
+                background-color: white;
+                box-shadow: none;
+            }
+
+            .custom-accordion .accordion-button:not(.collapsed) {
+                background-color: white;
+                color: #1f2937;
+                border-bottom: 1px solid #e5e7eb;
+            }
+
+            .custom-accordion .accordion-button::after {
+                background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23eab308'%3E%3Cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3E%3C/svg%3E");
+                transition: transform 0.2s ease-in-out;
+            }
+
+            .custom-accordion .accordion-button:not(.collapsed)::after {
+                transform: rotate(-180deg);
+            }
+
+            .custom-accordion .accordion-body {
+                padding: 24px;
+                color: #4b5563;
+                font-size: 15px;
+                line-height: 1.6;
+                background-color: #fafafa;
+            }
+        </style>
+        <section class="section-padding bg-white">
+            <div class="container">
+                <div class="text-center mb-5">
+                    <div class="faq-badge"><i class="fas fa-question-circle"></i> PASSENGER FAQS</div>
+                    <h2 class="fw-bold mb-3" style="font-family: 'Outfit', sans-serif;">Frequently Asked Questions</h2>
+                    <p class="text-muted">Quick answers to common questions regarding booking, fares, and fleet safety.
+                    </p>
+                </div>
+
+                <div class="row justify-content-center">
+                    <div class="col-lg-9">
+                        <div class="accordion custom-accordion" id="faqAccordion">
+
+                            <!-- FAQ 1 -->
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="headingOne">
+                                    <button class="accordion-button" type="button" data-bs-toggle="collapse"
+                                        data-bs-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
+                                        How do I book a cab in Patna or Bihar Sharif with Bihar Cab Service?
+                                    </button>
+                                </h2>
+                                <div id="collapseOne" class="accordion-collapse collapse show"
+                                    aria-labelledby="headingOne" data-bs-parent="#faqAccordion">
+                                    <div class="accordion-body">
+                                        You can book instantly by calling our 24x7 phone hotline or by submitting your
+                                        pickup & drop details in our instant WhatsApp booking form. Driver confirmation
+                                        takes less than 2 minutes.
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- FAQ 2 -->
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="headingTwo">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                                        data-bs-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+                                        What is the fixed taxi fare from Patna JPNI Airport to Bihar Sharif?
+                                    </button>
+                                </h2>
+                                <div id="collapseTwo" class="accordion-collapse collapse" aria-labelledby="headingTwo"
+                                    data-bs-parent="#faqAccordion">
+                                    <div class="accordion-body">
+                                        Our fixed taxi fares from Patna Airport to Bihar Sharif are highly competitive
+                                        and completely transparent. Please contact our support via WhatsApp or phone for
+                                        the most accurate current rates with zero hidden charges.
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- FAQ 3 -->
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="headingThree">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                                        data-bs-target="#collapseThree" aria-expanded="false"
+                                        aria-controls="collapseThree">
+                                        Are toll charges and parking fees included in the fixed fare?
+                                    </button>
+                                </h2>
+                                <div id="collapseThree" class="accordion-collapse collapse"
+                                    aria-labelledby="headingThree" data-bs-parent="#faqAccordion">
+                                    <div class="accordion-body">
+                                        Toll charges and parking fees are typically not included in our base fare to
+                                        ensure transparency. You only pay for what you use, and our drivers will provide
+                                        receipts for any toll or parking expenses incurred during your trip.
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- FAQ 4 -->
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="headingFour">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                                        data-bs-target="#collapseFour" aria-expanded="false"
+                                        aria-controls="collapseFour">
+                                        Is cab service available 24 hours a day, 7 days a week?
+                                    </button>
+                                </h2>
+                                <div id="collapseFour" class="accordion-collapse collapse" aria-labelledby="headingFour"
+                                    data-bs-parent="#faqAccordion">
+                                    <div class="accordion-body">
+                                        Yes, BiharCabs operates 24x7. Whether it's a late-night airport pickup or an
+                                        early-morning outstation drop, our support team and verified drivers are always
+                                        ready to serve you.
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- FAQ 5 -->
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="headingFive">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                                        data-bs-target="#collapseFive" aria-expanded="false"
+                                        aria-controls="collapseFive">
+                                        Are drivers verified, licensed, and safe for late night rides?
+                                    </button>
+                                </h2>
+                                <div id="collapseFive" class="accordion-collapse collapse" aria-labelledby="headingFive"
+                                    data-bs-parent="#faqAccordion">
+                                    <div class="accordion-body">
+                                        Absolutely. Passenger safety is our topmost priority. All our drivers undergo a
+                                        strict background verification process, hold valid commercial licenses, and are
+                                        specially trained to ensure a safe experience for late-night commuters.
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- FAQ 6 -->
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="headingSix">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                                        data-bs-target="#collapseSix" aria-expanded="false" aria-controls="collapseSix">
+                                        Do I need to pay any advance payment for booking confirmation?
+                                    </button>
+                                </h2>
+                                <div id="collapseSix" class="accordion-collapse collapse" aria-labelledby="headingSix"
+                                    data-bs-parent="#faqAccordion">
+                                    <div class="accordion-body">
+                                        For local rides, no advance payment is usually required. However, for certain
+                                        outstation trips or premium vehicle bookings (like Tempo Travellers), a nominal
+                                        advance may be requested to confirm your reservation.
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- FAQ 7 -->
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="headingSeven">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                                        data-bs-target="#collapseSeven" aria-expanded="false"
+                                        aria-controls="collapseSeven">
+                                        Can I get doorstep cab pickup in Araut and Faraut villages?
+                                    </button>
+                                </h2>
+                                <div id="collapseSeven" class="accordion-collapse collapse"
+                                    aria-labelledby="headingSeven" data-bs-parent="#faqAccordion">
+                                    <div class="accordion-body">
+                                        Yes! We proudly extend our pickup and drop-off services beyond just the city
+                                        centers, offering reliable doorstep cab pickups across surrounding areas,
+                                        including Araut, Faraut, and other nearby villages.
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 9. Booking Enquiry Section -->
+        
+        <section class="section-padding" style="background: #fafafa;">
+            <div class="container">
+                <div class="row g-5 align-items-center">
+                    <!-- Left Column -->
+                    <div class="col-lg-5">
+                        <div class="fast-booking-badge"><i class="fas fa-comment-dots me-1"></i> FAST BOOKING ENQUIRY
+                        </div>
+                        <h2 class="fw-bold mb-4"
+                            style="font-family: 'Outfit', sans-serif; font-size: 2.8rem; line-height: 1.2;">Book Your
+                            Verified Ride in 30 Seconds</h2>
+
+                        <div class="driver-img-box">
+                            <img src="assets/img/img/bihari_female.webp" alt="Verified Driver">
+                            <div class="verified-driver-badge"><i class="fas fa-check-circle text-success me-1"></i>
+                                VERIFIED DRIVERS WAITING</div>
+                        </div>
+
+                        <p class="text-muted mb-4" style="font-size: 15px;">Fill out the details to receive an instant
+                            fare quote and driver confirmation over phone or WhatsApp. Zero advance payment required.
+                        </p>
+
+                        <a href="tel:+917070992170" class="text-decoration-none">
+                            <div class="contact-box">
+                                <div class="contact-icon"><i class="fas fa-phone-alt me-1"></i></div>
+                                <div>
+                                    <div class="contact-title">24X7 DIRECT PHONE HOTLINE</div>
+                                    <h4 class="contact-value">070709 92170</h4>
+                                </div>
+                            </div>
+                        </a>
+
+                        <a href="https://wa.me/917070992170" class="text-decoration-none">
+                            <div class="contact-box whatsapp-box">
+                                <div class="contact-icon"><i class="fas fa-comment-dots me-1"></i></div>
+                                <div>
+                                    <div class="contact-title">INSTANT WHATSAPP SUPPORT</div>
+                                    <h4 class="contact-value">Click to Chat on WhatsApp</h4>
+                                </div>
+                            </div>
+                        </a>
+
+                        <div class="d-flex align-items-start mt-4">
+                            <div style="color: #facc15; font-size: 20px; margin-right: 12px;"><i
+                                    class="fas fa-shield-alt text-primary me-1"></i></div>
+                            <div>
+                                <h6 class="fw-bold mb-1" style="font-size: 14px;">Zero Advance Payment Required</h6>
+                                <p class="text-muted mb-0" style="font-size: 12px;">This is a lead enquiry form. Pay
+                                    directly to your verified driver after your ride is completed safely.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Column (Form) -->
+                    <div class="col-lg-7">
+                        <div class="booking-form-card">
+                            <h4 class="fw-bold mb-4" style="font-family: 'Outfit', sans-serif;">Instant Booking Request
+                            </h4>
+                            <form action="#">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label-custom">Your Name <span>*</span></label>
+                                        <input type="text" id="name_instant" class="custom-input" placeholder="Enter full name">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label-custom">Phone Number <span>*</span></label>
+                                        <input type="tel" id="phone_instant" class="custom-input" placeholder="+91 Mobile Number">
+                                    </div>
+
+                                    <div class="col-md-6 position-relative">
+                                        <label class="form-label-custom">Pickup Location <span>*</span></label>
+                                        <input type="text" id="pickup_location_instant" class="custom-input pe-5"
+                                            placeholder="Type pickup spot or city...">
+                                        <i class="fas fa-crosshairs text-primary position-absolute" id="auto_detect_btn_instant" style="right: 25px; top: 40px; cursor: pointer; font-size: 18px; z-index: 10;" title="Auto Detect Location"></i>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label-custom">Drop Location <span>*</span></label>
+                                        <input type="text" id="drop_location_instant" class="custom-input"
+                                            placeholder="Type drop destination or city...">
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <label class="form-label-custom">Travel Date <span>*</span></label>
+                                        <input type="date" id="date_instant" class="custom-input">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label-custom">Pickup Time <span>*</span></label>
+                                        <input type="time" id="time_instant" class="custom-input">
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <label class="form-label-custom">Total Passengers <span>*</span></label>
+                                        <select id="passengers_instant" class="custom-input custom-select">
+                                            <option>1 Person</option>
+                                            <option>2 Persons</option>
+                                            <option>3 Persons</option>
+                                            <option>4 Persons</option>
+                                            <option>5+ Persons</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label-custom">Trip Category <span>*</span></label>
+                                        <select id="category_instant" class="custom-input custom-select">
+                                            <option>One Way (Drop)</option>
+                                            <option>Round Trip</option>
+                                            <option>Local Rental</option>
+                                            <option>Airport Transfer</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="col-12">
+                                        <label class="form-label-custom">Special Instructions / Luggage
+                                            (Optional)</label>
+                                        <input type="text" id="instructions_instant" class="custom-input"
+                                            placeholder="e.g. AC Sedan required, 3 big suitcases">
+                                    </div>
+
+                                    <div class="col-12 mt-4">
+                                        <div id="fare_estimate_box_instant" class="mb-3 p-3 rounded text-center" style="display: none; background: rgba(250, 204, 21, 0.1); border: 1px dashed #facc15;">
+                                            <small class="text-muted text-uppercase fw-bold" style="letter-spacing: 1px;">Total Driving Distance</small>
+                                            <div class="mt-1">
+                                                <i class="fas fa-route text-warning me-2" style="font-size: 20px;"></i>
+                                                <strong id="estimated_distance_instant" class="text-dark" style="font-size: 24px;">-</strong>
+                                            </div>
+                                            <small class="text-muted mt-2 d-block" style="font-size: 11px;">*Our team will contact you shortly with the best fare for this trip.</small>
+                                        </div>
+                                    
+                                        <button type="button" class="btn-whatsapp-submit" onclick="submitInstantBooking()"><i
+                                                class="fas fa-comment-dots me-1"></i> Send Booking on
+                                            WhatsApp</button>
+                                        <p class="text-center text-muted mt-3 mb-0"
+                                            style="font-size: 12px; font-weight: 600;">We'll reply with exact fare &
+                                            confirm in 2 minutes!</p>
+                                    </div>
+                                </div>
+                            </form>
+                            
+                            <script>
+                                function submitInstantBooking() {
+                                    const name = document.getElementById('name_instant').value;
+                                    const phone = document.getElementById('phone_instant').value;
+                                    const pickup = document.getElementById('pickup_location_instant').value;
+                                    const drop = document.getElementById('drop_location_instant').value;
+                                    const date = document.getElementById('date_instant').value;
+                                    const time = document.getElementById('time_instant').value;
+                                    const passengers = document.getElementById('passengers_instant').value;
+                                    const category = document.getElementById('category_instant').value;
+                                    const instructions = document.getElementById('instructions_instant').value;
+                                    
+                                    if (!pickup || !drop) {
+                                        alert("Please fill in Pickup and Drop locations.");
+                                        return;
+                                    }
+                                    
+                                    const estDist = document.getElementById('estimated_distance_instant') ? document.getElementById('estimated_distance_instant').innerText : '';
+                                    
+                                    let message = `Hello BiharCabs! I would like to make an Instant Booking.\n\n*Name:* ${name || 'N/A'}\n*Phone:* ${phone || 'N/A'}\n*Category:* ${category}\n*Pickup:* ${pickup}\n*Drop:* ${drop}\n*Date:* ${date || 'N/A'}\n*Time:* ${time || 'N/A'}\n*Passengers:* ${passengers}`;
+                                    
+                                    if (instructions) {
+                                        message += `\n*Instructions:* ${instructions}`;
+                                    }
+                                    
+                                    if (estDist && estDist !== '-') {
+                                        message += `\n*Distance:* ${estDist}`;
+                                    }
+                                    
+                                    message += `\n\nPlease confirm availability and fare.`;
+                                    const whatsappUrl = `https://wa.me/917070992170?text=${encodeURIComponent(message)}`;
+                                    window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+                                }
+                            </script>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    

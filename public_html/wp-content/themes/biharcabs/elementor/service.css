@@ -1,0 +1,204 @@
+
+            .services-hero {
+                background: linear-gradient(rgba(17, 24, 39, 0.95), rgba(17, 24, 39, 0.95)), url('assets/img/img/new_hero_bg.webp') center/cover;
+                padding: 120px 0 80px;
+                text-align: center;
+                color: white;
+            }
+
+            .services-hero .catalog-badge {
+                display: inline-block;
+                background: rgba(250, 204, 21, 0.1);
+                color: #facc15;
+                font-size: 12px;
+                font-weight: 700;
+                padding: 6px 16px;
+                border-radius: 50px;
+                border: 1px solid rgba(250, 204, 21, 0.3);
+                margin-bottom: 20px;
+                letter-spacing: 1px;
+            }
+
+            .services-hero h1 {
+                font-family: 'Outfit', sans-serif;
+                font-size: 3rem;
+                font-weight: 800;
+                margin-bottom: 20px;
+            }
+
+            .services-hero p {
+                font-size: 18px;
+                color: #d1d5db;
+                max-width: 700px;
+                margin: 0 auto 40px;
+            }
+
+            .search-bar-container {
+                max-width: 600px;
+                margin: 0 auto;
+                position: relative;
+            }
+
+            .search-bar-container input {
+                width: 100%;
+                background: rgba(255, 255, 255, 0.05);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                padding: 15px 20px 15px 50px;
+                border-radius: 8px;
+                color: white;
+                font-size: 16px;
+            }
+
+            .search-bar-container input:focus {
+                outline: none;
+                border-color: #facc15;
+            }
+
+            .search-bar-container i {
+                position: absolute;
+                left: 20px;
+                top: 50%;
+                transform: translateY(-50%);
+                color: #9ca3af;
+            }
+
+            .service-grid-section {
+                padding: 80px 0;
+                background: #f9fafb;
+            }
+
+            .section-badge {
+                display: inline-block;
+                background: rgba(250, 204, 21, 0.1);
+                color: #d97706;
+                font-size: 12px;
+                font-weight: 700;
+                padding: 6px 16px;
+                border-radius: 50px;
+                border: 1px solid #fde047;
+                margin-bottom: 15px;
+                text-transform: uppercase;
+            }
+
+            .service-card {
+                background: white;
+                border-radius: 16px;
+                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+                transition: 0.3s;
+                height: 100%;
+                display: flex;
+                flex-direction: column;
+                overflow: hidden;
+                border: 1px solid #f3f4f6;
+            }
+
+            .service-card:hover {
+                transform: translateY(-5px);
+                box-shadow: 0 15px 40px rgba(0, 0, 0, 0.08);
+            }
+
+            .service-img-wrapper {
+                position: relative;
+                height: 200px;
+                width: 100%;
+            }
+
+            .service-img-wrapper img {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+            }
+
+            .service-icon-bubble {
+                position: absolute;
+                bottom: -20px;
+                left: 20px;
+                background: #facc15;
+                color: black;
+                width: 50px;
+                height: 50px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                border-radius: 12px;
+                font-size: 20px;
+                box-shadow: 0 5px 15px rgba(250, 204, 21, 0.4);
+            }
+
+            .service-card-body {
+                padding: 35px 25px 25px;
+                flex-grow: 1;
+                display: flex;
+                flex-direction: column;
+            }
+
+            .service-card h4 {
+                font-family: 'Outfit', sans-serif;
+                font-weight: 700;
+                font-size: 20px;
+                margin-bottom: 15px;
+                color: #1f2937;
+            }
+
+            .service-card p.desc {
+                color: #6b7280;
+                font-size: 14px;
+                line-height: 1.6;
+                margin-bottom: 20px;
+                flex-grow: 1;
+            }
+
+            .service-features {
+                list-style: none;
+                padding: 0;
+                margin: 0 0 25px 0;
+            }
+
+            .service-features li {
+                font-size: 12px;
+                color: #4b5563;
+                margin-bottom: 8px;
+                display: flex;
+                align-items: center;
+            }
+
+            .service-features li i {
+                color: #facc15;
+                margin-right: 8px;
+            }
+
+            .service-footer {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                border-top: 1px solid #f3f4f6;
+                padding-top: 15px;
+            }
+
+            .btn-book-sm {
+                background: #facc15;
+                color: black;
+                font-weight: 700;
+                padding: 8px 16px;
+                border-radius: 8px;
+                text-decoration: none;
+                font-size: 13px;
+                transition: 0.3s;
+            }
+
+            .btn-book-sm:hover {
+                background: #eab308;
+                color: black;
+            }
+
+            .btn-view-sm {
+                color: #6b7280;
+                font-size: 13px;
+                font-weight: 600;
+                text-decoration: none;
+            }
+
+            .btn-view-sm:hover {
+                color: #1f2937;
+            }
+        
