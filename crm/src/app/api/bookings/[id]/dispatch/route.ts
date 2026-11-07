@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { broadcastRideToDrivers, acceptRideOffer } from '@/lib/dispatch-engine';
-import { query } from '@/lib/db';
+import { query, withTransaction } from '@/lib/db';
+import { settleReturnDiscountFunding } from '@/lib/return-trips';
 
 export async function POST(
   req: NextRequest,
@@ -39,15 +40,20 @@ export async function POST(
 
       const vehicleId = vehicleRes.rows[0]?.id || null;
 
-      await query(
-        `UPDATE crm_bookings
-         SET assigned_driver_id = $1,
-             assigned_vehicle_id = $2,
-             booking_status = 'DRIVER_ASSIGNED',
-             updated_at = CURRENT_TIMESTAMP
-         WHERE id = $3`,
-        [driver_id, vehicleId, bookingId]
-      );
+      await withTransaction(async (client) => {
+        // Lock the booking, then apply the return-trip funding rule before assigning.
+        const locked = await client.query('SELECT * FROM crm_bookings WHERE id = $1 FOR UPDATE', [bookingId]);
+        await settleReturnDiscountFunding(client, locked.rows[0], Number(driver_id));
+        await client.query(
+          `UPDATE crm_bookings
+           SET assigned_driver_id = $1,
+               assigned_vehicle_id = $2,
+               booking_status = 'DRIVER_ASSIGNED',
+               updated_at = CURRENT_TIMESTAMP
+           WHERE id = $3`,
+          [driver_id, vehicleId, bookingId]
+        );
+      });
 
       return NextResponse.json({
         success: true,

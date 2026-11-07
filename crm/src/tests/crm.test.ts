@@ -141,15 +141,19 @@ describe('BiharCabs Operational CRM Core Engine Tests', () => {
     );
     const bookingId = bookRes.rows[0].id;
 
-    // C. Atomic Ride Acceptance
+    // C. Atomic Ride Acceptance (only a driver who was offered the ride may accept it)
+    await query(
+      `INSERT INTO crm_dispatch_offers (booking_id, driver_id, offered_driver_fare, offer_status) VALUES ($1, $2, 2200, 'PENDING')`,
+      [bookingId, driverId]
+    );
     const acceptResult = await acceptRideOffer(bookingId, driverId);
     assert.strictEqual(acceptResult.success, true);
     assert.strictEqual(acceptResult.status, 'ASSIGNED');
 
-    // Test Race Condition: A second driver tries to accept the already assigned ride
+    // A driver who was never offered the ride cannot take it
     const secondAccept = await acceptRideOffer(bookingId, driverId + 9999);
     assert.strictEqual(secondAccept.success, false);
-    assert.strictEqual(secondAccept.status, 'ALREADY_ASSIGNED');
+    assert.strictEqual(secondAccept.status, 'NOT_OFFERED');
 
     // D. Complete Trip and Settle Commission Ledger
     // Trip Fare: 2500, Commission: 300 -> Driver Net Earnings = 2200
@@ -232,6 +236,8 @@ describe('BiharCabs Operational CRM Core Engine Tests', () => {
     assert.strictEqual(parsed.destination, 'Darbhanga');
     assert.strictEqual(parsed.trip_type, 'oneway');
     assert.strictEqual(parsed.pickup_date, '2026-11-12');
+    assert.strictEqual(parsed.pickup_time, '09:30 AM');
+    assert.strictEqual(parsePreFilledWebsiteMessage('Hi BiharCabs, I want to book a One-Way cab from Patna to Gaya on 2026-11-12.').pickup_time, undefined);
 
     // B. Test Conversational State Machine Step-by-Step
     const testPhone = '919876543219';
@@ -262,14 +268,26 @@ describe('BiharCabs Operational CRM Core Engine Tests', () => {
     conv = await getConversation(testPhone);
     assert.strictEqual(conv.state, 'AWAITING_DESTINATION');
 
-    // Step 4: Enter Destination -> Transitions to AWAITING_VEHICLE_CHOICE
+    // Step 4: Enter Destination -> asks when the cab is needed
     await processIncomingWhatsAppMessage({
       fromPhone: testPhone,
       text: 'Darbhanga',
     });
     conv = await getConversation(testPhone);
-    // Even if WP is offline, state moves gracefully
+    assert.strictEqual(conv.state, 'AWAITING_PICKUP_TIME');
+
+    // Step 4b: An unreadable time asks again
+    await processIncomingWhatsAppMessage({ fromPhone: testPhone, text: 'sometime soon' });
+    conv = await getConversation(testPhone);
+    assert.strictEqual(conv.state, 'AWAITING_PICKUP_TIME');
+
+    // Step 4c: A real time -> live fares (or a custom quote if WP is offline)
+    await processIncomingWhatsAppMessage({ fromPhone: testPhone, text: 'tomorrow 9 am' });
+    conv = await getConversation(testPhone);
     assert.ok(conv.state === 'AWAITING_VEHICLE_CHOICE' || conv.state === 'IDLE');
+    if (conv.state === 'AWAITING_VEHICLE_CHOICE') {
+      assert.match(String(conv.context_data.pickup_time), /^09:00$/);
+    }
 
     await resetConversation(testPhone);
   });

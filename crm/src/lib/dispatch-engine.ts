@@ -6,8 +6,10 @@ import {
   getAdminContacts,
   getDriverRatingPolicy,
   getRevenueProtectionPolicy,
+  getReturnTripPolicy,
 } from './settings';
 import { PoolClient } from 'pg';
+import { settleReturnDiscountFunding } from './return-trips';
 
 export interface DispatchCandidate {
   driver_id: number;
@@ -130,7 +132,13 @@ export async function calculateFareSplit(customerTotalFare: number): Promise<{
 export async function findEligibleDrivers(
   originCity: string,
   vehicleCode: string,
-  options?: { isPrepaidRide?: boolean }
+  options?: {
+    isPrepaidRide?: boolean;
+    /** Only drivers returning from originCity to this city, whose return lasts until the pickup. */
+    returnTrip?: { destinationCity: string; pickupAt: Date };
+    /** Leave out drivers who already have an offer for this booking. */
+    excludeOfferedForBooking?: number;
+  }
 ): Promise<DispatchCandidate[]> {
   const ratingPolicy = await getDriverRatingPolicy();
   const revPolicy = await getRevenueProtectionPolicy();
@@ -216,18 +224,66 @@ export async function findEligibleDrivers(
     ];
   }
 
+  // Returning drivers are matched on where they are now, not their base city.
+  if (options?.returnTrip) {
+    const destParam = params.length + 1;
+    const pickupParam = params.length + 2;
+    sql = sql.replace(
+      'WHERE LOWER(d.base_city) = LOWER($1)',
+      `WHERE EXISTS (
+         SELECT 1 FROM crm_driver_returns r
+         WHERE r.driver_id = d.id AND r.ended_at IS NULL
+           AND r.expires_at > CURRENT_TIMESTAMP AND r.expires_at >= $${pickupParam}
+           AND LOWER(r.from_city) = LOWER($1) AND LOWER(r.to_city) = LOWER($${destParam})
+       )`
+    );
+    params.push(options.returnTrip.destinationCity, options.returnTrip.pickupAt);
+  }
+  if (options?.excludeOfferedForBooking) {
+    const bookingParam = params.length + 1;
+    sql = sql.replace(
+      'AND d.is_available = true',
+      `AND d.is_available = true
+        AND NOT EXISTS (SELECT 1 FROM crm_dispatch_offers o WHERE o.driver_id = d.id AND o.booking_id = $${bookingParam})`
+    );
+    params.push(options.excludeOfferedForBooking);
+  }
+
   const res = await query(sql, params);
   return res.rows;
+}
+
+/** Pickup moment of a stored booking, read as India time. */
+function bookingPickupAt(booking: any): Date {
+  const date = booking.pickup_date instanceof Date
+    ? `${booking.pickup_date.getFullYear()}-${String(booking.pickup_date.getMonth() + 1).padStart(2, '0')}-${String(booking.pickup_date.getDate()).padStart(2, '0')}`
+    : String(booking.pickup_date).slice(0, 10);
+  const time = String(booking.pickup_time).slice(0, 5);
+  return new Date(`${date}T${time}:00+05:30`);
 }
 
 /**
  * Broadcast ride to eligible drivers and initialize SLA deadline.
  */
-export async function broadcastRideToDrivers(bookingId: number): Promise<{
+/**
+ * Broadcast a ride and start its SLA.
+ *
+ * A booking carrying a return-trip discount is first offered only to drivers returning on that
+ * route, for the policy's exclusive window. When the window ends (see releaseExpiredReturnWindows),
+ * or if no returning driver is free, it goes to regular drivers, who are paid as if there were no
+ * discount because the company absorbs it.
+ */
+export async function broadcastRideToDrivers(
+  bookingId: number,
+  options?: { releaseReturnWindow?: boolean }
+): Promise<{
   success: boolean;
   offersCreated: number;
   slaDeadline: Date;
   candidates: DispatchCandidate[];
+  isReturnPriority: boolean;
+  exclusiveUntil: Date | null;
+  offeredDriverFare: number;
 }> {
   const timeoutMins = await getDispatchSlaTimeoutMinutes();
 
@@ -243,11 +299,43 @@ export async function broadcastRideToDrivers(bookingId: number): Promise<{
     }
 
     const booking = bookingRes.rows[0];
-    const slaDeadline = new Date(Date.now() + timeoutMins * 60 * 1000);
+    let slaDeadline = new Date(Date.now() + timeoutMins * 60 * 1000);
 
     // 2. Find eligible drivers (prepaid rides cross-absorb debt from digital-only restricted drivers)
     const isPrepaid = booking.payment_status === 'PAID_IN_FULL' || Number(booking.advance_paid) >= Number(booking.customer_total_fare);
-    const candidates = await findEligibleDrivers(booking.origin_city, booking.wp_vehicle_code, { isPrepaidRide: isPrepaid });
+    const hasDiscount = Number(booking.return_discount_amount) > 0 && !booking.return_discount_funded_by;
+
+    let candidates: DispatchCandidate[] = [];
+    let isReturnPriority = false;
+    let exclusiveUntil: Date | null = null;
+
+    if (hasDiscount && !booking.return_window_released_at && !options?.releaseReturnWindow) {
+      const { policy, active } = await getReturnTripPolicy();
+      if (active && booking.destination_city) {
+        candidates = await findEligibleDrivers(booking.origin_city, booking.wp_vehicle_code, {
+          isPrepaidRide: isPrepaid,
+          returnTrip: { destinationCity: booking.destination_city, pickupAt: bookingPickupAt(booking) },
+        });
+      }
+      if (candidates.length > 0) {
+        isReturnPriority = true;
+        exclusiveUntil = new Date(Date.now() + Number(policy.exclusive_window_minutes) * 60 * 1000);
+        // The SLA starts once regular drivers get the ride, so escalation never cuts the window short.
+        slaDeadline = new Date(exclusiveUntil.getTime() + timeoutMins * 60 * 1000);
+      }
+    }
+
+    if (!isReturnPriority) {
+      candidates = await findEligibleDrivers(booking.origin_city, booking.wp_vehicle_code, {
+        isPrepaidRide: isPrepaid,
+        excludeOfferedForBooking: options?.releaseReturnWindow ? bookingId : undefined,
+      });
+    }
+
+    // A regular driver earns the undiscounted payout; the company covers the discount.
+    const offeredDriverFare = hasDiscount && !isReturnPriority
+      ? Number(booking.driver_payout_amount) + Number(booking.return_discount_driver_share)
+      : Number(booking.driver_payout_amount);
 
     // 3. Update booking status and SLA
     await client.query(
@@ -255,19 +343,23 @@ export async function broadcastRideToDrivers(bookingId: number): Promise<{
        SET booking_status = 'AWAITING_DRIVER',
            driver_broadcast_at = CURRENT_TIMESTAMP,
            sla_deadline_at = $1,
+           return_exclusive_until = CASE WHEN $3::timestamptz IS NOT NULL THEN $3::timestamptz ELSE return_exclusive_until END,
+           return_window_released_at = CASE
+             WHEN return_discount_amount > 0 AND $4::boolean = false AND return_window_released_at IS NULL THEN CURRENT_TIMESTAMP
+             ELSE return_window_released_at END,
            updated_at = CURRENT_TIMESTAMP
        WHERE id = $2`,
-      [slaDeadline, bookingId]
+      [slaDeadline, bookingId, exclusiveUntil, isReturnPriority]
     );
 
     // 4. Create offer records for each candidate
     let offersCreated = 0;
     for (const cand of candidates) {
       await client.query(
-        `INSERT INTO crm_dispatch_offers 
-         (booking_id, driver_id, offered_driver_fare, offer_status, sent_at)
-         VALUES ($1, $2, $3, 'PENDING', CURRENT_TIMESTAMP)`,
-        [bookingId, cand.driver_id, booking.driver_payout_amount]
+        `INSERT INTO crm_dispatch_offers
+         (booking_id, driver_id, offered_driver_fare, offer_status, sent_at, is_return_priority)
+         VALUES ($1, $2, $3, 'PENDING', CURRENT_TIMESTAMP, $4)`,
+        [bookingId, cand.driver_id, offeredDriverFare, isReturnPriority]
       );
       offersCreated++;
     }
@@ -277,8 +369,31 @@ export async function broadcastRideToDrivers(bookingId: number): Promise<{
       offersCreated,
       slaDeadline,
       candidates,
+      isReturnPriority,
+      exclusiveUntil,
+      offeredDriverFare,
     };
   });
+}
+
+/**
+ * Bookings whose return-trip exclusive window has ended without a driver accepting.
+ * Each is broadcast to regular drivers; returns them with the new candidates for notification.
+ */
+export async function releaseExpiredReturnWindows(): Promise<Array<{ bookingId: number; result: Awaited<ReturnType<typeof broadcastRideToDrivers>> }>> {
+  const due = await query(
+    `SELECT id FROM crm_bookings
+     WHERE booking_status = 'AWAITING_DRIVER'
+       AND assigned_driver_id IS NULL
+       AND return_exclusive_until IS NOT NULL
+       AND return_exclusive_until <= CURRENT_TIMESTAMP
+       AND return_window_released_at IS NULL`
+  );
+  const released = [];
+  for (const row of due.rows) {
+    released.push({ bookingId: Number(row.id), result: await broadcastRideToDrivers(Number(row.id), { releaseReturnWindow: true }) });
+  }
+  return released;
 }
 
 /**
@@ -291,7 +406,7 @@ export async function acceptRideOffer(
   driverId: number
 ): Promise<{
   success: boolean;
-  status: 'ASSIGNED' | 'ALREADY_ASSIGNED' | 'OFFER_EXPIRED' | 'NOT_FOUND';
+  status: 'ASSIGNED' | 'ALREADY_ASSIGNED' | 'OFFER_EXPIRED' | 'NOT_FOUND' | 'NOT_OFFERED';
   booking?: BookingDetails;
   message: string;
 }> {
@@ -316,8 +431,22 @@ export async function acceptRideOffer(
 
     const booking: BookingDetails = bookingRes.rows[0];
 
+    // Only a driver who was offered this ride may take it. Without this, any driver could accept any
+    // waiting booking, including one reserved for a returning driver.
+    const offerRes = await client.query(
+      `SELECT offer_status FROM crm_dispatch_offers WHERE booking_id = $1 AND driver_id = $2 ORDER BY id DESC LIMIT 1`,
+      [bookingId, driverId]
+    );
+    if (offerRes.rows.length === 0) {
+      return {
+        success: false,
+        status: 'NOT_OFFERED',
+        message: `Ride #${booking.booking_code} was not offered to you.`,
+      };
+    }
+
     // Check if already assigned
-    if (booking.assigned_driver_id && booking.assigned_driver_id !== driverId) {
+    if (booking.assigned_driver_id && Number(booking.assigned_driver_id) !== Number(driverId)) {
       // Mark this driver's offer as MISSED
       await client.query(
         `UPDATE crm_dispatch_offers
@@ -344,6 +473,15 @@ export async function acceptRideOffer(
       };
     }
 
+    if (offerRes.rows[0].offer_status !== 'PENDING') {
+      return {
+        success: false,
+        status: 'OFFER_EXPIRED',
+        booking,
+        message: `Your offer for this ride is no longer active.`,
+      };
+    }
+
     // Find driver's active vehicle
     const vehicleRes = await client.query(
       `SELECT id FROM crm_driver_vehicles 
@@ -353,6 +491,9 @@ export async function acceptRideOffer(
     );
 
     const vehicleId = vehicleRes.rows[0]?.id || null;
+
+    // Decide who funds any return-trip discount before the booking is assigned.
+    await settleReturnDiscountFunding(client, booking, driverId);
 
     // 2. Assign the driver and update booking
     await client.query(
@@ -381,8 +522,13 @@ export async function acceptRideOffer(
       [bookingId, driverId]
     );
 
-    booking.assigned_driver_id = driverId;
-    booking.booking_status = 'DRIVER_ASSIGNED';
+    // Re-read so callers see the payout after any return-trip funding change.
+    const fresh = await client.query(
+      `SELECT b.*, c.full_name AS customer_name, c.phone AS customer_phone
+       FROM crm_bookings b JOIN crm_customers c ON c.id = b.customer_id WHERE b.id = $1`,
+      [bookingId]
+    );
+    Object.assign(booking, fresh.rows[0]);
 
     return {
       success: true,

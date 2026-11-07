@@ -11,9 +11,14 @@ import {
   calculateRideSplitWithTaxes,
   broadcastRideToDrivers,
   acceptRideOffer,
+  findEligibleDrivers,
 } from './dispatch-engine';
 import { completeTripAndSettle } from './billing';
-import { getAdminContacts, getWhatsAppIntents, getRevenueProtectionPolicy } from './settings';
+import { getAdminContacts, getWhatsAppIntents, getRevenueProtectionPolicy, getReturnTripPolicy } from './settings';
+import { applyReturnDiscount } from './return-trip-pricing';
+import { endDriverReturn, startDriverReturn } from './return-trips';
+import { notifyOfferedDrivers } from './dispatch-notify';
+import { formatPickup, parsePickupTime, PickupTime } from './pickup-time';
 import { recordCustomerRating } from './ratings';
 
 export interface ConversationState {
@@ -131,11 +136,118 @@ export function parsePreFilledWebsiteMessage(text: string): {
       destination,
       trip_type: tripType,
       pickup_date: dateMatch ? dateMatch[1] : undefined,
-      pickup_time: timeMatch ? timeMatch[1] : '09:00 AM',
+      // No stated time: leave it blank so the bot asks the customer, never assume one.
+      pickup_time: timeMatch ? timeMatch[1] : undefined,
     };
   }
 
   return { isWebsiteQuote: false };
+}
+
+const PICKUP_TIME_PROMPT =
+  'When do you need the cab?\nReply *NOW*, or a time like *today 6:30 pm*, *tomorrow 9 am* or *12/11 7 pm*.';
+
+function pickupContext(pickup: PickupTime) {
+  return { pickup_date: pickup.date, pickup_time: pickup.time, pickup_at: pickup.at.toISOString() };
+}
+
+async function askPickupTime(phone: string, ctx: Record<string, any>, retry = false): Promise<void> {
+  await updateConversation(phone, 'AWAITING_PICKUP_TIME', ctx);
+  await sendWhatsAppText(phone, (retry ? "Sorry, I couldn't read that time.\n" : '') + PICKUP_TIME_PROMPT);
+}
+
+/**
+ * Return-trip offers for each vehicle: priced only when a returning driver with that vehicle is free
+ * for this route and pickup time, and the policy is fully configured.
+ */
+async function returnOffersFor(origin: string, destination: string, quotes: any[], pickupAt: Date) {
+  const offers: Record<string, { original_fare: number; discount: number; fare: number }> = {};
+  const { policy, active } = await getReturnTripPolicy();
+  if (!active) return offers;
+  const rules = await getRevenueProtectionPolicy();
+  for (const q of quotes) {
+    const returning = await findEligibleDrivers(origin, q.vehicle_code, { returnTrip: { destinationCity: destination, pickupAt } });
+    if (returning.length === 0) continue;
+    const discounted = applyReturnDiscount(await calculateRideSplitWithTaxes(Number(q.total_fare)), policy, rules);
+    if (discounted) {
+      offers[q.vehicle_code] = { original_fare: Number(q.total_fare), discount: discounted.discountAmount, fare: discounted.split.customerTotalFare };
+    }
+  }
+  return offers;
+}
+
+/** Quote the route for the chosen pickup time and show vehicles, with any return-trip offer. */
+async function quoteAndOfferVehicles(phone: string, ctx: Record<string, any>): Promise<void> {
+  const quoteRes = await fetchLiveQuote({
+    origin_city: ctx.origin,
+    destination_city: ctx.destination,
+    trip_type: ctx.trip_type || 'oneway',
+    pickup_date: ctx.pickup_date,
+  });
+
+  if (!quoteRes.success || quoteRes.quotes.length === 0) {
+    await updateConversation(phone, 'IDLE', {});
+    await sendWhatsAppText(
+      phone,
+      `Thank you for contacting BiharCabs! Our route specialist is calculating the best custom rate for ${ctx.origin} to ${ctx.destination} and will share your price card shortly.`
+    );
+    for (const a of await getAdminContacts()) {
+      if (a.phone) {
+        await sendWhatsAppText(
+          a.phone,
+          `⚠️ Custom Quote Needed: Customer ${phone} requested ${ctx.origin} → ${ctx.destination} for ${formatPickup(new Date(ctx.pickup_at))}. Open CRM to send quote.`
+        );
+      }
+    }
+    return;
+  }
+
+  const offers = await returnOffersFor(ctx.origin, ctx.destination, quoteRes.quotes, new Date(ctx.pickup_at));
+  const rows = quoteRes.quotes.map((q) => {
+    const offer = offers[q.vehicle_code];
+    const fare = offer ? offer.fare : Number(q.total_fare);
+    const notes = [q.vehicle_models, `${q.seating_capacity} seats`, q.toll_tax_text].filter(Boolean).join(' • ');
+    return {
+      id: `sel_veh_${q.vehicle_code}`,
+      title: `${q.vehicle_name} (₹${fare.toLocaleString('en-IN')})`.slice(0, 24),
+      description: (offer ? `🔁 Return-trip offer: ₹${offer.discount.toLocaleString('en-IN')} off • ${notes}` : notes).slice(0, 72),
+    };
+  });
+
+  await updateConversation(phone, 'AWAITING_VEHICLE_CHOICE', {
+    ...ctx,
+    quotes: quoteRes.quotes,
+    return_offers: offers,
+    distance_km: quoteRes.route?.distance_km || null,
+  });
+
+  const facts = [
+    quoteRes.route?.distance_km ? `Distance: ${quoteRes.route.distance_km} km` : null,
+    quoteRes.route?.duration_text ? `Travel time: ${quoteRes.route.duration_text}` : null,
+  ].filter(Boolean).join(' | ');
+  const offerLine = Object.keys(offers).length > 0 ? '\n🔁 A driver is returning on this route, so some cabs are discounted.' : '';
+  await sendWhatsAppList(
+    phone,
+    `🚖 Fares: ${ctx.origin} → ${ctx.destination} (${String(ctx.trip_type || 'oneway').toUpperCase()})\nPickup: ${formatPickup(new Date(ctx.pickup_at))}${facts ? `\n${facts}` : ''}${offerLine}\n\nPlease tap below to select your vehicle:`,
+    'Choose Vehicle',
+    [{ title: 'Available Vehicles', rows }],
+    'BiharCabs Live Rates'
+  );
+}
+
+/** After a drop away from home, let the driver mark that they are heading back. */
+async function offerReturnTrip(driverPhone: string, booking: any): Promise<void> {
+  const { policy, active } = await getReturnTripPolicy();
+  if (!active || !booking.destination_city) return;
+  const dRes = await query(`SELECT base_city FROM crm_drivers WHERE id = $1`, [booking.assigned_driver_id]);
+  const base = dRes.rows[0]?.base_city;
+  if (!base || String(base).trim().toLowerCase() === String(booking.destination_city).trim().toLowerCase()) return;
+  await sendWhatsAppButtons(
+    driverPhone,
+    `Heading back to ${base}? Tap below and you'll get first priority on ${booking.destination_city} → ${base} rides for the next ${policy.return_status_hours} hours.`,
+    [{ id: `return_back_${booking.id}`, title: '🔁 Returning home' }],
+    'Return Trip'
+  );
 }
 
 /**
@@ -244,9 +356,15 @@ export async function processIncomingWhatsAppMessage(params: {
       `UPDATE crm_bookings 
        SET booking_status = 'TRIP_IN_PROGRESS', updated_at = CURRENT_TIMESTAMP
        WHERE id = $1
+         AND booking_status = 'DRIVER_ASSIGNED'
+         AND assigned_driver_id IN (SELECT id FROM crm_drivers WHERE phone = $2 OR whatsapp_phone = $2)
        RETURNING *`,
-      [bookingId]
+      [bookingId, fromPhone]
     );
+    if (bRes.rows.length === 0) {
+      await sendWhatsAppText(fromPhone, 'This trip cannot be started from your number. Please contact BiharCabs support.');
+      return;
+    }
 
     if (bRes.rows.length > 0) {
       const b = bRes.rows[0];
@@ -271,7 +389,15 @@ export async function processIncomingWhatsAppMessage(params: {
   // E. Driver Completes Trip
   if (buttonId?.startsWith('complete_trip_')) {
     const bookingId = parseInt(buttonId.replace('complete_trip_', ''), 10);
-    const bRes = await query(`SELECT * FROM crm_bookings WHERE id = $1`, [bookingId]);
+    const bRes = await query(
+      `SELECT * FROM crm_bookings
+       WHERE id = $1 AND booking_status = 'TRIP_IN_PROGRESS' AND assigned_driver_id IN (SELECT id FROM crm_drivers WHERE phone = $2 OR whatsapp_phone = $2)`,
+      [bookingId, fromPhone]
+    );
+    if (bRes.rows.length === 0) {
+      await sendWhatsAppText(fromPhone, 'This trip cannot be completed from your number. Please contact BiharCabs support.');
+      return;
+    }
     if (bRes.rows.length > 0) {
       const b = bRes.rows[0];
       const result = await completeTripAndSettle({
@@ -308,6 +434,42 @@ export async function processIncomingWhatsAppMessage(params: {
           'Your feedback directly impacts driver quality!'
         );
       }
+      await offerReturnTrip(fromPhone, b);
+    }
+    return;
+  }
+
+  // E2. Driver marks "returning home" after a drop
+  if (buttonId?.startsWith('return_back_')) {
+    const bookingId = parseInt(buttonId.replace('return_back_', ''), 10);
+    const res = await query(
+      `SELECT b.id, b.destination_city, b.booking_status, d.id AS driver_id, d.base_city
+       FROM crm_bookings b JOIN crm_drivers d ON d.id = b.assigned_driver_id
+       WHERE b.id = $1 AND (d.phone = $2 OR d.whatsapp_phone = $2)`,
+      [bookingId, fromPhone.replace(/\D/g, '')]
+    );
+    const row = res.rows[0];
+    const { policy, active } = await getReturnTripPolicy();
+    if (!row || row.booking_status !== 'COMPLETED_SETTLED' || !row.destination_city || !active) {
+      await sendWhatsAppText(fromPhone, 'Return priority is not available for this trip.');
+      return;
+    }
+    const ret = await startDriverReturn(Number(row.driver_id), row.destination_city, row.base_city, Number(policy.return_status_hours), bookingId);
+    await sendWhatsAppButtons(
+      fromPhone,
+      `✅ Marked as returning: ${ret.from_city} → ${ret.to_city} until ${formatPickup(new Date(ret.expires_at))}.\nYou'll get first priority on matching rides. Tap below once you're home.`,
+      [{ id: 'reached_home', title: '🏠 Reached home' }],
+      'Return Trip'
+    );
+    return;
+  }
+
+  // E3. Driver is home: stop return priority
+  if (buttonId === 'reached_home' || lowerText === 'reached home') {
+    const dRes = await query(`SELECT id FROM crm_drivers WHERE phone = $1 OR whatsapp_phone = $1`, [fromPhone.replace(/\D/g, '')]);
+    if (dRes.rows[0]) {
+      const ended = await endDriverReturn(Number(dRes.rows[0].id), 'REACHED_HOME');
+      await sendWhatsAppText(fromPhone, ended ? '🏠 Welcome home! Return priority is off. You will get regular ride alerts as usual.' : 'You have no active return trip.');
     }
     return;
   }
@@ -315,7 +477,14 @@ export async function processIncomingWhatsAppMessage(params: {
   // F. Driver Pay Dues via UPI
   if (buttonId?.startsWith('pay_dues_')) {
     const driverId = parseInt(buttonId.replace('pay_dues_', ''), 10);
-    const dRes = await query(`SELECT wallet_balance FROM crm_drivers WHERE id = $1`, [driverId]);
+    const dRes = await query(
+      `SELECT wallet_balance FROM crm_drivers WHERE id = $1 AND (phone = $2 OR whatsapp_phone = $2)`,
+      [driverId, fromPhone]
+    );
+    if (dRes.rows.length === 0) {
+      await sendWhatsAppText(fromPhone, 'These dues are not linked to your number.');
+      return;
+    }
     const unpaidAmount = Math.abs(Number(dRes.rows[0]?.wallet_balance || 0)).toFixed(2);
     const revPolicy = await getRevenueProtectionPolicy();
     const upiLink = `upi://pay?pa=${revPolicy.company_upi_vpa}&pn=${encodeURIComponent(revPolicy.company_upi_name)}&am=${unpaidAmount}&cu=INR&tn=Dues-Driver-${driverId}`;
@@ -335,6 +504,17 @@ export async function processIncomingWhatsAppMessage(params: {
     const parts = buttonId.split('_');
     const bookingId = parseInt(parts[2], 10);
     const scoreStr = parts[3];
+
+    // Low ratings can suspend a driver, so only the customer who took the trip may rate it.
+    const own = await query(
+      `SELECT 1 FROM crm_bookings b JOIN crm_customers c ON c.id = b.customer_id
+       WHERE b.id = $1 AND c.phone = $2 AND b.booking_status = 'COMPLETED_SETTLED'`,
+      [bookingId, fromPhone]
+    );
+    if (own.rows.length === 0) {
+      await sendWhatsAppText(fromPhone, 'This trip cannot be rated from your number.');
+      return;
+    }
 
     if (scoreStr === '5' || scoreStr === '4') {
       const rating = parseInt(scoreStr, 10);
@@ -514,60 +694,14 @@ export async function processIncomingWhatsAppMessage(params: {
   // Check Path A: Pre-filled message from BiharCabs.com website calculator
   const preFilled = parsePreFilledWebsiteMessage(rawText);
   if (preFilled.isWebsiteQuote && preFilled.origin && preFilled.destination) {
-    const date = preFilled.pickup_date || new Date().toISOString().split('T')[0];
-    const time = preFilled.pickup_time || '09:00 AM';
-
-    const quoteRes = await fetchLiveQuote({
-      origin_city: preFilled.origin,
-      destination_city: preFilled.destination,
-      trip_type: (preFilled.trip_type as any) || 'oneway',
-      pickup_date: date,
-    });
-
-    if (quoteRes.success && quoteRes.quotes.length > 0) {
-      const rows = quoteRes.quotes.map((q) => ({
-        id: `sel_veh_${q.vehicle_code}`,
-        title: `${q.vehicle_name} (₹${q.total_fare.toLocaleString('en-IN')})`,
-        description: `${q.vehicle_models} &bull; ${q.seating_capacity} Seats &bull; Toll/Tax included`,
-      }));
-
-      await updateConversation(fromPhone, 'AWAITING_VEHICLE_CHOICE', {
-        origin: preFilled.origin,
-        destination: preFilled.destination,
-        trip_type: preFilled.trip_type || 'oneway',
-        pickup_date: date,
-        pickup_time: time,
-        quotes: quoteRes.quotes,
-      });
-
-      await sendWhatsAppList(
-        fromPhone,
-        `🚖 Live Rates for ${preFilled.origin} → ${preFilled.destination} (${preFilled.trip_type?.toUpperCase()}):\nDistance: ${quoteRes.route?.distance_km || 100} km | Approx Time: ${quoteRes.route?.duration_text || '2.5 hrs'}\n\nPlease tap below to select your preferred cab:`,
-        'Choose Vehicle',
-        [{ title: 'Available BiharCabs Vehicles', rows }],
-        'BiharCabs Instant Quote'
-      );
-      return;
-    } else {
-      // Unlisted / Custom route -> flag NEEDS_CUSTOM_QUOTE
-      await updateConversation(fromPhone, 'IDLE', {});
-      await sendWhatsAppText(
-        fromPhone,
-        `Thank you for contacting BiharCabs! Our route specialist is calculating the best custom rate for ${preFilled.origin} to ${preFilled.destination} and will share your price card shortly.`
-      );
-
-      // Alert Admin
-      const admins = await getAdminContacts();
-      for (const a of admins) {
-        if (a.phone) {
-          await sendWhatsAppText(
-            a.phone,
-            `⚠️ Custom Quote Needed: Customer ${fromPhone} requested unlisted route (${preFilled.origin} → ${preFilled.destination}) on ${date}. Open CRM to send quote.`
-          );
-        }
-      }
+    const ctx = { origin: preFilled.origin, destination: preFilled.destination, trip_type: preFilled.trip_type || 'oneway' };
+    const pickup = preFilled.pickup_date && preFilled.pickup_time ? parsePickupTime(`${preFilled.pickup_date} ${preFilled.pickup_time}`) : null;
+    if (!pickup) {
+      await askPickupTime(fromPhone, ctx);
       return;
     }
+    await quoteAndOfferVehicles(fromPhone, { ...ctx, ...pickupContext(pickup) });
+    return;
   }
 
   // Path B: Direct inquiry greeting
@@ -620,50 +754,24 @@ export async function processIncomingWhatsAppMessage(params: {
   // Step 3: Destination Given
   if (conv.state === 'AWAITING_DESTINATION') {
     const destination = rawText.trim();
-    const origin = conv.context_data.origin || 'Patna';
-    const tripType = conv.context_data.trip_type || 'oneway';
-
-    const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
-
-    // Query Tariff Bridge
-    const quoteRes = await fetchLiveQuote({
-      origin_city: origin,
-      destination_city: destination,
-      trip_type: tripType as any,
-      pickup_date: tomorrow,
-    });
-
-    if (quoteRes.success && quoteRes.quotes.length > 0) {
-      const rows = quoteRes.quotes.map((q) => ({
-        id: `sel_veh_${q.vehicle_code}`,
-        title: `${q.vehicle_name} (₹${q.total_fare.toLocaleString('en-IN')})`,
-        description: `${q.vehicle_models} &bull; ${q.seating_capacity} Seats &bull; Toll/Tax included`,
-      }));
-
-      await updateConversation(fromPhone, 'AWAITING_VEHICLE_CHOICE', {
-        ...conv.context_data,
-        destination,
-        pickup_date: tomorrow,
-        pickup_time: '09:00 AM',
-        quotes: quoteRes.quotes,
-      });
-
-      await sendWhatsAppList(
-        fromPhone,
-        `🚖 Exact Fares: ${origin} → ${destination} (${tripType.toUpperCase()}):\nDistance: ${quoteRes.route?.distance_km || 100} km | Travel Time: ${quoteRes.route?.duration_text || '2-3 hrs'}\n\nPlease tap below to select your vehicle:`,
-        'Choose Vehicle',
-        [{ title: 'Available Vehicles', rows }],
-        'BiharCabs Live Rates'
-      );
-      return;
-    } else {
-      await updateConversation(fromPhone, 'IDLE', {});
-      await sendWhatsAppText(
-        fromPhone,
-        `We have received your route request for ${origin} to ${destination}. Our dispatch manager will review the highway route and send you a custom quote in minutes.`
-      );
+    if (!conv.context_data.origin || !destination) {
+      await resetConversation(fromPhone);
+      await sendWhatsAppText(fromPhone, 'Sorry, something went wrong. Please reply *HI* to start your booking again.');
       return;
     }
+    await askPickupTime(fromPhone, { ...conv.context_data, destination, trip_type: conv.context_data.trip_type || 'oneway' });
+    return;
+  }
+
+  // Step 3b: Pickup time given -> live fares, with any return-trip offer
+  if (conv.state === 'AWAITING_PICKUP_TIME') {
+    const pickup = parsePickupTime(rawText);
+    if (!pickup) {
+      await askPickupTime(fromPhone, conv.context_data, true);
+      return;
+    }
+    await quoteAndOfferVehicles(fromPhone, { ...conv.context_data, ...pickupContext(pickup) });
+    return;
   }
 
   // Step 4: Vehicle Selected
@@ -676,18 +784,25 @@ export async function processIncomingWhatsAppMessage(params: {
     else if (lowerText.includes('tempo')) vehicleCode = 'tempo';
 
     const quotes: any[] = conv.context_data.quotes || [];
-    const matchedQuote = quotes.find((q) => q.vehicle_code === vehicleCode) || quotes[0] || { total_fare: 2499 };
+    const matchedQuote = quotes.find((q) => q.vehicle_code === vehicleCode);
+    if (!matchedQuote) {
+      await sendWhatsAppText(fromPhone, 'That vehicle is not available on this route. Please choose one from the list.');
+      return;
+    }
+    const offer = conv.context_data.return_offers?.[vehicleCode];
+    const shownFare = offer ? Number(offer.fare) : Number(matchedQuote.total_fare);
 
     const ctx: Record<string, any> = {
       ...conv.context_data,
       selected_vehicle: vehicleCode,
-      total_fare: matchedQuote.total_fare,
+      total_fare: Number(matchedQuote.total_fare),
+      shown_fare: shownFare,
     };
 
     await updateConversation(fromPhone, 'AWAITING_LANDMARK', ctx);
     await sendWhatsAppText(
       fromPhone,
-      `Selected: ${vehicleCode.toUpperCase()} (Total Fare: ₹${Number(matchedQuote.total_fare).toLocaleString('en-IN')}).\n\nPlease reply with your exact Pickup Landmark & Address in ${ctx.origin || 'origin city'} (e.g., Patna Junction, Fraser Road, or Airport Terminal 1):`
+      `Selected: ${vehicleCode.toUpperCase()} (Total Fare: ₹${shownFare.toLocaleString('en-IN')}${offer ? `, includes ₹${Number(offer.discount).toLocaleString('en-IN')} return-trip discount` : ''}).\n\nPlease reply with your exact Pickup Landmark & Address in ${ctx.origin || 'origin city'} (e.g., Patna Junction, Fraser Road, or Airport Terminal 1):`
     );
     return;
   }
@@ -696,12 +811,15 @@ export async function processIncomingWhatsAppMessage(params: {
   if (conv.state === 'AWAITING_LANDMARK') {
     const pickupAddress = rawText.trim();
     const ctx = conv.context_data;
-    const origin = ctx.origin || 'Patna';
-    const destination = ctx.destination || 'Darbhanga';
-    const totalFare = Number(ctx.total_fare || 2499);
-    const vehicleCode = ctx.selected_vehicle || 'sedan';
-    const date = ctx.pickup_date || new Date().toISOString().split('T')[0];
-    const time = ctx.pickup_time || '09:00';
+    const origin = ctx.origin;
+    const destination = ctx.destination;
+    const fullFare = Number(ctx.total_fare);
+    const vehicleCode = ctx.selected_vehicle;
+    if (!origin || !destination || !vehicleCode || !(fullFare > 0) || !ctx.pickup_date || !ctx.pickup_time || !pickupAddress) {
+      await resetConversation(fromPhone);
+      await sendWhatsAppText(fromPhone, 'Sorry, some booking details were missing. Please reply *HI* to start again.');
+      return;
+    }
 
     // 1. Upsert Customer
     const custRes = await query(
@@ -714,8 +832,20 @@ export async function processIncomingWhatsAppMessage(params: {
     );
     const customerId = custRes.rows[0].id;
 
-    // 2. Calculate Fare Split with Statutory Taxes and Advance Token
-    const split = await calculateRideSplitWithTaxes(totalFare);
+    // 2. Fare split on the full fare, then the return-trip discount if one was offered.
+    //    The discount is recalculated here from current settings, never taken from the conversation.
+    const fullSplit = await calculateRideSplitWithTaxes(fullFare);
+    let split = fullSplit;
+    let discount = { amount: 0, company: 0, driver: 0 };
+    if (ctx.return_offers?.[vehicleCode]) {
+      const { policy, active } = await getReturnTripPolicy();
+      const applied = active ? applyReturnDiscount(fullSplit, policy, await getRevenueProtectionPolicy()) : null;
+      if (applied) {
+        split = { ...fullSplit, ...applied.split };
+        discount = { amount: applied.discountAmount, company: applied.companyShare, driver: applied.driverShare };
+      }
+    }
+    const totalFare = split.customerTotalFare;
 
     // 3. Create Booking
     const codeNum = Math.floor(1000 + Math.random() * 9000);
@@ -727,8 +857,9 @@ export async function processIncomingWhatsAppMessage(params: {
         pickup_address, drop_address, pickup_date, pickup_time, wp_vehicle_code,
         distance_km, customer_total_fare, driver_payout_amount, commission_amount,
         advance_paid, gst_amount, tech_fee_amount, balance_cash_due_from_customer,
+        fare_before_discount, return_discount_amount, return_discount_company_share, return_discount_driver_share,
         booking_status
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 100, $11, $12, $13, $14, $15, $16, $17, 'AWAITING_DRIVER')
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, 'AWAITING_DRIVER')
       RETURNING id, booking_code`,
       [
         bookingCode,
@@ -738,9 +869,10 @@ export async function processIncomingWhatsAppMessage(params: {
         destination,
         pickupAddress,
         destination,
-        date,
-        '09:00',
+        ctx.pickup_date,
+        ctx.pickup_time,
         vehicleCode,
+        Number(ctx.distance_km) || 0,
         totalFare,
         split.driverGrossEarnings,
         split.totalCompanyDuesZ,
@@ -748,32 +880,24 @@ export async function processIncomingWhatsAppMessage(params: {
         split.gstAmount,
         split.techFeeAmount,
         split.balanceCashDueFromCustomer,
+        discount.amount > 0 ? fullFare : null,
+        discount.amount,
+        discount.company,
+        discount.driver,
       ]
     );
 
     const bookingId = bookRes.rows[0].id;
 
-    // 4. Broadcast to verified drivers
+    // 4. Broadcast: returning drivers first when discounted, then regular drivers
     const broadcast = await broadcastRideToDrivers(bookingId);
-
-    // For each matching driver, send WhatsApp Interactive Alert
-    for (const cand of broadcast.candidates) {
-      await sendWhatsAppButtons(
-        cand.whatsapp_phone || cand.phone,
-        `🚖 New Ride Alert (#${bookingCode})!\nRoute: ${origin} → ${destination}\nDate: ${date} at 09:00 AM\nCab: ${vehicleCode.toUpperCase()}\n\n💵 Fare Details:\nTotal Fare: ₹${totalFare}\nAdvance Token: ₹${split.advanceTokenAmount}\n👉 COLLECT CASH AT DROP: ₹${split.balanceCashDueFromCustomer}\nYour Net Earnings: ₹${split.driverGrossEarnings}\n\nFirst to tap Accept gets the ride!`,
-        [
-          { id: `accept_ride_${bookingId}`, title: '✅ Accept Ride' },
-          { id: `decline_ride_${bookingId}`, title: '❌ Decline' },
-        ],
-        'BiharCabs Dispatch Alert'
-      );
-    }
+    await notifyOfferedDrivers(bookingId, broadcast);
 
     await resetConversation(fromPhone);
 
     await sendWhatsAppText(
       fromPhone,
-      `🎉 Booking Scheduled (#${bookingCode})!\nRoute: ${origin} → ${destination}\nPickup Address: ${pickupAddress}\nVehicle: ${vehicleCode.toUpperCase()}\nTotal Fare: ₹${totalFare.toLocaleString('en-IN')}\nAdvance Token: ₹${split.advanceTokenAmount.toLocaleString('en-IN')} (Secured via UPI)\nBalance Payable to Driver at Drop: ₹${split.balanceCashDueFromCustomer.toLocaleString('en-IN')}\n\nOur system is currently assigning your verified driver. You will receive driver contact and cab registration number shortly!`
+      `🎉 Booking Scheduled (#${bookingCode})!\nRoute: ${origin} → ${destination}\nPickup: ${formatPickup(new Date(ctx.pickup_at))}\nPickup Address: ${pickupAddress}\nVehicle: ${vehicleCode.toUpperCase()}\nTotal Fare: ₹${totalFare.toLocaleString('en-IN')}${discount.amount > 0 ? ` (₹${discount.amount.toLocaleString('en-IN')} return-trip discount applied)` : ''}\nAdvance Token: ₹${split.advanceTokenAmount.toLocaleString('en-IN')} (Secured via UPI)\nBalance Payable to Driver at Drop: ₹${split.balanceCashDueFromCustomer.toLocaleString('en-IN')}\n\nOur system is currently assigning your verified driver. You will receive driver contact and cab registration number shortly!`
     );
     return;
   }
