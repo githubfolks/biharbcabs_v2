@@ -243,21 +243,70 @@ add_action('save_post_bc_booking', function($post_id) {
 /**
  * AJAX Endpoint: Capture Booking Lead to Database
  */
-function bc_ajax_save_booking() {
-    $pickup       = sanitize_text_field($_POST['pickup'] ?? '');
-    $drop         = sanitize_text_field($_POST['drop'] ?? '');
-    $date         = sanitize_text_field($_POST['date'] ?? '');
-    $time         = sanitize_text_field($_POST['time'] ?? '');
-    $name         = sanitize_text_field($_POST['name'] ?? '');
-    $phone        = sanitize_text_field($_POST['phone'] ?? '');
-    $passengers   = sanitize_text_field($_POST['passengers'] ?? '1');
-    $category     = sanitize_text_field($_POST['category'] ?? 'One Way');
-    $distance     = sanitize_text_field($_POST['distance'] ?? '');
-    $instructions = sanitize_textarea_field($_POST['instructions'] ?? '');
-    $source       = sanitize_text_field($_POST['source'] ?? 'Website Booking Form');
+/**
+ * Normalize an Indian mobile number to +91XXXXXXXXXX, or return '' if it is not one.
+ * Mirrors the pattern set on booking phone inputs in biharcabs.js.
+ */
+function bc_normalize_mobile($raw) {
+    if (!is_string($raw) || !preg_match('/^\s*\+?[0-9][0-9\s-]*$/D', $raw)) {
+        return '';
+    }
+    $digits = preg_replace('/\D/', '', $raw);
+    if (strlen($digits) === 12 && strpos($digits, '91') === 0) {
+        $digits = substr($digits, 2);
+    } elseif (strlen($digits) === 11 && $digits[0] === '0') {
+        $digits = substr($digits, 1);
+    }
+    return preg_match('/^[6-9][0-9]{9}$/D', $digits) ? '+91' . $digits : '';
+}
 
-    if (empty($pickup) && empty($drop) && empty($phone)) {
-        wp_send_json_error(array('message' => 'Please provide booking details.'));
+/**
+ * Allow a burst of enquiries per IP rather than one: mobile carriers put many customers behind a
+ * single IP, so a strict cooldown would silently drop real leads. Each slot is reserved atomically.
+ */
+function bc_acquire_booking_slot($ip, $limit = 10, $window = 600) {
+    $key = hash_hmac('sha256', $ip, wp_salt('nonce'));
+    for ($slot = 0; $slot < $limit; $slot++) {
+        if (bc_acquire_contact_slot('booking:' . $key . ':' . $slot, $window)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+function bc_ajax_save_booking() {
+    if ((int) ($_SERVER['CONTENT_LENGTH'] ?? 0) > 16384) {
+        wp_send_json_error(array('message' => 'Request is too large.'), 413);
+    }
+    foreach (array('pickup' => 500, 'drop' => 500, 'date' => 20, 'time' => 20, 'name' => 150, 'phone' => 40, 'passengers' => 40, 'category' => 80, 'distance' => 40, 'instructions' => 2000, 'source' => 80) as $field => $max) {
+        if (isset($_POST[$field]) && (!is_string($_POST[$field]) || strlen(wp_unslash($_POST[$field])) > $max)) {
+            wp_send_json_error(array('message' => 'Invalid or oversized form field.'), 400);
+        }
+    }
+
+    $pickup       = sanitize_text_field(wp_unslash($_POST['pickup'] ?? ''));
+    $drop         = sanitize_text_field(wp_unslash($_POST['drop'] ?? ''));
+    $date         = sanitize_text_field(wp_unslash($_POST['date'] ?? ''));
+    $time         = sanitize_text_field(wp_unslash($_POST['time'] ?? ''));
+    $name         = sanitize_text_field(wp_unslash($_POST['name'] ?? ''));
+    $phone        = bc_normalize_mobile(wp_unslash($_POST['phone'] ?? ''));
+    $passengers   = sanitize_text_field(wp_unslash($_POST['passengers'] ?? '')) ?: '1';
+    $category     = sanitize_text_field(wp_unslash($_POST['category'] ?? '')) ?: 'One Way';
+    $distance     = sanitize_text_field(wp_unslash($_POST['distance'] ?? ''));
+    $instructions = sanitize_textarea_field(wp_unslash($_POST['instructions'] ?? ''));
+    $source       = sanitize_text_field(wp_unslash($_POST['source'] ?? '')) ?: 'Website Booking Form';
+
+    if (empty($pickup) || empty($drop) || empty($phone)) {
+        wp_send_json_error(array('message' => 'Please provide pickup, drop and a valid mobile number.'), 400);
+    }
+
+    $ip = is_string($_SERVER['REMOTE_ADDR'] ?? null) ? $_SERVER['REMOTE_ADDR'] : '';
+    if (!bc_acquire_booking_slot($ip)) {
+        header('Retry-After: 600');
+        wp_send_json_error(array('message' => 'Too many requests. Please call or WhatsApp us.'), 429);
+    }
+    if (!wp_next_scheduled('bc_cleanup_contact_slots')) {
+        wp_schedule_event(time() + HOUR_IN_SECONDS, 'daily', 'bc_cleanup_contact_slots');
     }
 
     $title = $name ?: ($phone ?: 'Booking Enquiry');

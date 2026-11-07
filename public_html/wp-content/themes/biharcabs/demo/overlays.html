@@ -96,7 +96,7 @@
         }
 
         .mobile-bottom-nav .nav-half {
-            width: 50%;
+            flex: 1 1 0;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -104,7 +104,7 @@
             height: 100%;
             text-decoration: none;
             font-weight: 700;
-            font-size: 13px;
+            font-size: 12px;
             text-transform: uppercase;
             font-family: 'Outfit', sans-serif;
             transition: 0.2s;
@@ -112,6 +112,7 @@
         .nav-half i { font-size: 20px; margin-bottom: 2px; }
         
         .nav-book { background: #facc15; color: black; border-top: 2px solid #eab308; }
+        .nav-call { background: #111827; color: white; border-top: 2px solid #000; }
         .nav-whatsapp { background: #25d366; color: white; border-top: 2px solid #128c7e; }
 
         /* Full Screen Modal */
@@ -153,6 +154,10 @@
             <i class="fas fa-taxi"></i>
             <span>Book Now</span>
         </div>
+        <a href="tel:+917070992170" class="nav-half nav-call">
+            <i class="fas fa-phone"></i>
+            <span>Call</span>
+        </a>
         <a href="https://wa.me/917070992170" target="_blank" rel="noopener noreferrer" class="nav-half nav-whatsapp">
             <i class="fab fa-whatsapp"></i>
             <span>WhatsApp</span>
@@ -174,30 +179,30 @@
                             <div class="row g-3">
                                 <div class="col-md-6">
                                     <label class="form-label-custom">Your Name <span>*</span></label>
-                                    <input type="text" id="name_modal" class="custom-input" placeholder="Enter full name">
+                                    <input type="text" id="name_modal" class="custom-input" placeholder="Enter full name" required>
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label-custom">Phone Number <span>*</span></label>
-                                    <input type="tel" id="phone_modal" class="custom-input" placeholder="+91 Mobile Number">
+                                    <input type="tel" id="phone_modal" class="custom-input" placeholder="+91 Mobile Number" required>
                                 </div>
 
                                 <div class="col-md-6 position-relative">
                                     <label class="form-label-custom">Pickup Location <span>*</span></label>
-                                    <input type="text" id="pickup_location_modal" class="custom-input pe-5" placeholder="Type pickup spot or city...">
+                                    <input type="text" id="pickup_location_modal" class="custom-input pe-5" placeholder="Type pickup spot or city..." required>
                                     <i class="fas fa-crosshairs text-primary position-absolute" id="auto_detect_btn_modal" style="right: 25px; top: 40px; cursor: pointer; font-size: 18px; z-index: 10;" title="Auto Detect Location"></i>
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label-custom">Drop Location <span>*</span></label>
-                                    <input type="text" id="drop_location_modal" class="custom-input" placeholder="Type drop destination or city...">
+                                    <input type="text" id="drop_location_modal" class="custom-input" placeholder="Type drop destination or city..." required>
                                 </div>
 
                                 <div class="col-md-6">
                                     <label class="form-label-custom">Travel Date <span>*</span></label>
-                                    <input type="date" id="date_modal" class="custom-input">
+                                    <input type="date" id="date_modal" class="custom-input" required>
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label-custom">Pickup Time <span>*</span></label>
-                                    <input type="time" id="time_modal" class="custom-input">
+                                    <input type="time" id="time_modal" class="custom-input" required>
                                 </div>
 
                                 <div class="col-md-6">

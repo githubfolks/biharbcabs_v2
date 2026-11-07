@@ -1,7 +1,7 @@
 <?php
 /**
  * Biharcabs Theme Functions and Definitions
- * Version: 1.1.3
+ * Version: 1.1.4.1
  */
 if (!defined('ABSPATH')) { exit; }
 
@@ -79,18 +79,18 @@ function bc_assets() {
     $css = array('bootstrap.min', 'all-fontawesome.min', 'animate.min', 'style');
     $previous = array();
     foreach ($css as $name) {
-        wp_enqueue_style('bc-' . $name, bc_asset('css/' . $name . '.css'), $previous, '1.1.3');
+        wp_enqueue_style('bc-' . $name, bc_asset('css/' . $name . '.css'), $previous, '1.1.4.1');
         $previous = array('bc-' . $name);
     }
-    wp_enqueue_style('biharcabs', get_stylesheet_uri(), $previous, '1.1.3');
+    wp_enqueue_style('biharcabs', get_stylesheet_uri(), $previous, '1.1.4.1');
 
     $scripts = array('bootstrap.bundle.min', 'main');
     $deps = array();
     foreach ($scripts as $name) {
-        wp_enqueue_script('bc-' . $name, bc_asset('js/' . $name . '.js'), $deps, '1.1.3', true);
+        wp_enqueue_script('bc-' . $name, bc_asset('js/' . $name . '.js'), $deps, '1.1.4.1', true);
         $deps[] = 'bc-' . $name;
     }
-    wp_enqueue_script('biharcabs', bc_asset('js/biharcabs.js'), $deps, '1.1.3', true);
+    wp_enqueue_script('biharcabs', bc_asset('js/biharcabs.js'), $deps, '1.1.4.1', true);
 
     $js_vars = array(
         'sticky'          => (bool) bc_setting('sticky'),
@@ -99,7 +99,9 @@ function bc_assets() {
         'ajaxUrl'         => admin_url('admin-ajax.php'),
         'contactNonce'    => wp_create_nonce('bc_contact'),
         'bookingNonce'    => wp_create_nonce('bc_booking'),
-        'whatsapp'        => bc_setting('whatsapp')
+        'whatsapp'        => bc_setting('whatsapp'),
+        'phone'           => bc_phone(bc_setting('phone')),
+        'phoneLabel'      => bc_setting('phone_label')
     );
     wp_localize_script('bc-main', 'biharcabs', $js_vars);
     wp_localize_script('biharcabs', 'biharcabs', $js_vars);
@@ -237,11 +239,24 @@ function bc_fragment($name) {
         }
     }
 
+    $has_social = false;
     foreach (array('facebook', 'twitter', 'instagram', 'linkedin') as $network) {
         if (bc_setting($network)) {
+            $has_social = true;
             $html = str_replace('href="#"><i class="fab fa-' . $network . '"', 'href="' . esc_url(bc_setting($network)) . '" rel="noopener noreferrer"><i class="fab fa-' . $network . '"', $html);
+        } else {
+            // No profile configured: drop the icon rather than render a dead link.
+            $html = preg_replace('~\s*<a href="#"><i class="fab fa-' . $network . '"></i></a>~', '', $html);
         }
     }
+    if (!$has_social) {
+        $html = str_replace(array('<span>Follow Us: </span>', '<h4>Follow Us</h4>'), '', $html);
+    }
+    $html = str_replace(
+        '<a href="#"><i class="fas fa-location-dot">',
+        '<a href="' . esc_url('https://www.google.com/maps/search/?api=1&query=' . rawurlencode(bc_setting('address'))) . '" target="_blank" rel="noopener noreferrer"><i class="fas fa-location-dot">',
+        $html
+    );
 
     if (!bc_setting('language')) {
         $html = preg_replace('~<div class="gtranslate_wrapper[^"<>]*"></div>~', '', $html);

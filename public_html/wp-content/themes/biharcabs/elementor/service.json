@@ -114,7 +114,7 @@
                                         "button_text_color": "",
                                         "background_color": ""
                                     },
-                                    "_title": "Our Taxi Services in Patna & Purnia , Bihar",
+                                    "_title": "Our Taxi Services in Patna & Purnia, Bihar",
                                     "_css_classes": "bc-native-widget",
                                     "_margin": {
                                         "unit": "px",
@@ -125,7 +125,7 @@
                                         "isLinked": true
                                     },
                                     "bc_source": "service-342aced",
-                                    "title": "Our Taxi Services in Patna &amp; Purnia , Bihar",
+                                    "title": "Our Taxi Services in Patna &amp; Purnia, Bihar",
                                     "header_size": "h1",
                                     "size": "default"
                                 },
@@ -628,7 +628,7 @@
                                                                         "button_text_color": "",
                                                                         "background_color": ""
                                                                     },
-                                                                    "_title": "Book Now View Details",
+                                                                    "_title": "Book Now",
                                                                     "_css_classes": "bc-native-widget",
                                                                     "_margin": {
                                                                         "unit": "px",
@@ -639,7 +639,7 @@
                                                                         "isLinked": true
                                                                     },
                                                                     "bc_source": "service-426c9a1",
-                                                                    "editor": "<div class=\"service-footer\">\n                                    <a href=\"#book\" class=\"btn-book-sm\">Book Now <i class=\"fas fa-arrow-right ms-1\"></i></a>\n                                    <a href=\"#\" class=\"btn-view-sm\">View Details</a>\n                                </div>"
+                                                                    "editor": "<div class=\"service-footer\">\n                                    <a href=\"#book\" class=\"btn-book-sm\">Book Now <i class=\"fas fa-arrow-right ms-1\"></i></a>\n                                </div>"
                                                                 },
                                                                 "elements": []
                                                             }
@@ -926,7 +926,7 @@
                                                                         "button_text_color": "",
                                                                         "background_color": ""
                                                                     },
-                                                                    "_title": "Book Now View Details",
+                                                                    "_title": "Book Now",
                                                                     "_css_classes": "bc-native-widget",
                                                                     "_margin": {
                                                                         "unit": "px",
@@ -937,7 +937,7 @@
                                                                         "isLinked": true
                                                                     },
                                                                     "bc_source": "service-cf02312",
-                                                                    "editor": "<div class=\"service-footer\">\n                                    <a href=\"#book\" class=\"btn-book-sm\">Book Now <i class=\"fas fa-arrow-right ms-1\"></i></a>\n                                    <a href=\"#\" class=\"btn-view-sm\">View Details</a>\n                                </div>"
+                                                                    "editor": "<div class=\"service-footer\">\n                                    <a href=\"#book\" class=\"btn-book-sm\">Book Now <i class=\"fas fa-arrow-right ms-1\"></i></a>\n                                </div>"
                                                                 },
                                                                 "elements": []
                                                             }
@@ -1224,7 +1224,7 @@
                                                                         "button_text_color": "",
                                                                         "background_color": ""
                                                                     },
-                                                                    "_title": "Book Now View Details",
+                                                                    "_title": "Book Now",
                                                                     "_css_classes": "bc-native-widget",
                                                                     "_margin": {
                                                                         "unit": "px",
@@ -1235,7 +1235,7 @@
                                                                         "isLinked": true
                                                                     },
                                                                     "bc_source": "service-d2ec471",
-                                                                    "editor": "<div class=\"service-footer\">\n                                    <a href=\"#book\" class=\"btn-book-sm\">Book Now <i class=\"fas fa-arrow-right ms-1\"></i></a>\n                                    <a href=\"#\" class=\"btn-view-sm\">View Details</a>\n                                </div>"
+                                                                    "editor": "<div class=\"service-footer\">\n                                    <a href=\"#book\" class=\"btn-book-sm\">Book Now <i class=\"fas fa-arrow-right ms-1\"></i></a>\n                                </div>"
                                                                 },
                                                                 "elements": []
                                                             }
@@ -1522,7 +1522,7 @@
                                                                         "button_text_color": "",
                                                                         "background_color": ""
                                                                     },
-                                                                    "_title": "Book Now View Details",
+                                                                    "_title": "Book Now",
                                                                     "_css_classes": "bc-native-widget",
                                                                     "_margin": {
                                                                         "unit": "px",
@@ -1533,7 +1533,7 @@
                                                                         "isLinked": true
                                                                     },
                                                                     "bc_source": "service-b791c68",
-                                                                    "editor": "<div class=\"service-footer\">\n                                    <a href=\"#book\" class=\"btn-book-sm\">Book Now <i class=\"fas fa-arrow-right ms-1\"></i></a>\n                                    <a href=\"#\" class=\"btn-view-sm\">View Details</a>\n                                </div>"
+                                                                    "editor": "<div class=\"service-footer\">\n                                    <a href=\"#book\" class=\"btn-book-sm\">Book Now <i class=\"fas fa-arrow-right ms-1\"></i></a>\n                                </div>"
                                                                 },
                                                                 "elements": []
                                                             }
@@ -1820,7 +1820,7 @@
                                                                         "button_text_color": "",
                                                                         "background_color": ""
                                                                     },
-                                                                    "_title": "Book Now View Details",
+                                                                    "_title": "Book Now",
                                                                     "_css_classes": "bc-native-widget",
                                                                     "_margin": {
                                                                         "unit": "px",
@@ -1831,7 +1831,7 @@
                                                                         "isLinked": true
                                                                     },
                                                                     "bc_source": "service-024480a",
-                                                                    "editor": "<div class=\"service-footer\">\n                                    <a href=\"#book\" class=\"btn-book-sm\">Book Now <i class=\"fas fa-arrow-right ms-1\"></i></a>\n                                    <a href=\"#\" class=\"btn-view-sm\">View Details</a>\n                                </div>"
+                                                                    "editor": "<div class=\"service-footer\">\n                                    <a href=\"#book\" class=\"btn-book-sm\">Book Now <i class=\"fas fa-arrow-right ms-1\"></i></a>\n                                </div>"
                                                                 },
                                                                 "elements": []
                                                             }
@@ -2118,7 +2118,7 @@
                                                                         "button_text_color": "",
                                                                         "background_color": ""
                                                                     },
-                                                                    "_title": "Book Now View Details",
+                                                                    "_title": "Book Now",
                                                                     "_css_classes": "bc-native-widget",
                                                                     "_margin": {
                                                                         "unit": "px",
@@ -2129,7 +2129,7 @@
                                                                         "isLinked": true
                                                                     },
                                                                     "bc_source": "service-e063138",
-                                                                    "editor": "<div class=\"service-footer\">\n                                    <a href=\"#book\" class=\"btn-book-sm\">Book Now <i class=\"fas fa-arrow-right ms-1\"></i></a>\n                                    <a href=\"#\" class=\"btn-view-sm\">View Details</a>\n                                </div>"
+                                                                    "editor": "<div class=\"service-footer\">\n                                    <a href=\"#book\" class=\"btn-book-sm\">Book Now <i class=\"fas fa-arrow-right ms-1\"></i></a>\n                                </div>"
                                                                 },
                                                                 "elements": []
                                                             }
@@ -2416,7 +2416,7 @@
                                                                         "button_text_color": "",
                                                                         "background_color": ""
                                                                     },
-                                                                    "_title": "Book Now View Details",
+                                                                    "_title": "Book Now",
                                                                     "_css_classes": "bc-native-widget",
                                                                     "_margin": {
                                                                         "unit": "px",
@@ -2427,7 +2427,7 @@
                                                                         "isLinked": true
                                                                     },
                                                                     "bc_source": "service-09fec38",
-                                                                    "editor": "<div class=\"service-footer\">\n                                    <a href=\"#book\" class=\"btn-book-sm\">Book Now <i class=\"fas fa-arrow-right ms-1\"></i></a>\n                                    <a href=\"#\" class=\"btn-view-sm\">View Details</a>\n                                </div>"
+                                                                    "editor": "<div class=\"service-footer\">\n                                    <a href=\"#book\" class=\"btn-book-sm\">Book Now <i class=\"fas fa-arrow-right ms-1\"></i></a>\n                                </div>"
                                                                 },
                                                                 "elements": []
                                                             }
@@ -2714,7 +2714,7 @@
                                                                         "button_text_color": "",
                                                                         "background_color": ""
                                                                     },
-                                                                    "_title": "Book Now View Details",
+                                                                    "_title": "Book Now",
                                                                     "_css_classes": "bc-native-widget",
                                                                     "_margin": {
                                                                         "unit": "px",
@@ -2725,7 +2725,7 @@
                                                                         "isLinked": true
                                                                     },
                                                                     "bc_source": "service-170b2f1",
-                                                                    "editor": "<div class=\"service-footer\">\n                                    <a href=\"#book\" class=\"btn-book-sm\">Book Now <i class=\"fas fa-arrow-right ms-1\"></i></a>\n                                    <a href=\"#\" class=\"btn-view-sm\">View Details</a>\n                                </div>"
+                                                                    "editor": "<div class=\"service-footer\">\n                                    <a href=\"#book\" class=\"btn-book-sm\">Book Now <i class=\"fas fa-arrow-right ms-1\"></i></a>\n                                </div>"
                                                                 },
                                                                 "elements": []
                                                             }

@@ -53,6 +53,12 @@ Cab service in Bihar</span> </h1>
                                         placeholder="Enter drop location" required>
                                 </div>
 
+                                <div class="hbc-input-group">
+                                    <label>Phone Number</label>
+                                    <i class="fas fa-phone hbc-icon gray"></i>
+                                    <input type="tel" id="phone_hero" class="hbc-input" placeholder="10-digit mobile number" required>
+                                </div>
+
                                 <div class="row g-3 mb-3 mt-1">
                                     <div class="col-6">
                                         <div class="modern-dt-group">
@@ -83,6 +89,7 @@ Cab service in Bihar</span> </h1>
                                 </div>
 
                                 <button type="button" class="hbc-btn" onclick="submitHeroBooking()">Book Now</button>
+                            <p class="bc-form-hint">Next, you'll send these details to us on WhatsApp.</p>
                             </form>
 
                             <script>
@@ -91,18 +98,19 @@ Cab service in Bihar</span> </h1>
                                     const drop = document.getElementById('drop_location').value;
                                     const date = document.getElementById('pickup_date').value;
                                     const time = document.getElementById('pickup_time').value;
+                                    const phone = document.getElementById('phone_hero').value;
                                     
                                     const estDist = document.getElementById('estimated_distance') ? document.getElementById('estimated_distance').innerText : '';
 
-                                    if (!pickup || !drop || !date || !time) {
-                                        alert("Please fill in all details (Pickup, Drop, Date, Time) before booking.");
+                                    if (!pickup || !drop || !date || !time || !phone) {
+                                        alert("Please fill in all details (Pickup, Drop, Phone, Date, Time) before booking.");
                                         return;
                                     }
 
                                     // Determine the active tab
                                     const activeTab = document.querySelector('.hbc-tab.active').innerText;
 
-                                    let message = `Hello BiharCabs! I would like to book a ride.\n\n*Trip Type:* ${activeTab}\n*Pickup:* ${pickup}\n*Drop:* ${drop}\n*Date:* ${date}\n*Time:* ${time}`;
+                                    let message = `Hello BiharCabs! I would like to book a ride.\n\n*Phone:* ${phone}\n*Trip Type:* ${activeTab}\n*Pickup:* ${pickup}\n*Drop:* ${drop}\n*Date:* ${date}\n*Time:* ${time}`;
                                     
                                     if (estDist && estDist !== '-') {
                                         message += `\n*Distance:* ${estDist}`;
@@ -421,8 +429,7 @@ Cab service in Bihar</span> </h1>
                                     class="fas fa-star text-warning"></i><i class="fas fa-star text-warning"></i><i
                                     class="fas fa-star text-warning"></i><i class="fas fa-star text-warning"></i><i
                                     class="fas fa-star text-warning"></i></div>
-                            <h4 class="text-white font-weight-bold" style="font-family: 'Outfit', sans-serif;">Akshay
-                                Cabs Experience</h4>
+                            <h4 class="text-white font-weight-bold" style="font-family: 'Outfit', sans-serif;">Passenger Experience</h4>
                             <p style="font-size: 14px; color: #d1d5db; line-height: 1.5; font-style: italic;">"Our
                                 driver was extremely courteous and loaded all our heavy airport bags. The ride from
                                 Patna JPNI Airport to Bihar Sharif was incredibly smooth!"</p>
@@ -1058,32 +1065,32 @@ Cab service in Bihar</span> </h1>
                                 <div class="row g-3">
                                     <div class="col-md-6">
                                         <label class="form-label-custom">Your Name <span>*</span></label>
-                                        <input type="text" id="name_instant" class="custom-input" placeholder="Enter full name">
+                                        <input type="text" id="name_instant" class="custom-input" placeholder="Enter full name" required>
                                     </div>
                                     <div class="col-md-6">
                                         <label class="form-label-custom">Phone Number <span>*</span></label>
-                                        <input type="tel" id="phone_instant" class="custom-input" placeholder="+91 Mobile Number">
+                                        <input type="tel" id="phone_instant" class="custom-input" placeholder="+91 Mobile Number" required>
                                     </div>
 
                                     <div class="col-md-6 position-relative">
                                         <label class="form-label-custom">Pickup Location <span>*</span></label>
                                         <input type="text" id="pickup_location_instant" class="custom-input pe-5"
-                                            placeholder="Type pickup spot or city...">
+                                            placeholder="Type pickup spot or city..." required>
                                         <i class="fas fa-crosshairs text-primary position-absolute" id="auto_detect_btn_instant" style="right: 25px; top: 40px; cursor: pointer; font-size: 18px; z-index: 10;" title="Auto Detect Location"></i>
                                     </div>
                                     <div class="col-md-6">
                                         <label class="form-label-custom">Drop Location <span>*</span></label>
                                         <input type="text" id="drop_location_instant" class="custom-input"
-                                            placeholder="Type drop destination or city...">
+                                            placeholder="Type drop destination or city..." required>
                                     </div>
 
                                     <div class="col-md-6">
                                         <label class="form-label-custom">Travel Date <span>*</span></label>
-                                        <input type="date" id="date_instant" class="custom-input">
+                                        <input type="date" id="date_instant" class="custom-input" required>
                                     </div>
                                     <div class="col-md-6">
                                         <label class="form-label-custom">Pickup Time <span>*</span></label>
-                                        <input type="time" id="time_instant" class="custom-input">
+                                        <input type="time" id="time_instant" class="custom-input" required>
                                     </div>
 
                                     <div class="col-md-6">
