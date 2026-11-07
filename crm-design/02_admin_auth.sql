@@ -31,16 +31,6 @@ CREATE TABLE IF NOT EXISTS crm_admin_sessions (
 CREATE INDEX IF NOT EXISTS idx_crm_admin_sessions_token ON crm_admin_sessions(session_token);
 CREATE INDEX IF NOT EXISTS idx_crm_admin_sessions_expiry ON crm_admin_sessions(expires_at);
 
--- Seed initial default Super Admin (Password: Admin@BiharCabs2026!)
-INSERT INTO crm_admin_users (email, password_hash, salt, full_name, role, phone, is_active)
-VALUES (
-    'admin@biharcabs.com',
-    '47d18e1d814bc739265e6b3c328acb1c0a62a8b51356d6138fecbb844b2aa35242c0bea8a111d2d93263994ad93d4c25fd2ebbee292f874c2dcaabe6e36cceda',
-    'a5f2f65ab912ce614c7e53a6436d0d28',
-    'Operations Super Admin',
-    'SUPER_ADMIN',
-    '917070992170',
-    true
-)
-ON CONFLICT (email) DO NOTHING;
+-- No default admin is seeded: a published default password would let anyone in.
+-- Create the first admin with: CRM_ADMIN_EMAIL=you@example.com node crm/scripts/set-admin-password.mjs
 

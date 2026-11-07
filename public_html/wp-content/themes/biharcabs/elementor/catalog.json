@@ -3827,8 +3827,8 @@
                 },
                 {
                     "key": "copy_37",
-                    "label": "We'll reply with exact fare & confirm in 2 minutes!",
-                    "value": "We'll reply with exact fare & confirm in 2 minutes!"
+                    "label": "We'll reply with exact fare & confirm within 30 minutes!",
+                    "value": "We'll reply with exact fare & confirm within 30 minutes!"
                 }
             ],
             "page": "index",
@@ -4019,8 +4019,8 @@
                 },
                 {
                     "key": "copy_37",
-                    "label": "We'll reply with exact fare & confirm in 2 minutes!",
-                    "value": "We'll reply with exact fare & confirm in 2 minutes!"
+                    "label": "We'll reply with exact fare & confirm within 30 minutes!",
+                    "value": "We'll reply with exact fare & confirm within 30 minutes!"
                 }
             ],
             "page": "service",
@@ -4211,8 +4211,8 @@
                 },
                 {
                     "key": "copy_37",
-                    "label": "We'll reply with exact fare & confirm in 2 minutes!",
-                    "value": "We'll reply with exact fare & confirm in 2 minutes!"
+                    "label": "We'll reply with exact fare & confirm within 30 minutes!",
+                    "value": "We'll reply with exact fare & confirm within 30 minutes!"
                 }
             ],
             "page": "cities",

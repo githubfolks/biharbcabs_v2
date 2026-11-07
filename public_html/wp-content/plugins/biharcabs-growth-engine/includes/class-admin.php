@@ -84,6 +84,13 @@ class BCGE_Admin {
                 <table class="form-table" role="presentation">
                     <tr><th scope="row">Fare estimates</th><td><label><input type="checkbox" name="public_enabled" value="1" <?php checked(!empty($card['public_enabled'])); ?>> Show estimates on the website and provide them to the CRM</label></td></tr>
                     <tr><th scope="row"><label for="bcge_toll">Toll note</label></th><td><input id="bcge_toll" type="text" class="regular-text" name="toll_tax_text" value="<?php echo esc_attr($card['toll_tax_text']); ?>"><p class="description">Shown next to every estimate.</p></td></tr>
+                    <tr><th scope="row"><label for="bcge_states">Service area</label></th><td>
+                        <textarea id="bcge_states" name="service_states" rows="5" class="regular-text"><?php echo esc_textarea(implode("\n", $card['service_states'])); ?></textarea>
+                        <p class="description">One state per line, spelled as in maps (for example Uttar Pradesh). Leave empty for no limit. Routes listed below are always quoted.</p>
+                        <p><label><input type="radio" name="service_area_rule" value="both" <?php checked($card['service_area_rule'], 'both'); ?>> Pickup and drop must both be in these states</label><br>
+                        <label><input type="radio" name="service_area_rule" value="either" <?php checked($card['service_area_rule'], 'either'); ?>> Pickup or drop in these states is enough</label></p>
+                        <p class="description">Other trips get no instant estimate; customers can still book and you quote them directly.</p>
+                    </td></tr>
                     <tr><th scope="row"><label for="bcge_key">LocationIQ server token</label></th><td><input id="bcge_key" type="password" class="regular-text" autocomplete="off" name="server_key" value="<?php echo esc_attr($card['server_key']); ?>"><p class="description">Optional. Leave blank to use the website's LocationIQ token.</p></td></tr>
                 </table>
 

@@ -430,7 +430,7 @@ add_action('admin_post_bc_download_bookings_csv', function() {
 function bc_instant_booking_shortcode($atts) {
     $atts = shortcode_atts(array(
         'title'        => __('Instant Booking Request', 'biharcabs'),
-        'subtitle'     => __("We'll reply with exact fare & confirm in 2 minutes!", 'biharcabs'),
+        'subtitle'     => __("We'll reply with exact fare & confirm within 30 minutes!", 'biharcabs'),
         'button_text'  => __('Send Booking on WhatsApp', 'biharcabs'),
         'show_card'    => 'yes',
         'source'       => 'Shortcode Booking Form'

@@ -58,6 +58,28 @@ class BCGE_Rest {
         return $hours ? sprintf('%d hr %d min', $hours, $minutes % 60) : sprintf('%d min', $minutes);
     }
 
+    /** GET a LocationIQ endpoint and decode it, or null on any failure. The key is never logged. */
+    private static function locationiq($path, $query, $card, $what) {
+        $key = $card['server_key'] ?: (string) get_theme_mod('bc_location_key', '');
+        if ($key === '') {
+            return null;
+        }
+        $url = 'https://us1.locationiq.com/v1/' . $path . '?' . http_build_query($query + array('key' => $key));
+        // The site's browser token is restricted by domain, so identify this site when using it.
+        $response = wp_remote_get($url, array('timeout' => 6, 'headers' => array('Referer' => home_url('/'))));
+        if (is_wp_error($response)) {
+            error_log('BiharCabs quote: ' . $what . ' lookup failed (' . $response->get_error_code() . ')');
+            return null;
+        }
+        $status = (int) wp_remote_retrieve_response_code($response);
+        $body   = json_decode(wp_remote_retrieve_body($response), true);
+        if ($status !== 200 || !is_array($body)) {
+            error_log('BiharCabs quote: unusable ' . $what . ' response (HTTP ' . $status . ')');
+            return null;
+        }
+        return $body;
+    }
+
     /** Driving distance from LocationIQ, cached so repeat quotes do not use the quota. */
     private static function road_distance($from, $to, $card) {
         $points = sprintf('%.3f,%.3f;%.3f,%.3f', $from['lon'], $from['lat'], $to['lon'], $to['lat']);
@@ -66,29 +88,53 @@ class BCGE_Rest {
         if (is_array($cached)) {
             return $cached;
         }
-
-        $key = $card['server_key'] ?: (string) get_theme_mod('bc_location_key', '');
-        if ($key === '') {
+        $body  = self::locationiq('directions/driving/' . $points, array('overview' => 'false'), $card, 'distance');
+        $route = $body['routes'][0] ?? null;
+        if (!is_array($route) || !is_numeric($route['distance'] ?? null) || $route['distance'] <= 0) {
             return null;
         }
-        $url = 'https://us1.locationiq.com/v1/directions/driving/' . $points . '?overview=false&key=' . rawurlencode($key);
-        // The site's browser token is restricted by domain, so identify this site when using it.
-        $response = wp_remote_get($url, array('timeout' => 6, 'headers' => array('Referer' => home_url('/'))));
-        if (is_wp_error($response)) {
-            error_log('BiharCabs quote: distance lookup failed (' . $response->get_error_code() . ')');
-            return null;
-        }
-        $status = (int) wp_remote_retrieve_response_code($response);
-        $body   = json_decode(wp_remote_retrieve_body($response), true);
-        $route  = is_array($body) ? ($body['routes'][0] ?? null) : null;
-        if ($status !== 200 || !is_array($route) || !is_numeric($route['distance'] ?? null) || $route['distance'] <= 0) {
-            error_log('BiharCabs quote: unusable distance response (HTTP ' . $status . ')');
-            return null;
-        }
-
         $result = array('km' => round($route['distance'] / 1000, 1), 'duration_text' => self::format_duration((float) ($route['duration'] ?? 0)));
         set_transient($cache, $result, self::DISTANCE_TTL);
         return $result;
+    }
+
+    /** Indian state for a point, from LocationIQ reverse geocoding and cached. '' when outside India or unknown. */
+    private static function state_of($point, $card) {
+        $lat   = sprintf('%.3f', $point['lat']);
+        $lon   = sprintf('%.3f', $point['lon']);
+        $cache = 'bcge_state_' . md5($lat . ',' . $lon);
+        $cached = get_transient($cache);
+        if (is_string($cached)) {
+            return $cached;
+        }
+        $body = self::locationiq('reverse', array('lat' => $lat, 'lon' => $lon, 'format' => 'json'), $card, 'state');
+        if (!is_array($body['address'] ?? null)) {
+            return null;
+        }
+        $address = $body['address'];
+        $state   = (($address['country_code'] ?? '') === 'in' && is_string($address['state'] ?? null)) ? trim($address['state']) : '';
+        set_transient($cache, $state, self::DISTANCE_TTL);
+        return $state;
+    }
+
+    /**
+     * Whether a trip may get an instant estimate: true, false, or null when a state could not be looked up.
+     * Callers treat null as "no estimate", so it fails closed without calling the trip out of area.
+     */
+    private static function in_service_area($from, $to, $card) {
+        $states = array_map('strtolower', (array) ($card['service_states'] ?? array()));
+        if (!$states) {
+            return true;
+        }
+        $inside = array();
+        foreach (array($from, $to) as $point) {
+            $state = self::state_of($point, $card);
+            if ($state === null) {
+                return null;
+            }
+            $inside[] = in_array(strtolower($state), $states, true);
+        }
+        return ($card['service_area_rule'] ?? 'both') === 'either' ? in_array(true, $inside, true) : !in_array(false, $inside, true);
     }
 
     private static function vehicle_quote($code, $vehicle, $fare, $card) {
@@ -153,9 +199,19 @@ class BCGE_Rest {
         $km = BCGE_Calculator::known_distance($card['routes'], $origin, $destination);
         $duration_text = '';
 
+        // Routes the owner listed are trusted as served; anything else is checked against the service area.
         if ($km <= 0) {
             $from = self::point($params['origin_lat'] ?? null, $params['origin_lon'] ?? null);
             $to   = self::point($params['destination_lat'] ?? null, $params['destination_lon'] ?? null);
+            if ($from && $to) {
+                $area = self::in_service_area($from, $to, $card);
+                if ($area === null) {
+                    return self::fail('NO_TARIFF', 'Please contact us for a custom quote.');
+                }
+                if (!$area) {
+                    return self::fail('OUT_OF_SERVICE_AREA', 'Please contact us for a quote for this trip.');
+                }
+            }
             $distance = ($from && $to) ? self::road_distance($from, $to, $card) : null;
             if ($distance) {
                 $km = (float) $distance['km'];

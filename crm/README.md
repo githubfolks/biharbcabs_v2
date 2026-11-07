@@ -51,9 +51,9 @@ Open **[http://localhost:3001](http://localhost:3001)** to access the BiharCabs 
 ### Admin Authentication & Login Credentials
 The CRM requires authentication to protect dispatch, driver, finance, and settings data:
 - **Login URL:** [http://localhost:3001/login](http://localhost:3001/login)
-- **Initial Seed Super Admin:**
-  - **Email:** `admin@biharcabs.com`
-  - **Password:** `Admin@BiharCabs2026!`
+- **Admin accounts:** no default admin is seeded. Create one, or reset a password, from the `crm` folder:
+  `CRM_ADMIN_EMAIL=you@example.com node scripts/set-admin-password.mjs`
+  It prints a generated password once, or uses `CRM_ADMIN_PASSWORD` if set, and signs out that admin's sessions.
 - Password hashing is enforced using Node.js `crypto.scrypt` with constant-time equality validation.
 - Sessions are stored in the native PostgreSQL `crm_admin_sessions` table and managed via secure `HttpOnly` cookies.
 
