@@ -1,0 +1,29 @@
+flowchart LR
+    subgraph Apply ["1. Driver Application (WA or Web)"]
+        START["Driver Sends 'JOIN'\non WhatsApp or CRM Link"]
+        PROFILE["Submit Basic Profile:\nName, Phone, Hub City\n(Patna/Gaya/Darbhanga/etc.)"]
+        DOCS["Upload KYC & Vehicle Docs:\n- Driving License (DL)\n- Vehicle RC & Permit\n- Insurance & Fitness\n- 4 Cab Photos"]
+        START --> PROFILE --> DOCS
+    end
+
+    subgraph Verify ["2. CRM Verification & Approval"]
+        REVIEW["Admin KYC Review\nin CRM Dashboard"]
+        MAP["Map Vehicle to biharcabs.com\nCategory (Sedan / SUV / Innova)"]
+        WALLET["Initialize Driver Ledger\n& Commission Terms"]
+        ACTIVE["Status: APPROVED_ACTIVE\n(Eligible for Ride Broadcasts)"]
+        REVIEW --> MAP --> WALLET --> ACTIVE
+    end
+
+    subgraph Guardrails ["3. Automated Compliance Guardrails"]
+        CRON["Daily Expiry & Wallet Check"]
+        WARN["T-15 Days Doc Expiry:\nSend WhatsApp Renewal Alert"]
+        BLOCK_DOC["Doc Expired:\nStatus -> SUSPENDED_DOC_EXPIRED"]
+        BLOCK_DUE["Unpaid Commission > Limit:\nStatus -> SUSPENDED_UNPAID_DUES\n(Send UPI Settlement Link)"]
+        CRON --> WARN
+        CRON --> BLOCK_DOC
+        CRON --> BLOCK_DUE
+    end
+
+    DOCS --> REVIEW
+    ACTIVE --> CRON
+

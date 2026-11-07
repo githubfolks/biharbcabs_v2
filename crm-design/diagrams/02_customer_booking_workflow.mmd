@@ -1,0 +1,25 @@
+sequenceDiagram
+    autonumber
+    actor Customer
+    participant WABot as WhatsApp Bot / CRM Engine
+    participant WPDB as biharcabs.com Pricing API
+    participant PG as CRM PostgreSQL DB
+
+    Customer->>WABot: Sends "Hi" or Pre-filled Website Quote Message
+    alt Direct Inquiry (Missing Route/Date/Vehicle)
+        WABot->>Customer: Sends Interactive WhatsApp Flow:\n1. Trip Type (One-Way / Round Trip / Airport / Local)\n2. Pickup City & Drop City\n3. Pickup Date & Time
+        Customer->>WABot: Submits Route & Schedule
+    end
+    WABot->>WPDB: Query Route & Vehicle Tariffs (origin, destination, trip_type, days)
+    alt Route Exists in biharcabs.com DB
+        WPDB-->>WABot: Returns Exact Tariffs (Sedan, Ertiga SUV, Innova, Tempo)
+        WABot->>Customer: Displays Interactive Vehicle Selection List with Exact Prices (₹)
+        Customer->>WABot: Selects Vehicle + Enters Exact Pickup Landmark
+        WABot->>PG: Create Booking (Status: CONFIRMED_AWAITING_DRIVER)
+        WABot->>Customer: Sends Booking Reference ID (#BC-1042) & "Assigning Verified Driver..."
+    else Custom / Unlisted Route or Negotiation Requested
+        WABot->>PG: Create Lead (Status: NEEDS_CUSTOM_QUOTE)
+        WABot->>Customer: "Our route specialist is calculating the best rate for your location..."
+        Note over WABot,PG: Alerts Admin on WA & CRM to enter Custom Fare -> Resumes Automated Flow
+    end
+

@@ -1,0 +1,36 @@
+flowchart TB
+    subgraph Channels ["Customer & Driver Touchpoints"]
+        WEB["biharcabs.com Website\n(Fare Calculator & Route Pages)"]
+        WA_CUST["Customer WhatsApp\n(Booking, Live Status, PDF Invoice)"]
+        WA_DRV["Driver WhatsApp\n(Ride Alerts, Accept/Decline, Onboarding)"]
+    end
+
+    subgraph WP_DB ["Existing Website Layer (WordPress)"]
+        WP_API["BC_REST_API & BC_Calculator\n(/wp-json/biharcabs/v1/quote)"]
+        WP_MYSQL[("Existing biharcabs.com DB\nwp_bc_vehicles\nwp_bc_routes\nwp_bc_route_tariffs")]
+        WP_API --> WP_MYSQL
+    end
+
+    subgraph CRM_Core ["BiharCabs Operational CRM & Automation Engine"]
+        WA_WEBHOOK["WhatsApp Cloud API Webhook\n& State Machine"]
+        PRICING_SVC["Pricing Sync & Quote Service"]
+        DISPATCH["Driver Broadcast & Escalation Engine\n(Background Scheduler / Workers)"]
+        BILLING["Billing, Commission Ledger\n& PDF Invoice Generator"]
+        ADMIN_UI["CRM Web Dashboard\n(Bookings, Drivers, Live Inbox, Finance)"]
+    end
+
+    subgraph PG_DB ["Native Host PostgreSQL Database (CRM Operational DB)"]
+        PG[("PostgreSQL (Native OS)\n- crm_settings\n- crm_bookings\n- crm_drivers & vehicles\n- crm_dispatch_offers\n- crm_payments & ledger\n- crm_invoices")]
+    end
+
+    WEB -->|"Pre-filled WA / Lead Webhook"| WA_WEBHOOK
+    WA_CUST <-->|"Meta WhatsApp Cloud API"| WA_WEBHOOK
+    WA_DRV <-->|"Meta WhatsApp Cloud API"| DISPATCH
+    PRICING_SVC <-->|"Fetch Live Route & Vehicle Tariffs"| WP_API
+    WA_WEBHOOK --> PRICING_SVC
+    WA_WEBHOOK --> DISPATCH
+    DISPATCH --> PG
+    BILLING --> PG
+    ADMIN_UI <--> PG
+    BILLING -->|"Send PDF Bill & Payment Link"| WA_CUST
+

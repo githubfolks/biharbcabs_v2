@@ -1,0 +1,102 @@
+erDiagram
+    CRM_SETTINGS {
+        varchar setting_key PK
+        jsonb setting_value
+        timestamp updated_at
+    }
+    CRM_CUSTOMERS {
+        bigserial id PK
+        varchar phone UK
+        varchar full_name
+        varchar email
+        varchar gstin
+        varchar company_name
+        timestamp created_at
+    }
+    CRM_DRIVERS {
+        bigserial id PK
+        varchar phone UK
+        varchar whatsapp_phone
+        varchar full_name
+        varchar base_city
+        varchar onboarding_status
+        varchar license_number
+        date license_expiry
+        numeric wallet_balance
+        numeric max_negative_balance
+        boolean is_available
+        numeric rating
+    }
+    CRM_DRIVER_VEHICLES {
+        bigserial id PK
+        bigint driver_id FK
+        varchar wp_vehicle_code
+        varchar registration_no UK
+        varchar model_name
+        date insurance_expiry
+        date fitness_expiry
+        date permit_expiry
+        boolean is_verified
+    }
+    CRM_BOOKINGS {
+        bigserial id PK
+        varchar booking_code UK
+        bigint customer_id FK
+        bigint assigned_driver_id FK
+        bigint assigned_vehicle_id FK
+        varchar trip_type
+        varchar origin_city
+        varchar destination_city
+        text pickup_address
+        text drop_address
+        date pickup_date
+        time pickup_time
+        varchar wp_vehicle_code
+        numeric distance_km
+        numeric customer_total_fare
+        numeric driver_payout_amount
+        numeric commission_amount
+        varchar booking_status
+        varchar payment_status
+        timestamp driver_broadcast_at
+        timestamp sla_deadline_at
+    }
+    CRM_DISPATCH_OFFERS {
+        bigserial id PK
+        bigint booking_id FK
+        bigint driver_id FK
+        numeric offered_driver_fare
+        varchar offer_status
+        timestamp sent_at
+        timestamp responded_at
+    }
+    CRM_PAYMENTS_LEDGER {
+        bigserial id PK
+        bigint booking_id FK
+        bigint driver_id FK
+        varchar transaction_type
+        varchar payment_channel
+        numeric amount
+        varchar reference_id
+        timestamp created_at
+    }
+    CRM_INVOICES {
+        bigserial id PK
+        varchar invoice_number UK
+        bigint booking_id FK
+        jsonb line_items
+        numeric subtotal
+        numeric tax_amount
+        numeric total_amount
+        varchar pdf_url
+        timestamp sent_on_wa_at
+    }
+
+    CRM_CUSTOMERS ||--o{ CRM_BOOKINGS : places
+    CRM_DRIVERS ||--o{ CRM_DRIVER_VEHICLES : owns
+    CRM_DRIVERS ||--o{ CRM_BOOKINGS : fulfills
+    CRM_BOOKINGS ||--o{ CRM_DISPATCH_OFFERS : broadcasts
+    CRM_DRIVERS ||--o{ CRM_DISPATCH_OFFERS : receives
+    CRM_BOOKINGS ||--o{ CRM_PAYMENTS_LEDGER : records
+    CRM_BOOKINGS ||--|| CRM_INVOICES : generates
+

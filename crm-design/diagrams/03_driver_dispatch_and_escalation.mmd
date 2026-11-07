@@ -1,0 +1,24 @@
+sequenceDiagram
+    autonumber
+    participant Dispatch as CRM Dispatch Engine (PG)
+    actor Drivers as Matched Drivers (WhatsApp)
+    actor Customer as Customer (WhatsApp)
+    actor Admin as Admin Staff (WhatsApp + CRM)
+
+    Dispatch->>Dispatch: Query Active Verified Drivers\n(Match Vehicle Type, Hub City, Docs Valid, Wallet > Min Limit)
+    Dispatch->>Drivers: Broadcast WhatsApp Ride Offer Template\n[Route, Date/Time, Customer Fare, Driver Net Payout, Commission]\nButtons: [ Accept Ride ]  [ Decline ]
+
+    alt Driver Confirms Within SLA Timeout (e.g., 15 Mins)
+        Drivers->>Dispatch: Driver A taps [ Accept Ride ]
+        Dispatch->>Dispatch: Acquire Atomic DB Lock (SELECT FOR UPDATE)\nStatus -> DRIVER_ASSIGNED (Driver A)
+        Dispatch->>Drivers: Confirm Assignment to Driver A + Share Customer Contact & Pickup Pin
+        Dispatch->>Customer: Send WhatsApp Confirmation:\n- Booking ID, Pickup Date/Time/Location\n- Driver Name, Phone, Vehicle Model & Reg No.\n- Confirmed Fare Breakdown
+        opt Another Driver B taps [ Accept Ride ] 2 seconds later
+            Dispatch->>Drivers: Reply to Driver B: "Sorry, Ride #BC-1042 was already accepted."
+        end
+    else No Driver Confirms Before Timeout (SLA Expired)
+        Dispatch->>Dispatch: Timer Fires -> Status: ESCALATED_NO_DRIVER
+        Dispatch->>Admin: High-Priority WA + CRM Alert:\n"Booking #BC-1042 (Patna -> Gaya) has NO driver confirmation after 15m!"\nQuick Actions: [Assign Driver Manually] [Re-Broadcast with Bonus]
+        Dispatch->>Customer: "Your booking #BC-1042 is confirmed! Our dispatch manager is assigning your vehicle and will share driver details shortly."
+    end
+

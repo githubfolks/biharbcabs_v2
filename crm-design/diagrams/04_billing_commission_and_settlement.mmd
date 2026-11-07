@@ -1,0 +1,18 @@
+sequenceDiagram
+    autonumber
+    actor Driver as Assigned Driver (WA)
+    participant CRM as CRM Billing & Ledger Engine
+    actor Customer as Customer (WA)
+    actor Admin as Admin Staff
+
+    Note over Driver,CRM: At Pickup Time
+    Driver->>CRM: Taps [ Start Trip ] (Logs Start Time & Opening Odometer for Roundtrip/Local)
+    CRM->>Customer: "Your trip with BiharCabs has started! Have a safe journey."
+
+    Note over Driver,CRM: At Drop-Off / Trip Completion
+    Driver->>CRM: Taps [ Complete Trip ] + Enters Closing Km / Toll / Parking (if applicable)\n+ Confirms Payment Mode (Cash Collected vs Online to Company)
+    CRM->>CRM: Compute Final Bill:\nBase Fare + Extra Km/Hr + Toll/Parking - Advance Paid = Balance Due
+    CRM->>CRM: Compute Split:\n- Platform Commission (e.g. 12% or Fixed)\n- Driver Net Earnings\n- Update Driver Wallet Ledger
+    CRM->>Customer: Sends Automated WhatsApp Bill + Branded PDF Invoice:\n- Full Fare Breakdown & Payment Receipt\n- Razorpay/UPI Link (if paying online)\n- 1-Click Google Review Link
+    CRM->>Driver: Sends Trip Settlement Summary on WhatsApp:\n"Trip #BC-1042 Completed. Cash Collected: ₹2,500. BiharCabs Commission: ₹300. Current Wallet Balance: -₹300 [Pay Commission via UPI]"
+
