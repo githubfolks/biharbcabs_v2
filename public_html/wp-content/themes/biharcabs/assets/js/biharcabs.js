@@ -235,6 +235,14 @@
   }
  }
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',ready);else ready();
+ // The desktop floating buttons repeat the hero booking form, so keep them out of its way while it is on screen.
+ const watchHeroForm=()=>{
+  const card=document.querySelector('.hero-booking-card');
+  if(!card||!('IntersectionObserver' in window)||document.documentElement.dataset.bcHeroWatch)return;
+  document.documentElement.dataset.bcHeroWatch='1';
+  new IntersectionObserver(([entry])=>document.body.classList.toggle('bc-hero-form-visible',entry.isIntersecting),{threshold:0.2}).observe(card);
+ };
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',watchHeroForm);else watchHeroForm();
  const editorReady=()=>{['biharcabs-demo','biharcabs-form'].forEach(name=>window.elementorFrontend?.hooks.addAction('frontend/element_ready/'+name+'.default',ready));};
  window.addEventListener('elementor/frontend/init',editorReady);if(window.jQuery)window.jQuery(window).on('elementor/frontend/init',editorReady);
 })();
