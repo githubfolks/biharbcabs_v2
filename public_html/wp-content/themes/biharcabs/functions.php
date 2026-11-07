@@ -1,7 +1,7 @@
 <?php
 /**
  * Biharcabs Theme Functions and Definitions
- * Version: 1.1.5
+ * Version: 1.1.6
  */
 if (!defined('ABSPATH')) { exit; }
 
@@ -79,18 +79,18 @@ function bc_assets() {
     $css = array('bootstrap.min', 'all-fontawesome.min', 'animate.min', 'style');
     $previous = array();
     foreach ($css as $name) {
-        wp_enqueue_style('bc-' . $name, bc_asset('css/' . $name . '.css'), $previous, '1.1.5');
+        wp_enqueue_style('bc-' . $name, bc_asset('css/' . $name . '.css'), $previous, '1.1.6');
         $previous = array('bc-' . $name);
     }
-    wp_enqueue_style('biharcabs', get_stylesheet_uri(), $previous, '1.1.5');
+    wp_enqueue_style('biharcabs', get_stylesheet_uri(), $previous, '1.1.6');
 
     $scripts = array('bootstrap.bundle.min', 'main');
     $deps = array();
     foreach ($scripts as $name) {
-        wp_enqueue_script('bc-' . $name, bc_asset('js/' . $name . '.js'), $deps, '1.1.5', true);
+        wp_enqueue_script('bc-' . $name, bc_asset('js/' . $name . '.js'), $deps, '1.1.6', true);
         $deps[] = 'bc-' . $name;
     }
-    wp_enqueue_script('biharcabs', bc_asset('js/biharcabs.js'), $deps, '1.1.5', true);
+    wp_enqueue_script('biharcabs', bc_asset('js/biharcabs.js'), $deps, '1.1.6', true);
 
     $js_vars = array(
         'sticky'          => (bool) bc_setting('sticky'),
