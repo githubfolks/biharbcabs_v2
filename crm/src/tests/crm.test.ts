@@ -201,7 +201,10 @@ describe('BiharCabs Operational CRM Core Engine Tests', () => {
     const adminRes = await query(`SELECT * FROM crm_admin_users WHERE email = 'admin@biharcabs.com'`);
     assert.strictEqual(adminRes.rows.length, 1);
     const admin = adminRes.rows[0];
-    assert.strictEqual(verifyPassword('Admin@BiharCabs2026!', admin.password_hash, admin.salt), true);
+    // Never assert a real account's password: the seeded default was published and has been removed.
+    const sample = hashPassword('test-only-password');
+    assert.strictEqual(verifyPassword('test-only-password', sample.hash, sample.salt), true);
+    assert.strictEqual(verifyPassword('wrong-password', sample.hash, sample.salt), false);
 
     // C. Create session
     const { token, expiresAt } = await createAdminSession(admin.id, 'TestAgent/1.0', '127.0.0.1');
