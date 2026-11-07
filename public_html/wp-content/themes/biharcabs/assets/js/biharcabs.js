@@ -40,6 +40,82 @@
     } catch (_) {}
   };
 
+  // After handing off to WhatsApp, tell the visitor what to do and give them a way out if it did not open.
+  const showNextStep = (form) => {
+    let box = form.querySelector('.bc-next-step');
+    if (!box) {
+      box = document.createElement('div');
+      box.className = 'bc-next-step';
+      box.setAttribute('role', 'status');
+      form.appendChild(box);
+    }
+    const title = document.createElement('strong');
+    title.textContent = 'Almost done: tap Send in WhatsApp so we can confirm your trip.';
+    box.replaceChildren(title);
+    if (config.phone) {
+      const help = document.createElement('p');
+      help.textContent = "WhatsApp didn't open? ";
+      const call = document.createElement('a');
+      call.href = 'tel:' + config.phone;
+      call.textContent = 'Call ' + (config.phoneLabel || config.phone);
+      help.appendChild(call);
+      box.appendChild(help);
+    }
+    box.scrollIntoView({ block: 'nearest' });
+  };
+
+  // Indian mobile numbers, with optional +91 / 0 prefix. Mirrors bc_normalize_mobile() on the server.
+  document.querySelectorAll('[data-bc-booking] [data-bc-field="phone"],[id^="phone_instant"],[id="phone_modal"],[id="phone_hero"]').forEach(input => {
+    input.type = 'tel';
+    input.inputMode = 'tel';
+    input.autocomplete = 'tel';
+    input.pattern = '\\s*(\\+?91|0)?[\\s\\-]*[6-9]([\\s\\-]*[0-9]){9}\\s*';
+    input.title = 'Enter a 10-digit Indian mobile number';
+  });
+
+  // Source markup places labels beside inputs without "for"; link them for screen readers and bigger tap areas.
+  document.querySelectorAll('form label:not([for])').forEach((label, index) => {
+    if (label.querySelector('input,select,textarea')) return;
+    const control = label.parentElement?.querySelector('input,select,textarea');
+    if (!control) return;
+    if (!control.id) control.id = 'bc-field-' + index;
+    label.htmlFor = control.id;
+  });
+
+  // Vehicle, city and service cards all share one booking modal, carrying the visitor's choice into it.
+  const bookingModal = document.getElementById('bookingModal');
+  const openBooking = (choice) => {
+    if (!bookingModal || !window.bootstrap) return false;
+    const set = (id, value) => { const el = document.getElementById(id); if (el && value) el.value = value; };
+    if (choice.drop) {
+      set('drop_location_modal', choice.drop);
+      document.getElementById('drop_location_modal')?.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    const category = document.getElementById('category_modal');
+    if (category && 'category' in choice) { category.selectedIndex = 0; set('category_modal', choice.category); }
+    const notes = document.getElementById('instructions_modal');
+    if (notes && (!notes.value || notes.value.startsWith('Vehicle: '))) notes.value = choice.vehicle ? 'Vehicle: ' + choice.vehicle : '';
+    window.bootstrap.Modal.getOrCreateInstance(bookingModal).show();
+    return true;
+  };
+  if (!document.documentElement.dataset.bcCtaBound) {
+    document.documentElement.dataset.bcCtaBound = '1';
+    document.addEventListener('click', event => {
+      const cta = event.target.closest('a[href="#"],button:not([type])');
+      if (!cta || cta.closest('form,.modal')) return;
+      const wanted = cta.textContent.trim().match(/^Book\s+(.+)$/i)?.[1];
+      if (!wanted) return;
+      let choice;
+      const city = wanted.match(/^Ride to (.+)$/i)?.[1];
+      if (city) choice = { drop: city };
+      else if (/^now$/i.test(wanted)) {
+        const service = cta.closest('.e-con')?.querySelector('h3,h4')?.textContent || '';
+        choice = { category: /airport/i.test(service) ? 'Airport Transfer' : /local/i.test(service) ? 'Local Rental' : '' };
+      } else choice = { vehicle: wanted };
+      if (openBooking(choice)) event.preventDefault();
+    });
+  }
+
   // Validate source type=button bookings too, including manually entered past dates.
   document.querySelectorAll('button[onclick*="Booking"]').forEach(button => {
    if(button.dataset.bcValidate)return;button.dataset.bcValidate='1';
@@ -55,7 +131,10 @@
     const drop = form.querySelector('[name*="drop"], [id*="drop"]')?.value?.trim() || '';
     const phone = form.querySelector('[name*="phone"], [id*="phone"]')?.value?.trim() || '';
     const name = form.querySelector('[name*="name"], [id*="name"]')?.value?.trim() || '';
-    saveLeadToDB({ pickup, drop, phone, name, date: date?.value || '', time: time?.value || '', source: 'Modal / Button Booking' });
+    const value = selector => form.querySelector(selector)?.value?.trim() || '';
+    const distance = form.querySelector('[id*="estimated_distance"]')?.textContent?.trim() || '';
+    saveLeadToDB({ pickup, drop, phone, name, date: date?.value || '', time: time?.value || '', passengers: value('[id*="passengers"]'), category: value('[id*="category"]'), instructions: value('[id*="instructions"]'), distance: distance === '-' ? '' : distance, source: 'Modal / Button Booking' });
+    showNextStep(form);
    },true);
    button.closest('form')?.addEventListener('submit',event=>{event.preventDefault();button.click();});
   });
@@ -102,6 +181,7 @@
 
     // 3. Open WhatsApp
     window.open('https://wa.me/'+number+'?text='+encodeURIComponent(lines.join('\n')),'_blank','noopener,noreferrer');
+    showNextStep(form);
    });
    if(config.locationEnabled&&config.locationKey)setup('',form);
   });

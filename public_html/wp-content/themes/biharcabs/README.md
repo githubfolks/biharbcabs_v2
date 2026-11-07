@@ -40,6 +40,16 @@ The English/Hindi switch uses the existing GTranslate service and can be disable
 
 The contact form uses WordPress `wp_mail`, not the source's embedded third-party access token. Configure a recipient (defaults to the WordPress admin email), configure mail/SMTP on your host, and test actual delivery. Mail submission is protected with a nonce, input validation, a honeypot, an atomic per-IP cooldown and escaped output. A successful wp_mail return indicates acceptance by the mail transport, not guaranteed inbox delivery. WhatsApp enquiries still work separately.
 
+## Booking leads
+
+All booking forms hand off to WhatsApp and also save a lead to Cab Bookings. A lead needs pickup, drop and a valid Indian mobile number; `bc_normalize_mobile()` stores it as `+91XXXXXXXXXX` and the browser pattern in `biharcabs.js` mirrors it. Lead capture allows 10 per IP per 10 minutes, because mobile carriers share IPs across customers. It deliberately has no nonce: the request is a background beacon from cacheable pages, so an expired nonce would silently lose real leads.
+
+Vehicle, city and service CTAs open the shared booking modal and prefill it from their visible label, so renaming those labels in Elementor changes what is prefilled. A chosen vehicle is carried in Special Instructions as `Vehicle: <name>`.
+
+## Content migrations
+
+Home and Contact content is stored as Elementor data in the database, so a theme deploy cannot change it. `inc/content-migrations.php` holds versioned one-time fixes, recorded in the `bc_content_version` option. They run on the first request after deploy and only touch live pages, never revisions.
+
 ## SEO
 
 WordPress title tags, canonical URLs, core XML sitemaps, responsive layout, semantic templates, featured images, descriptions and TaxiService structured data are supported. The theme defers its descriptions/schema/title override when Yoast, Rank Math, AIOSEO or SEOPress is detected. Configure a unique site title, real business details and image alt text; use an SEO plugin for advanced metadata. No ranking guarantee is implied.
