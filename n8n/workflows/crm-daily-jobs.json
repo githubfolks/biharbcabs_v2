@@ -1,0 +1,66 @@
+{
+  "id": "bcCronDaily00001",
+  "name": "BiharCabs CRM: daily jobs (09:00 IST)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "daysInterval": 1,
+              "triggerAtHour": 9,
+              "triggerAtMinute": 0
+            }
+          ]
+        }
+      },
+      "id": "8f52d2a0-ef82-4aa9-8389-cc90fcc906f1",
+      "name": "Daily at 09:00 IST",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://crm:3001/api/dispatch/cron/daily",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "5223de00-e88c-4410-9cf8-4f6cfb3c3540",
+      "name": "Run CRM daily jobs",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [240, 0],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "bcCrmCronAuth001",
+          "name": "BiharCabs CRM cron secret"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Daily at 09:00 IST": {
+      "main": [
+        [
+          {
+            "node": "Run CRM daily jobs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Kolkata"
+  },
+  "active": false,
+  "pinData": {}
+}
