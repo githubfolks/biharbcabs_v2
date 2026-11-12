@@ -25,7 +25,7 @@ import {
   getConversation,
   resetConversation,
 } from '../lib/whatsapp-bot';
-import { executeAllCronTasks, runUnpaidDuesGuardrails } from '../lib/cron-service';
+import { executeFrequentCronTasks, runUnpaidDuesGuardrails } from '../lib/cron-service';
 import { recordCustomerRating, disputeRating, getDriverRatingProfile } from '../lib/ratings';
 
 describe('BiharCabs Operational CRM Core Engine Tests', () => {
@@ -373,8 +373,8 @@ describe('BiharCabs Operational CRM Core Engine Tests', () => {
     );
     const expiredVehicleId = vRes.rows[0].id;
 
-    // Run master cron
-    const results = await executeAllCronTasks();
+    // Run the frequent scheduled jobs (expired-document suspension is one of them)
+    const results = await executeFrequentCronTasks();
     assert.ok(typeof results.slaBreachesEscalated === 'number');
     assert.ok(typeof results.wakeupChecksSent === 'number');
     assert.ok(results.documentsExpiredSuspended >= 1, 'Expired driver was suspended');
