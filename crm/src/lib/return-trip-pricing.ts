@@ -6,6 +6,7 @@
  * - The company funds the discount up to its platform commission; the returning driver funds the rest.
  * - If no returning driver takes the ride and a regular driver does, the company absorbs the whole discount.
  */
+import { FareSplit, SplitRules, round2, splitFare } from './fare-split';
 
 export type DiscountType = 'PERCENT' | 'FLAT';
 
@@ -41,23 +42,6 @@ export function checkReturnTripPolicy(raw: any): ReturnTripPolicyCheck {
   return { policy, active: policy.enabled && errors.length === 0, errors };
 }
 
-export interface FareSplit {
-  customerTotalFare: number;
-  platformCommission: number;
-  gstAmount: number;
-  techFeeAmount: number;
-  totalCompanyDuesZ: number;
-  advanceTokenAmount: number;
-  balanceCashDueFromCustomer: number;
-  driverGrossEarnings: number;
-}
-
-export interface SplitRules {
-  gst_on_commission_pct: number;
-  advance_token_percentage: number;
-  min_advance_amount: number;
-}
-
 export interface DiscountedSplit {
   split: FareSplit;
   discountAmount: number;
@@ -65,8 +49,6 @@ export interface DiscountedSplit {
   driverShare: number;
   originalFare: number;
 }
-
-const round2 = (n: number) => Math.round(n * 100) / 100;
 
 /** Discount in whole rupees for a fare, before any checks. */
 export function returnDiscountAmount(fare: number, policy: ReturnTripPolicy): number {
@@ -76,42 +58,27 @@ export function returnDiscountAmount(fare: number, policy: ReturnTripPolicy): nu
 
 /**
  * Apply the return-trip discount to a fare split worked out on the full fare.
- * The company gives up commission first, GST is recalculated on what remains, and the driver covers the rest.
+ * The company gives up commission first; everything else (ride GST, GST on commission + fee, advance)
+ * is recalculated on the discounted fare with the same formula as any booking, and the driver covers the rest.
  * Returns null when no discount can be offered safely, so the ride is simply priced normally.
  */
-export function applyReturnDiscount(split: FareSplit, policy: ReturnTripPolicy, rules: SplitLike): DiscountedSplit | null {
+export function applyReturnDiscount(split: FareSplit, policy: ReturnTripPolicy, rules: SplitRules): DiscountedSplit | null {
   const fare = split.customerTotalFare;
   const discount = returnDiscountAmount(fare, policy);
   if (!(fare > 0) || !(discount > 0) || discount >= fare) return null;
 
   const companyShare = Math.min(discount, split.platformCommission);
-  const commission = split.platformCommission - companyShare;
-  const gst = round2((commission * rules.gst_on_commission_pct) / 100);
-  const dues = round2(commission + gst + split.techFeeAmount);
-  const newFare = fare - discount;
-  const advance = Math.min(newFare, Math.max(rules.min_advance_amount, Math.round((newFare * rules.advance_token_percentage) / 100)));
-  const driverGross = round2(newFare - dues);
-  if (!(driverGross > 0)) return null;
+  const discounted = splitFare(fare - discount, rules, split.platformCommission - companyShare);
+  if (!(discounted.driverGrossEarnings > 0)) return null;
 
   return {
-    split: {
-      customerTotalFare: newFare,
-      platformCommission: commission,
-      gstAmount: gst,
-      techFeeAmount: split.techFeeAmount,
-      totalCompanyDuesZ: dues,
-      advanceTokenAmount: advance,
-      balanceCashDueFromCustomer: Math.max(0, newFare - advance),
-      driverGrossEarnings: driverGross,
-    },
+    split: discounted,
     discountAmount: discount,
     companyShare,
-    driverShare: round2(split.driverGrossEarnings - driverGross),
+    driverShare: round2(split.driverGrossEarnings - discounted.driverGrossEarnings),
     originalFare: fare,
   };
 }
-
-type SplitLike = SplitRules;
 
 /**
  * When a regular driver takes a discounted ride, the company absorbs the whole discount:

@@ -1,3 +1,4 @@
+import { SplitRules } from './fare-split';
 import { query } from './db';
 import { checkReturnTripPolicy, ReturnTripPolicyCheck } from './return-trip-pricing';
 
@@ -222,6 +223,8 @@ export interface RevenueProtectionPolicyConfig {
   reserve_deduction_per_trip: number;
   streak_bonus_target_trips: number;
   streak_bonus_amount: number;
+  /** GST on a customer advance when received (18%: rate not determinable at receipt, per CA). */
+  advance_gst_pct: number;
 }
 
 export async function getRevenueProtectionPolicy(): Promise<RevenueProtectionPolicyConfig> {
@@ -259,7 +262,33 @@ export async function getRevenueProtectionPolicy(): Promise<RevenueProtectionPol
     reserve_deduction_per_trip: Number(raw.reserve_deduction_per_trip ?? 100.0),
     streak_bonus_target_trips: Number(raw.streak_bonus_target_trips ?? 5),
     streak_bonus_amount: Number(raw.streak_bonus_amount ?? 150.0),
+    advance_gst_pct: Number(raw.advance_gst_pct ?? 18.0),
   };
+}
+
+/**
+ * Rules for splitting a fare (see fare-split.ts). The ride GST rate is company_billing_info.tax_percentage.
+ * GST rates must be valid: a missing or broken rate stops pricing instead of silently charging 0%.
+ */
+export async function getSplitRules(): Promise<SplitRules> {
+  const policy = await getRevenueProtectionPolicy();
+  const billing = await getSetting<any>('company_billing_info', {});
+  const rules: SplitRules = {
+    platform_commission_pct: policy.platform_commission_pct,
+    gst_on_commission_pct: policy.gst_on_commission_pct,
+    ride_fare_gst_pct: Number(billing.tax_percentage),
+    tech_fee_amount: policy.tech_fee_amount,
+    advance_token_percentage: policy.advance_token_percentage,
+    min_advance_amount: policy.min_advance_amount,
+  };
+  // A missing value must not count as 0% (Number(null) is 0), so the raw ride rate is checked too.
+  const rawRide = billing.tax_percentage;
+  const present = rawRide !== null && rawRide !== undefined && String(rawRide).trim() !== '';
+  const pct = (n: number) => Number.isFinite(n) && n >= 0 && n <= 28;
+  if (!present || !pct(rules.ride_fare_gst_pct) || !pct(rules.gst_on_commission_pct) || !pct(policy.advance_gst_pct)) {
+    throw new Error('[Settings] GST rates are missing or invalid (company_billing_info.tax_percentage, gst_on_commission_pct, advance_gst_pct).');
+  }
+  return rules;
 }
 
 

@@ -19,6 +19,7 @@ import {
   getRevenueProtectionPolicy,
   getReturnTripPolicy,
   getAdvanceCollectionPolicy,
+  getSplitRules,
   getCompanyBillingInfo,
 } from './settings';
 import { PaymentMode, isAdvanceRequired, requestAdvancePayment, advanceLinkMessage } from './advance-payments';
@@ -172,7 +173,7 @@ async function returnOffersFor(origin: string, destination: string, quotes: any[
   const offers: Record<string, { original_fare: number; discount: number; fare: number }> = {};
   const { policy, active } = await getReturnTripPolicy();
   if (!active) return offers;
-  const rules = await getRevenueProtectionPolicy();
+  const rules = await getSplitRules();
   for (const q of quotes) {
     const returning = await findEligibleDrivers(origin, q.vehicle_code, { returnTrip: { destinationCity: destination, pickupAt } });
     if (returning.length === 0) continue;
@@ -944,7 +945,7 @@ async function priceBooking(ctx: Record<string, any>) {
   let discount = { amount: 0, company: 0, driver: 0 };
   if (ctx.return_offers?.[ctx.selected_vehicle]) {
     const { policy, active } = await getReturnTripPolicy();
-    const applied = active ? applyReturnDiscount(fullSplit, policy, await getRevenueProtectionPolicy()) : null;
+    const applied = active ? applyReturnDiscount(fullSplit, policy, await getSplitRules()) : null;
     if (applied) {
       split = { ...fullSplit, ...applied.split };
       discount = { amount: applied.discountAmount, company: applied.companyShare, driver: applied.driverShare };
@@ -993,8 +994,9 @@ async function createCustomerBooking(
       distance_km, customer_total_fare, driver_payout_amount, commission_amount,
       advance_paid, gst_amount, tech_fee_amount, balance_cash_due_from_customer,
       fare_before_discount, return_discount_amount, return_discount_company_share, return_discount_driver_share,
-      payment_mode, advance_due_amount, advance_status, booking_status
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, 0, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25)
+      payment_mode, advance_due_amount, advance_status, booking_status,
+      ride_gst_amount, platform_commission_amount
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, 0, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27)
     RETURNING id, booking_code`,
     [
       bookingCode,
@@ -1022,6 +1024,8 @@ async function createCustomerBooking(
       advanceDue,
       online ? 'PENDING' : 'NOT_REQUIRED',
       online ? 'AWAITING_ADVANCE' : 'AWAITING_DRIVER',
+      split.rideGstAmount,
+      split.platformCommission,
     ]
   );
   const bookingId = Number(bookRes.rows[0].id);

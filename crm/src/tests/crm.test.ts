@@ -63,15 +63,20 @@ describe('BiharCabs Operational CRM Core Engine Tests', () => {
   });
 
   it('3. Commission Engine: Dynamically calculates fare split & commission', async () => {
-    // The split bookings use: commission from revenue_protection_policy, GST on it, plus the tech fee.
+    // The split bookings use: commission from revenue_protection_policy; 18% GST on commission + tech fee;
+    // ride GST (company_billing_info.tax_percentage) included in the fare and borne by the driver.
     const policy = await getRevenueProtectionPolicy();
+    const ridePct = Number((await getAllSettings(true)).company_billing_info.tax_percentage);
     const split = await calculateRideSplitWithTaxes(3000);
+    const r2 = (n: number) => Math.round(n * 100) / 100;
     const commission = Math.round((3000 * policy.platform_commission_pct) / 100);
-    const gst = parseFloat(((commission * policy.gst_on_commission_pct) / 100).toFixed(2));
+    const gst = r2(((commission + policy.tech_fee_amount) * policy.gst_on_commission_pct) / 100);
+    const rideGst = r2((3000 * ridePct) / (100 + ridePct));
     assert.strictEqual(split.platformCommission, commission);
     assert.strictEqual(split.gstAmount, gst);
-    assert.strictEqual(split.totalCompanyDuesZ, parseFloat((commission + gst + policy.tech_fee_amount).toFixed(2)));
-    assert.strictEqual(split.driverGrossEarnings, 3000 - split.totalCompanyDuesZ);
+    assert.strictEqual(split.rideGstAmount, rideGst);
+    assert.strictEqual(split.totalCompanyDuesZ, r2(rideGst + commission + policy.tech_fee_amount + gst));
+    assert.strictEqual(split.driverGrossEarnings, r2(3000 - split.totalCompanyDuesZ));
   });
 
   it('4. Tariff Bridge: Fails gracefully without generating synthetic data when WP is unreachable', async () => {
@@ -504,12 +509,13 @@ describe('BiharCabs Operational CRM Core Engine Tests', () => {
     const split = await calculateRideSplitWithTaxes(2000);
     assert.strictEqual(split.customerTotalFare, 2000);
     assert.strictEqual(split.platformCommission, 60); // 3%
-    assert.strictEqual(split.gstAmount, 10.8); // 18% of 60
+    assert.strictEqual(split.gstAmount, 12.6); // 18% of commission 60 + tech fee 10
     assert.strictEqual(split.techFeeAmount, 10);
-    assert.strictEqual(split.totalCompanyDuesZ, 80.8); // 60 + 10.8 + 10
+    assert.strictEqual(split.rideGstAmount, 95.24); // 5% included in the fare, borne by the driver
+    assert.strictEqual(split.totalCompanyDuesZ, 177.84); // 95.24 + 60 + 10 + 12.6
     assert.strictEqual(split.advanceTokenAmount, 200); // 10%
     assert.strictEqual(split.balanceCashDueFromCustomer, 1800); // 2000 - 200
-    assert.strictEqual(split.driverGrossEarnings, 1919.2); // 2000 - 80.8
+    assert.strictEqual(split.driverGrossEarnings, 1822.16); // 2000 - 177.84
 
     // 2. Settlement Verification with Advance Token: Zero-Debt Driver Collection
     const ts = Date.now();
@@ -831,11 +837,12 @@ describe('BiharCabs Operational CRM Core Engine Tests', () => {
 
     const fare = 3000;
     const taxSplit = await calculateRideSplitWithTaxes(fare);
-    // 3% facilitation = 90. 18% GST on 90 = 16.20. Tech fee = 10. Total deduction = 116.20. Advance 10% = 300. Cash due = 2700.
+    // 3% = 90. Tech fee 10. 18% GST on both = 18. Ride GST 5% included = 142.86. Share = 260.86. Advance 300. Cash due 2700.
     assert.strictEqual(taxSplit.platformCommission, 90);
-    assert.strictEqual(taxSplit.gstAmount, 16.2);
+    assert.strictEqual(taxSplit.gstAmount, 18);
     assert.strictEqual(taxSplit.techFeeAmount, 10);
-    assert.strictEqual(taxSplit.totalCompanyDuesZ, 116.2);
+    assert.strictEqual(taxSplit.rideGstAmount, 142.86);
+    assert.strictEqual(taxSplit.totalCompanyDuesZ, 260.86);
     assert.strictEqual(taxSplit.advanceTokenAmount, 300);
     assert.strictEqual(taxSplit.balanceCashDueFromCustomer, 2700);
 
@@ -844,8 +851,8 @@ describe('BiharCabs Operational CRM Core Engine Tests', () => {
         booking_code, customer_id, assigned_driver_id, trip_type, origin_city,
         pickup_address, pickup_date, pickup_time, wp_vehicle_code, customer_total_fare,
         driver_payout_amount, commission_amount, gst_amount, tech_fee_amount, advance_paid, balance_cash_due_from_customer,
-        booking_status, payment_status
-      ) VALUES ($1, $2, $3, 'oneway', 'Patna', 'Airport', CURRENT_DATE, '18:00:00', 'sedan', $4, $5, $6, $7, $8, $9, $10, 'COMPLETED_SETTLED', 'PAID_IN_FULL')
+        booking_status, payment_status, ride_gst_amount
+      ) VALUES ($1, $2, $3, 'oneway', 'Patna', 'Airport', CURRENT_DATE, '18:00:00', 'sedan', $4, $5, $6, $7, $8, $9, $10, 'COMPLETED_SETTLED', 'PAID_IN_FULL', $11)
       RETURNING id`,
       [
         `KPI-TEST-${ts}`,
@@ -858,6 +865,7 @@ describe('BiharCabs Operational CRM Core Engine Tests', () => {
         taxSplit.techFeeAmount,
         taxSplit.advanceTokenAmount,
         taxSplit.balanceCashDueFromCustomer,
+        taxSplit.rideGstAmount,
       ]
     );
     const bookingId = bRes.rows[0].id;
@@ -866,7 +874,7 @@ describe('BiharCabs Operational CRM Core Engine Tests', () => {
     const kpiRes = await query(`
       SELECT
         COALESCE(SUM(b.commission_amount), 0) AS total_commission_revenue,
-        COALESCE(SUM(b.gst_amount), 0) AS total_gst_statutory_collected,
+        COALESCE(SUM(b.gst_amount + b.ride_gst_amount), 0) AS total_gst_statutory_collected,
         COALESCE(SUM(b.tech_fee_amount), 0) AS total_tech_fees_collected,
         COALESCE((SELECT SUM(security_reserve_balance) FROM crm_drivers), 0) AS total_security_reserve_held,
         COALESCE((SELECT SUM(ABS(wallet_balance)) FROM crm_drivers WHERE wallet_balance < 0), 0) AS total_driver_dues_outstanding
@@ -874,8 +882,8 @@ describe('BiharCabs Operational CRM Core Engine Tests', () => {
       WHERE b.id = $1
     `, [bookingId]);
 
-    assert.strictEqual(Number(kpiRes.rows[0].total_commission_revenue), 116.2);
-    assert.strictEqual(Number(kpiRes.rows[0].total_gst_statutory_collected), 16.2);
+    assert.strictEqual(Number(kpiRes.rows[0].total_commission_revenue), 260.86);
+    assert.strictEqual(Number(kpiRes.rows[0].total_gst_statutory_collected), 160.86); // 18 + 142.86
     assert.strictEqual(Number(kpiRes.rows[0].total_tech_fees_collected), 10);
     assert.ok(Number(kpiRes.rows[0].total_security_reserve_held) >= 200);
     assert.ok(Number(kpiRes.rows[0].total_driver_dues_outstanding) >= 150);
@@ -916,14 +924,16 @@ describe('BiharCabs Operational CRM Core Engine Tests', () => {
     assert.strictEqual(freshPolicy.dynamic_credit_limits.standard, 1200.0);
 
     // 4. Verify calculateRideSplitWithTaxes() immediately recalculates on ₹2,000 fare
-    // At 10%: platform commission = 200. GST 18% = 36. Tech fee = 10. Convenience fee = 39. Total company dues Z = 246.00.
+    // At 10%: commission 200, tech fee 10, GST 18% on both = 37.80, ride GST 5% included in the fare = 95.24.
+    // BiharCabs' share = 95.24 + 200 + 10 + 37.80 = 343.04; driver keeps 1656.96.
     const split10 = await calculateRideSplitWithTaxes(2000);
     assert.strictEqual(split10.platformCommission, 200);
-    assert.strictEqual(split10.gstAmount, 36);
     assert.strictEqual(split10.techFeeAmount, 10);
-    assert.strictEqual(split10.convenienceFeeAmount, 39);
-    assert.strictEqual(split10.totalCompanyDuesZ, 246);
-    assert.strictEqual(split10.driverGrossEarnings, 1754);
+    assert.strictEqual(split10.gstAmount, 37.8);
+    assert.strictEqual(split10.rideGstAmount, 95.24);
+    assert.strictEqual(split10.rideTaxableValue, 1904.76);
+    assert.strictEqual(split10.totalCompanyDuesZ, 343.04);
+    assert.strictEqual(split10.driverGrossEarnings, 1656.96);
 
     // 5. Restore original policy
     await updateSetting('revenue_protection_policy', originalPolicy, 'Restored original policy');

@@ -2,7 +2,8 @@ import crypto from 'crypto';
 import { PoolClient } from 'pg';
 import { query, withTransaction } from './db';
 import { cancelPaymentLink, createPaymentLink, fetchPaymentLinkStatus } from './razorpay';
-import { AdvanceCollectionPolicy, getAdminContacts, getAdvanceCollectionPolicy, getCompanyBillingInfo } from './settings';
+import { AdvanceCollectionPolicy, getAdminContacts, getAdvanceCollectionPolicy, getCompanyBillingInfo, getRevenueProtectionPolicy } from './settings';
+import { gstIncluded } from './fare-split';
 import { bookingPickupAt, broadcastRideToDrivers } from './dispatch-engine';
 import { notifyOfferedDrivers } from './dispatch-notify';
 import { sendWhatsAppText } from './whatsapp';
@@ -160,15 +161,22 @@ async function handlePaid(client: PoolClient, event: any, after: AfterCommit): P
   }
 
   const amount = Number(link.amount_paise) / 100;
+  // GST is due on an advance when it is received (18%: rate not determinable at receipt, per CA). The advance
+  // includes it. A consecutive receipt voucher number is recorded for the receipt.
+  const advanceGst = gstIncluded(amount, (await getRevenueProtectionPolicy()).advance_gst_pct);
+  const voucher = await client.query(`SELECT nextval('crm_receipt_voucher_seq') AS n`);
+  const voucherNumber = `RV${financialYearCode(new Date())}${String(voucher.rows[0].n).padStart(6, '0')}`;
   await client.query(
-    `UPDATE crm_payment_links SET status = 'PAID', provider_payment_id = $1, paid_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+    `UPDATE crm_payment_links
+     SET status = 'PAID', provider_payment_id = $1, paid_at = CURRENT_TIMESTAMP, gst_amount = $3, receipt_voucher_number = $4, updated_at = CURRENT_TIMESTAMP
      WHERE id = $2`,
-    [payment.id, link.id]
+    [payment.id, link.id, advanceGst, voucherNumber]
   );
+  await client.query(`UPDATE crm_bookings SET advance_gst_amount = advance_gst_amount + $1 WHERE id = $2`, [advanceGst, b.id]);
   await client.query(
     `INSERT INTO crm_payments_ledger (booking_id, customer_id, transaction_type, direction, payment_channel, amount, reference_id, notes)
      VALUES ($1, $2, 'CUSTOMER_ADVANCE', 'CREDIT', 'RAZORPAY', $3, $4, $5)`,
-    [b.id, b.customer_id, amount, payment.id, `Advance via Razorpay link ${link.provider_link_id}`]
+    [b.id, b.customer_id, amount, payment.id, `Advance via Razorpay link ${link.provider_link_id}; receipt voucher ${voucherNumber}; GST included ₹${advanceGst.toFixed(2)}`]
   );
 
   if (b.booking_status !== 'AWAITING_ADVANCE') {
@@ -360,6 +368,13 @@ export async function waiveBookingAdvance(input: { bookingId: number; adminId: n
   console.info(`[Advance] Advance waived on ${bookingCode} by admin #${input.adminId}`);
   const dispatched = await runAfterCommit(after);
   return { bookingCode, dispatched };
+}
+
+/** Indian financial year (April–March) as "2627" for 2026-27, used in receipt voucher numbers. */
+export function financialYearCode(d: Date): string {
+  const ist = new Date(d.getTime() + 5.5 * 60 * 60 * 1000);
+  const start = ist.getUTCMonth() >= 3 ? ist.getUTCFullYear() : ist.getUTCFullYear() - 1;
+  return `${String(start % 100).padStart(2, '0')}${String((start + 1) % 100).padStart(2, '0')}`;
 }
 
 function checkWaivable(b: any): void {

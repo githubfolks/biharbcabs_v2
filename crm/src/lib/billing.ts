@@ -1,5 +1,6 @@
 import { query, withTransaction } from './db';
-import { getCompanyBillingInfo, getRevenueProtectionPolicy } from './settings';
+import { getCompanyBillingInfo, getRevenueProtectionPolicy, getSplitRules } from './settings';
+import { gstIncluded, round2 } from './fare-split';
 import { PoolClient } from 'pg';
 import PDFDocument from 'pdfkit';
 import fs from 'fs';
@@ -68,7 +69,7 @@ export async function completeTripAndSettle(
     }
     const baseFare = Number(b.customer_total_fare);
     const advancePaid = Number(b.advance_paid || 0);
-    const commission = Number(b.commission_amount || 0);
+    const bookedShare = Number(b.commission_amount || 0);
     const tollParking = Number(input.tollParking || 0);
     const cashCollected = Number(input.cashCollectedByDriver || 0);
 
@@ -84,6 +85,11 @@ export async function completeTripAndSettle(
 
     const extraHourCharges = (input.extraHours || 0) * 150.0;
     const totalCustomerPayable = baseFare + extraKmCharges + extraHourCharges + tollParking;
+
+    // Ride GST is BiharCabs' liability (Sec 9(5)), borne by the driver. The share fixed at booking covers the
+    // quoted fare; the GST included in any extra km/hour charges is added to it here.
+    const splitRules = await getSplitRules();
+    const commission = round2(bookedShare + gstIncluded(extraKmCharges + extraHourCharges, splitRules.ride_fare_gst_pct));
     const balanceCustomerDue = Math.max(0, totalCustomerPayable - advancePaid - cashCollected);
 
     const revPolicy = await getRevenueProtectionPolicy();
@@ -225,17 +231,22 @@ export async function completeTripAndSettle(
     if (extraHourCharges > 0) lineItems.push({ description: 'Extra Hours Charges', amount: extraHourCharges });
     if (tollParking > 0) lineItems.push({ description: 'Toll & Parking (Actuals)', amount: tollParking });
 
+    // BiharCabs' sole customer invoice: line amounts include GST; GST on the ride (fare + extras) is shown
+    // separately. Tolls/parking are passed through at actuals without GST.
+    const invoiceTax = gstIncluded(totalCustomerPayable - tollParking, splitRules.ride_fare_gst_pct);
     await client.query(
       `INSERT INTO crm_invoices
        (invoice_number, booking_id, line_items, subtotal, tax_amount, total_amount, created_at)
-       VALUES ($1, $2, $3, $4, 0.00, $4, CURRENT_TIMESTAMP)
+       VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)
        ON CONFLICT (booking_id) DO UPDATE
        SET invoice_number = EXCLUDED.invoice_number,
            line_items = EXCLUDED.line_items,
            subtotal = EXCLUDED.subtotal,
+           tax_amount = EXCLUDED.tax_amount,
            total_amount = EXCLUDED.total_amount,
            updated_at = CURRENT_TIMESTAMP`,
-      [invoiceNumber, input.bookingId, JSON.stringify(lineItems), totalCustomerPayable]
+      // subtotal = taxable value of the ride (excludes tolls), so subtotal + tax + tolls = total.
+      [invoiceNumber, input.bookingId, JSON.stringify(lineItems), round2(totalCustomerPayable - tollParking - invoiceTax), invoiceTax, totalCustomerPayable]
     );
 
     return {
@@ -338,6 +349,16 @@ export async function generateInvoicePdf(
 
     doc.strokeColor('#cccccc').lineWidth(0.5).moveTo(40, itemY).lineTo(550, itemY).stroke();
     itemY += 10;
+
+    // Tax breakdown (line amounts above include GST)
+    const money = (n: number) => `₹${Number(n).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+    doc.font('Helvetica').fontSize(9);
+    doc.text('Taxable value:', 350, itemY);
+    doc.text(money(inv.subtotal), 480, itemY, { align: 'right' });
+    itemY += 15;
+    doc.text(`GST @ ${Number(company.tax_percentage)}% (included):`, 350, itemY);
+    doc.text(money(inv.tax_amount), 480, itemY, { align: 'right' });
+    itemY += 18;
 
     // Totals
     doc.font('Helvetica-Bold').fontSize(11);

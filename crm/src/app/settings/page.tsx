@@ -419,8 +419,8 @@ export default function SettingsPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-700">Statutory GST on Commission (%)</label>
-                  <p className="text-[10px] text-slate-400 mb-1">18% GST levied on facilitation</p>
+                  <label className="block text-[11px] font-semibold text-slate-700">GST on Commission + Tech Fee (%)</label>
+                  <p className="text-[10px] text-slate-400 mb-1">18% GST on commission + tech fee together, added on top (per CA)</p>
                   <input
                     type="number"
                     step="0.5"

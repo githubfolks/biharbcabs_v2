@@ -3,17 +3,11 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert';
 import { applyReturnDiscount, checkReturnTripPolicy, companyAbsorbsDiscount, returnDiscountAmount } from '../lib/return-trip-pricing';
 import { formatPickup, parsePickupTime, pickupMoment } from '../lib/pickup-time';
+import { splitFare } from '../lib/fare-split';
 
 // Sample figures for checking arithmetic only; they are not BiharCabs settings.
-const rules = { gst_on_commission_pct: 18, advance_token_percentage: 10, min_advance_amount: 200 };
-function split(fare: number) {
-  const platformCommission = Math.round(fare * 0.03);
-  const gstAmount = Math.round(platformCommission * 18) / 100;
-  const techFeeAmount = 10;
-  const totalCompanyDuesZ = Math.round((platformCommission + gstAmount + techFeeAmount) * 100) / 100;
-  const advanceTokenAmount = Math.min(fare, Math.max(200, Math.round(fare * 0.1)));
-  return { customerTotalFare: fare, platformCommission, gstAmount, techFeeAmount, totalCompanyDuesZ, advanceTokenAmount, balanceCashDueFromCustomer: fare - advanceTokenAmount, driverGrossEarnings: fare - totalCompanyDuesZ };
-}
+const rules = { platform_commission_pct: 3, gst_on_commission_pct: 18, ride_fare_gst_pct: 5, tech_fee_amount: 10, advance_token_percentage: 10, min_advance_amount: 200 };
+const split = (fare: number) => splitFare(fare, rules);
 const policy = (over: any = {}) => checkReturnTripPolicy({ enabled: true, discount_type: 'PERCENT', discount_value: 10, exclusive_window_minutes: 10, return_status_hours: 6, ...over }).policy;
 
 describe('return trip policy', () => {
@@ -47,17 +41,22 @@ describe('return trip discount', () => {
   });
 
   it('company pays up to its commission and the driver covers the rest', () => {
-    const s = split(3000); // commission 90, GST 16.2, fee 10, driver gross 2883.8
+    // Full fare 3000: ride GST 142.86, commission 90, fee 10, GST on both 18 -> share 260.86, driver 2739.14
+    const s = split(3000);
+    assert.strictEqual(s.totalCompanyDuesZ, 260.86);
     const r = applyReturnDiscount(s, policy(), rules)!;
     assert.strictEqual(r.discountAmount, 300);
     assert.strictEqual(r.companyShare, 90);
     assert.strictEqual(r.split.platformCommission, 0);
-    assert.strictEqual(r.split.gstAmount, 0);
+    assert.strictEqual(r.split.gstAmount, 1.8, 'GST on the tech fee remains');
     assert.strictEqual(r.split.customerTotalFare, 2700);
-    assert.strictEqual(r.split.totalCompanyDuesZ, 10);
-    assert.strictEqual(r.split.driverGrossEarnings, 2690);
-    assert.strictEqual(r.driverShare, 193.8); // 2883.8 - 2690: GST saved on lost commission lowers the driver's share
-    assert.strictEqual(Math.round((r.companyShare + r.driverShare - 16.2) * 100) / 100, 267.6);
+    assert.strictEqual(r.split.rideGstAmount, 128.57, 'ride GST on the discounted fare');
+    assert.strictEqual(r.split.totalCompanyDuesZ, 140.37);
+    assert.strictEqual(r.split.driverGrossEarnings, 2559.63);
+    assert.strictEqual(r.driverShare, 179.51);
+    // The discount is covered by BiharCabs' commission, the driver, and the GST that falls with the fare.
+    const taxSaved = (s.gstAmount - r.split.gstAmount) + (s.rideGstAmount - r.split.rideGstAmount);
+    assert.strictEqual(Math.round((r.companyShare + r.driverShare + taxSaved) * 100) / 100, 300);
   });
 
   it('a small discount comes entirely from company commission', () => {
@@ -65,8 +64,8 @@ describe('return trip discount', () => {
     const r = applyReturnDiscount(s, policy({ discount_type: 'FLAT', discount_value: 50 }), rules)!;
     assert.strictEqual(r.companyShare, 50);
     assert.strictEqual(r.split.platformCommission, 40);
-    assert.strictEqual(r.split.gstAmount, 7.2);
-    assert.ok(r.driverShare < 0, 'driver gains slightly because GST falls with the commission');
+    assert.strictEqual(r.split.gstAmount, 9, '18% of commission 40 + fee 10');
+    assert.ok(r.driverShare < 0, 'driver gains slightly because GST falls with the commission and the fare');
   });
 
   it('customer pays exactly the discounted fare, and money adds up', () => {

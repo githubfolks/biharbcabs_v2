@@ -209,3 +209,18 @@ Apply `crm-design/14_trip_start_otp.sql` before deploying. Tests drive the real 
 ```bash
 DATABASE_URL=postgresql://localhost/biharcabs_crm_test npx tsx --test src/tests/trip-otp.integration.ts
 ```
+
+## GST (per BiharCabs' CA)
+
+- **Ride fare:** BiharCabs is liable under CGST Sec 9(5) for GST on the full fare, at `company_billing_info.tax_percentage` (5%). Quoted fares include it, and the **driver bears it**: it is part of BiharCabs' share of each ride (owner decision).
+- **Commission + ₹10 tech fee** charged to the driver: 18% GST on both together, **added on top** (`gst_on_commission_pct`). The ₹10 fee becomes ₹11.80.
+- **BiharCabs' share** = ride GST + commission + tech fee + 18% GST on (commission + tech fee). The formula is in `src/lib/fare-split.ts` and is used by every booking and by return-trip discounts. On a ₹2,500 ride at 3%: 119.05 + 75 + 10 + 15.30 = ₹219.35, and the driver keeps ₹2,280.65.
+- **Customer invoice** (BiharCabs is the sole issuer): shows the taxable value and the GST included. Extra km/hour charges carry ride GST, which is added to the driver's share at settlement. Tolls/parking are passed through without GST.
+- **Customer advance:** 18% GST is due when it is received (`advance_gst_pct`; the rate is not determinable at receipt, per CA). It is recorded on the payment link and booking, with a consecutive receipt voucher number (`RV<FY><serial>`).
+- **Invalid or missing GST rates stop pricing** with an error; a rate never silently falls back to 0%.
+
+Apply `crm-design/15_gst_on_rides_and_advances.sql` before deploying. Bookings created earlier keep their amounts (driver did not bear ride GST on those). Tests:
+```bash
+npx tsx --test src/tests/fare-split.test.ts
+DATABASE_URL=postgresql://localhost/biharcabs_crm_test npx tsx --test src/tests/trip-otp.integration.ts
+```

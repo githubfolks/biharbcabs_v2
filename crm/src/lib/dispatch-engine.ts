@@ -5,10 +5,12 @@ import {
   getDriverRatingPolicy,
   getRevenueProtectionPolicy,
   getReturnTripPolicy,
+  getSplitRules,
 } from './settings';
 import { PoolClient } from 'pg';
 import { settleReturnDiscountFunding } from './return-trips';
 import { issueStartOtp } from './trip-otp';
+import { FareSplit, splitFare } from './fare-split';
 
 export interface DispatchCandidate {
   driver_id: number;
@@ -45,49 +47,11 @@ export interface BookingDetails {
   assigned_driver_id?: number;
 }
 
-export interface RideSplitCalculation {
-  customerTotalFare: number;
-  platformCommission: number;
-  gstAmount: number;
-  techFeeAmount: number;
-  convenienceFeeAmount: number;
-  totalCompanyDuesZ: number;
-  advanceTokenAmount: number;
-  balanceCashDueFromCustomer: number;
-  driverGrossEarnings: number;
-}
+export type RideSplitCalculation = FareSplit;
 
-/**
- * Mathematically compute platform commission, 18% GST on commission, tech fee,
- * customer convenience fee, and universal advance token according to dynamic crm_settings.
- */
+/** Split a fare with the current settings (see fare-split.ts for the GST treatment). */
 export async function calculateRideSplitWithTaxes(customerTotalFare: number): Promise<RideSplitCalculation> {
-  const policy = await getRevenueProtectionPolicy();
-
-  const platformCommission = Math.round((customerTotalFare * policy.platform_commission_pct) / 100);
-  const gstAmount = parseFloat(((platformCommission * policy.gst_on_commission_pct) / 100).toFixed(2));
-  const techFeeAmount = Number(policy.tech_fee_amount || 10);
-  const convenienceFeeAmount = Number(policy.customer_convenience_fee || 0);
-  const totalCompanyDuesZ = parseFloat((platformCommission + gstAmount + techFeeAmount).toFixed(2));
-
-  // Compute advance token (minimum ₹200, capped at total fare)
-  const calculatedAdvance = Math.round((customerTotalFare * policy.advance_token_percentage) / 100);
-  const advanceTokenAmount = Math.min(customerTotalFare, Math.max(policy.min_advance_amount, calculatedAdvance));
-
-  const balanceCashDueFromCustomer = Math.max(0, customerTotalFare - advanceTokenAmount);
-  const driverGrossEarnings = customerTotalFare - totalCompanyDuesZ;
-
-  return {
-    customerTotalFare,
-    platformCommission,
-    gstAmount,
-    techFeeAmount,
-    convenienceFeeAmount,
-    totalCompanyDuesZ,
-    advanceTokenAmount,
-    balanceCashDueFromCustomer,
-    driverGrossEarnings,
-  };
+  return splitFare(customerTotalFare, await getSplitRules());
 }
 
 /**

@@ -13,6 +13,8 @@ import { query, getDbPool } from '../lib/db';
 import { processIncomingWhatsAppMessage } from '../lib/whatsapp-bot';
 import { getTripOtpPolicy } from '../lib/trip-otp';
 import { calculateRideSplitWithTaxes } from '../lib/dispatch-engine';
+import { completeTripAndSettle } from '../lib/billing';
+import { getAllSettings, updateSetting } from '../lib/settings';
 
 const dbName = new URL(process.env.DATABASE_URL || 'postgresql://x/none').pathname.slice(1);
 if (!dbName.endsWith('_test')) throw new Error(`Refusing to run: ${dbName} is not a _test database.`);
@@ -223,5 +225,48 @@ describe('cash settlement at trip completion (bot)', () => {
     await send(d.phone, { buttonId: `complete_trip_${b.id}` });
     assert.strictEqual((await booking(b.id)).booking_status, 'DRIVER_ASSIGNED');
     assert.ok((await lastTextTo(d.phone)).includes('cannot be completed'));
+  });
+});
+
+describe('GST at settlement (CA rules)', () => {
+  it('the customer invoice shows the ride GST included in the fare', async () => {
+    const d = await driver();
+    const b = await offeredBooking(d.id, 250);
+    const otp = await acceptAndAskToStart(d, b);
+    await send(d.phone, { text: otp });
+    await send(d.phone, { buttonId: `complete_trip_${b.id}` });
+    const inv = (await query(`SELECT subtotal, tax_amount, total_amount FROM crm_invoices WHERE booking_id = $1`, [b.id])).rows[0];
+    const pct = Number((await query(`SELECT setting_value->>'tax_percentage' AS p FROM crm_settings WHERE setting_key = 'company_billing_info'`)).rows[0].p);
+    const tax = Math.round((2500 * pct / (100 + pct)) * 100) / 100;
+    assert.strictEqual(Number(inv.tax_amount), tax);
+    assert.strictEqual(Number(inv.total_amount), 2500);
+    assert.strictEqual(Math.round((Number(inv.subtotal) + Number(inv.tax_amount)) * 100) / 100, 2500);
+  });
+
+  it('GST inside extra charges is added to the driver share; tolls are passed through without GST', async () => {
+    const d = await driver();
+    const b = await offeredBooking(d.id, 0);
+    const otp = await acceptAndAskToStart(d, b);
+    await send(d.phone, { text: otp });
+    // Settle with 1 extra hour and a toll, as finance can from the ledger screen.
+    const result = await completeTripAndSettle({ bookingId: b.id, cashCollectedByDriver: 0, extraHours: 1, tollParking: 100 });
+    const pct = Number((await query(`SELECT setting_value->>'tax_percentage' AS p FROM crm_settings WHERE setting_key = 'company_billing_info'`)).rows[0].p);
+    const extraGst = Math.round((result.extraHourCharges * pct / (100 + pct)) * 100) / 100;
+    assert.ok(result.extraHourCharges > 0);
+    assert.strictEqual(result.companyCommission, Math.round((b.share + extraGst) * 100) / 100);
+    const inv = (await query(`SELECT subtotal, tax_amount, total_amount FROM crm_invoices WHERE booking_id = $1`, [b.id])).rows[0];
+    const rideAndExtras = 2500 + result.extraHourCharges;
+    assert.strictEqual(Number(inv.tax_amount), Math.round((rideAndExtras * pct / (100 + pct)) * 100) / 100);
+    assert.strictEqual(Math.round((Number(inv.subtotal) + Number(inv.tax_amount) + 100) * 100) / 100, Number(inv.total_amount), 'taxable + GST + toll = total');
+  });
+
+  it('pricing refuses to run without a valid ride GST rate (never silently 0%)', async () => {
+    const original = (await getAllSettings(true)).company_billing_info;
+    try {
+      await updateSetting('company_billing_info', { ...original, tax_percentage: null });
+      await assert.rejects(() => calculateRideSplitWithTaxes(2500), /GST rates are missing or invalid/);
+    } finally {
+      await updateSetting('company_billing_info', original);
+    }
   });
 });
