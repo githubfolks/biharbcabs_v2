@@ -14,7 +14,15 @@ import {
   findEligibleDrivers,
 } from './dispatch-engine';
 import { completeTripAndSettle } from './billing';
-import { getAdminContacts, getWhatsAppIntents, getRevenueProtectionPolicy, getReturnTripPolicy } from './settings';
+import {
+  getAdminContacts,
+  getWhatsAppIntents,
+  getRevenueProtectionPolicy,
+  getReturnTripPolicy,
+  getAdvanceCollectionPolicy,
+  getCompanyBillingInfo,
+} from './settings';
+import { PaymentMode, isAdvanceRequired, requestAdvancePayment, advanceLinkMessage } from './advance-payments';
 import { applyReturnDiscount } from './return-trip-pricing';
 import { endDriverReturn, startDriverReturn } from './return-trips';
 import { notifyOfferedDrivers } from './dispatch-notify';
@@ -807,98 +815,48 @@ export async function processIncomingWhatsAppMessage(params: {
     return;
   }
 
-  // Step 5: Landmark Given -> Create Booking & Broadcast to Drivers!
+  // Step 5: Landmark given. Rides that must pay the advance online get a payment link straight away;
+  // other rides let the customer choose between the online advance and full cash to the driver.
   if (conv.state === 'AWAITING_LANDMARK') {
-    const pickupAddress = rawText.trim();
-    const ctx = conv.context_data;
-    const origin = ctx.origin;
-    const destination = ctx.destination;
-    const fullFare = Number(ctx.total_fare);
-    const vehicleCode = ctx.selected_vehicle;
-    if (!origin || !destination || !vehicleCode || !(fullFare > 0) || !ctx.pickup_date || !ctx.pickup_time || !pickupAddress) {
+    const ctx: Record<string, any> = { ...conv.context_data, pickup_address: rawText.trim() };
+    if (!hasBookingDetails(ctx)) {
       await resetConversation(fromPhone);
       await sendWhatsAppText(fromPhone, 'Sorry, some booking details were missing. Please reply *HI* to start again.');
       return;
     }
 
-    // 1. Upsert Customer
-    const custRes = await query(
-      `INSERT INTO crm_customers (phone, full_name, created_at, updated_at)
-       VALUES ($1, $2, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-       ON CONFLICT (phone) DO UPDATE
-       SET full_name = COALESCE(crm_customers.full_name, EXCLUDED.full_name)
-       RETURNING id`,
-      [fromPhone, customerName || 'Valued Customer']
-    );
-    const customerId = custRes.rows[0].id;
-
-    // 2. Fare split on the full fare, then the return-trip discount if one was offered.
-    //    The discount is recalculated here from current settings, never taken from the conversation.
-    const fullSplit = await calculateRideSplitWithTaxes(fullFare);
-    let split = fullSplit;
-    let discount = { amount: 0, company: 0, driver: 0 };
-    if (ctx.return_offers?.[vehicleCode]) {
-      const { policy, active } = await getReturnTripPolicy();
-      const applied = active ? applyReturnDiscount(fullSplit, policy, await getRevenueProtectionPolicy()) : null;
-      if (applied) {
-        split = { ...fullSplit, ...applied.split };
-        discount = { amount: applied.discountAmount, company: applied.companyShare, driver: applied.driverShare };
-      }
+    const { split } = await priceBooking(ctx);
+    const policy = await getAdvanceCollectionPolicy();
+    if (isAdvanceRequired(policy, ctx.trip_type || 'oneway', split.customerTotalFare)) {
+      await createCustomerBooking(fromPhone, customerName, ctx, 'ADVANCE_ONLINE');
+      return;
     }
-    const totalFare = split.customerTotalFare;
 
-    // 3. Create Booking
-    const codeNum = Math.floor(1000 + Math.random() * 9000);
-    const bookingCode = `BC-${codeNum}`;
-
-    const bookRes = await query(
-      `INSERT INTO crm_bookings (
-        booking_code, customer_id, trip_type, origin_city, destination_city,
-        pickup_address, drop_address, pickup_date, pickup_time, wp_vehicle_code,
-        distance_km, customer_total_fare, driver_payout_amount, commission_amount,
-        advance_paid, gst_amount, tech_fee_amount, balance_cash_due_from_customer,
-        fare_before_discount, return_discount_amount, return_discount_company_share, return_discount_driver_share,
-        booking_status
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, 'AWAITING_DRIVER')
-      RETURNING id, booking_code`,
-      [
-        bookingCode,
-        customerId,
-        ctx.trip_type || 'oneway',
-        origin,
-        destination,
-        pickupAddress,
-        destination,
-        ctx.pickup_date,
-        ctx.pickup_time,
-        vehicleCode,
-        Number(ctx.distance_km) || 0,
-        totalFare,
-        split.driverGrossEarnings,
-        split.totalCompanyDuesZ,
-        split.advanceTokenAmount,
-        split.gstAmount,
-        split.techFeeAmount,
-        split.balanceCashDueFromCustomer,
-        discount.amount > 0 ? fullFare : null,
-        discount.amount,
-        discount.company,
-        discount.driver,
-      ]
-    );
-
-    const bookingId = bookRes.rows[0].id;
-
-    // 4. Broadcast: returning drivers first when discounted, then regular drivers
-    const broadcast = await broadcastRideToDrivers(bookingId);
-    await notifyOfferedDrivers(bookingId, broadcast);
-
-    await resetConversation(fromPhone);
-
-    await sendWhatsAppText(
+    await updateConversation(fromPhone, 'AWAITING_PAYMENT_CHOICE', ctx);
+    await sendWhatsAppButtons(
       fromPhone,
-      `🎉 Booking Scheduled (#${bookingCode})!\nRoute: ${origin} → ${destination}\nPickup: ${formatPickup(new Date(ctx.pickup_at))}\nPickup Address: ${pickupAddress}\nVehicle: ${vehicleCode.toUpperCase()}\nTotal Fare: ₹${totalFare.toLocaleString('en-IN')}${discount.amount > 0 ? ` (₹${discount.amount.toLocaleString('en-IN')} return-trip discount applied)` : ''}\nAdvance Token: ₹${split.advanceTokenAmount.toLocaleString('en-IN')} (Secured via UPI)\nBalance Payable to Driver at Drop: ₹${split.balanceCashDueFromCustomer.toLocaleString('en-IN')}\n\nOur system is currently assigning your verified driver. You will receive driver contact and cab registration number shortly!`
+      `Total fare: ₹${split.customerTotalFare.toLocaleString('en-IN')}.\nHow would you like to pay?\n\n• Pay ₹${split.advanceTokenAmount.toLocaleString('en-IN')} advance online now, rest in cash to the driver\n• Pay the full fare in cash to the driver`,
+      [
+        { id: 'pay_mode_online', title: `Pay ₹${split.advanceTokenAmount.toLocaleString('en-IN')} advance` },
+        { id: 'pay_mode_cash', title: 'Full cash to driver' },
+      ],
+      'BiharCabs Payment'
     );
+    return;
+  }
+
+  // Step 6: Payment choice for rides where the online advance is optional
+  if (conv.state === 'AWAITING_PAYMENT_CHOICE') {
+    if (buttonId !== 'pay_mode_online' && buttonId !== 'pay_mode_cash') {
+      await sendWhatsAppText(fromPhone, 'Please tap one of the payment buttons above, or reply *HI* to start again.');
+      return;
+    }
+    if (!hasBookingDetails(conv.context_data)) {
+      await resetConversation(fromPhone);
+      await sendWhatsAppText(fromPhone, 'Sorry, some booking details were missing. Please reply *HI* to start again.');
+      return;
+    }
+    await createCustomerBooking(fromPhone, customerName, conv.context_data, buttonId === 'pay_mode_online' ? 'ADVANCE_ONLINE' : 'FULL_CASH');
     return;
   }
 
@@ -907,5 +865,136 @@ export async function processIncomingWhatsAppMessage(params: {
     fromPhone,
     intents?.fallback_message ||
       `Namaste! For instant cab booking, please reply with "HI" or send your pickup and drop city (e.g. "Patna to Darbhanga tomorrow").\n\nFor 24/7 customer support, call +91 7070992170.`
+  );
+}
+
+function hasBookingDetails(ctx: Record<string, any>): boolean {
+  return Boolean(
+    ctx.origin && ctx.destination && ctx.selected_vehicle && Number(ctx.total_fare) > 0 &&
+    ctx.pickup_date && ctx.pickup_time && ctx.pickup_address
+  );
+}
+
+/**
+ * Fare split on the full fare, then the return-trip discount if one was offered.
+ * The discount is recalculated from current settings, never taken from the conversation.
+ */
+async function priceBooking(ctx: Record<string, any>) {
+  const fullFare = Number(ctx.total_fare);
+  const fullSplit = await calculateRideSplitWithTaxes(fullFare);
+  let split = fullSplit;
+  let discount = { amount: 0, company: 0, driver: 0 };
+  if (ctx.return_offers?.[ctx.selected_vehicle]) {
+    const { policy, active } = await getReturnTripPolicy();
+    const applied = active ? applyReturnDiscount(fullSplit, policy, await getRevenueProtectionPolicy()) : null;
+    if (applied) {
+      split = { ...fullSplit, ...applied.split };
+      discount = { amount: applied.discountAmount, company: applied.companyShare, driver: applied.driverShare };
+    }
+  }
+  return { fullFare, split, discount };
+}
+
+/**
+ * Create the customer's booking. With the online advance it waits in AWAITING_ADVANCE and the
+ * customer gets a Razorpay link; drivers see it only after the payment webhook confirms it.
+ * With full cash it goes to drivers now. advance_paid stays 0 until money is actually received.
+ */
+async function createCustomerBooking(
+  fromPhone: string,
+  customerName: string | undefined,
+  ctx: Record<string, any>,
+  requestedMode: PaymentMode
+): Promise<void> {
+  const custRes = await query(
+    `INSERT INTO crm_customers (phone, full_name, created_at, updated_at)
+     VALUES ($1, $2, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+     ON CONFLICT (phone) DO UPDATE
+     SET full_name = COALESCE(crm_customers.full_name, EXCLUDED.full_name)
+     RETURNING id`,
+    [fromPhone, customerName || 'Valued Customer']
+  );
+  const customerId = custRes.rows[0].id;
+
+  const { fullFare, split, discount } = await priceBooking(ctx);
+  const totalFare = split.customerTotalFare;
+  const tripType = ctx.trip_type || 'oneway';
+
+  // The server decides: a ride that needs the advance online cannot be switched to cash.
+  const policy = await getAdvanceCollectionPolicy();
+  const mode: PaymentMode = isAdvanceRequired(policy, tripType, totalFare) ? 'ADVANCE_ONLINE' : requestedMode;
+  const online = mode === 'ADVANCE_ONLINE';
+  const advanceDue = online ? split.advanceTokenAmount : 0;
+  const balanceDue = Math.max(0, totalFare - advanceDue);
+
+  const bookingCode = `BC-${Math.floor(1000 + Math.random() * 9000)}`;
+  const bookRes = await query(
+    `INSERT INTO crm_bookings (
+      booking_code, customer_id, trip_type, origin_city, destination_city,
+      pickup_address, drop_address, pickup_date, pickup_time, wp_vehicle_code,
+      distance_km, customer_total_fare, driver_payout_amount, commission_amount,
+      advance_paid, gst_amount, tech_fee_amount, balance_cash_due_from_customer,
+      fare_before_discount, return_discount_amount, return_discount_company_share, return_discount_driver_share,
+      payment_mode, advance_due_amount, advance_status, booking_status
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, 0, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25)
+    RETURNING id, booking_code`,
+    [
+      bookingCode,
+      customerId,
+      tripType,
+      ctx.origin,
+      ctx.destination,
+      ctx.pickup_address,
+      ctx.destination,
+      ctx.pickup_date,
+      ctx.pickup_time,
+      ctx.selected_vehicle,
+      Number(ctx.distance_km) || 0,
+      totalFare,
+      split.driverGrossEarnings,
+      split.totalCompanyDuesZ,
+      split.gstAmount,
+      split.techFeeAmount,
+      balanceDue,
+      discount.amount > 0 ? fullFare : null,
+      discount.amount,
+      discount.company,
+      discount.driver,
+      mode,
+      advanceDue,
+      online ? 'PENDING' : 'NOT_REQUIRED',
+      online ? 'AWAITING_ADVANCE' : 'AWAITING_DRIVER',
+    ]
+  );
+  const bookingId = Number(bookRes.rows[0].id);
+  await resetConversation(fromPhone);
+
+  const summary =
+    `Booking #${bookingCode}\nRoute: ${ctx.origin} → ${ctx.destination}\nPickup: ${formatPickup(new Date(ctx.pickup_at))}\n` +
+    `Pickup Address: ${ctx.pickup_address}\nVehicle: ${String(ctx.selected_vehicle).toUpperCase()}\n` +
+    `Total Fare: ₹${totalFare.toLocaleString('en-IN')}${discount.amount > 0 ? ` (₹${discount.amount.toLocaleString('en-IN')} return-trip discount applied)` : ''}`;
+
+  if (online) {
+    try {
+      const request = await requestAdvancePayment(bookingId);
+      await sendWhatsAppText(fromPhone, `${summary}\n\n${await advanceLinkMessage(bookingCode, request, balanceDue)}`);
+    } catch (err: any) {
+      console.error(`[Bot] Payment link failed for booking ${bookingCode}:`, err?.message);
+      const company = await getCompanyBillingInfo().catch(() => null);
+      await sendWhatsAppText(
+        fromPhone,
+        `${summary}\n\nSorry, we could not create your payment link right now, so this booking is not confirmed yet. ` +
+          `Our team can see it and will contact you${company?.phone ? `, or call ${company.phone}` : ''}.`
+      );
+    }
+    return;
+  }
+
+  // Full cash: drivers see it now (returning drivers first when discounted).
+  const broadcast = await broadcastRideToDrivers(bookingId);
+  await notifyOfferedDrivers(bookingId, broadcast);
+  await sendWhatsAppText(
+    fromPhone,
+    `🎉 ${summary}\nPayment: full fare ₹${totalFare.toLocaleString('en-IN')} in cash to the driver at drop.\n\nWe are assigning your verified driver. You will receive driver contact and cab registration number shortly!`
   );
 }

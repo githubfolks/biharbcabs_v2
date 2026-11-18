@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireAdmin } from '@/lib/auth';
 import { getDriverRatingProfile, disputeRating } from '@/lib/ratings';
-import { validateSession } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -8,6 +8,8 @@ export async function GET(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  const auth = await requireAdmin(req, 'ratings.view');
+  if (auth instanceof NextResponse) return auth;
   try {
     const driverId = parseInt(params.id, 10);
     if (isNaN(driverId)) {
@@ -29,6 +31,8 @@ export async function POST(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  const auth = await requireAdmin(req, 'ratings.dispute');
+  if (auth instanceof NextResponse) return auth;
   try {
     const driverId = parseInt(params.id, 10);
     if (isNaN(driverId)) {
@@ -46,15 +50,8 @@ export async function POST(
         );
       }
 
-      // Extract admin user from session cookie if available
-      const token = req.cookies.get('biharcabs_crm_session')?.value;
-      let adminId = 1;
-      if (token) {
-        const session = await validateSession(token);
-        if (session) adminId = session.id;
-      }
-
-      const result = await disputeRating(ratingId, adminId, notes);
+      // Recorded against the signed-in admin (validated by requireAdmin above).
+      const result = await disputeRating(ratingId, auth.id, notes);
       return NextResponse.json(result);
     }
 

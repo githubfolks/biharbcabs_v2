@@ -11,6 +11,7 @@ export function middleware(req: NextRequest) {
     pathname.startsWith('/_next') ||
     pathname.startsWith('/api/auth') ||
     pathname.startsWith('/api/whatsapp/webhook') ||
+    pathname === '/api/payments/razorpay/webhook' ||
     pathname.startsWith('/api/dispatch/cron') ||
     pathname === '/login' ||
     pathname === '/favicon.ico'
@@ -21,7 +22,12 @@ export function middleware(req: NextRequest) {
   // Check for session cookie
   const sessionToken = req.cookies.get(SESSION_COOKIE_NAME)?.value;
 
+  // Only presence is checked here: this runs without database access. Every admin API route also
+  // validates the session itself with requireAdmin() from src/lib/auth.ts.
   if (!sessionToken) {
+    if (pathname.startsWith('/api/')) {
+      return NextResponse.json({ success: false, error: 'Not signed in' }, { status: 401 });
+    }
     const loginUrl = new URL('/login', req.url);
     loginUrl.searchParams.set('redirect', pathname);
     return NextResponse.redirect(loginUrl);

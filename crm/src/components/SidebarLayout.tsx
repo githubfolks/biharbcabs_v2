@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import { 
   Car, MessageSquare, Users, Wallet, Sliders, LogOut, User, Database, ChevronRight 
 } from 'lucide-react';
+import { Permission, hasPermission } from '@/lib/permissions';
 
 interface SidebarLayoutProps {
   children: React.ReactNode;
@@ -44,12 +45,13 @@ export default function SidebarLayout({ children }: SidebarLayoutProps) {
     return <main className="min-h-screen bg-slate-50">{children}</main>;
   }
 
-  const navItems = [
+  const allNavItems: { href: string; label: string; icon: typeof Car; badge?: string; active: boolean; permission: Permission }[] = [
     {
       href: '/',
       label: 'Live Dispatch',
       icon: Car,
       active: pathname === '/',
+      permission: 'bookings.view',
     },
     {
       href: '/inbox',
@@ -57,26 +59,32 @@ export default function SidebarLayout({ children }: SidebarLayoutProps) {
       icon: MessageSquare,
       badge: 'Live',
       active: pathname.startsWith('/inbox'),
+      permission: 'inbox.use',
     },
     {
       href: '/drivers',
       label: 'Drivers & Fleet',
       icon: Users,
       active: pathname.startsWith('/drivers'),
+      permission: 'drivers.view',
     },
     {
       href: '/finance',
       label: 'Finance & Ledger',
       icon: Wallet,
       active: pathname.startsWith('/finance'),
+      permission: 'ledger.view',
     },
     {
       href: '/settings',
       label: 'System Settings',
       icon: Sliders,
       active: pathname.startsWith('/settings'),
+      permission: 'settings.view',
     },
   ];
+  // Hide pages the role cannot use (the API enforces the same rules). Nothing shows until the user loads.
+  const navItems = allNavItems.filter((item) => user && hasPermission(user.role, item.permission));
 
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden font-sans">

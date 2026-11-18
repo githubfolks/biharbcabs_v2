@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { awardDriverIncentive } from '@/lib/billing';
-import { getCurrentAdmin } from '@/lib/auth';
+import { requireAdmin } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -8,13 +8,10 @@ export async function POST(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  const auth = await requireAdmin(req, 'incentives.award');
+  if (auth instanceof NextResponse) return auth;
+  const admin = auth;
   try {
-    const admin = await getCurrentAdmin();
-
-    if (!admin) {
-      return NextResponse.json({ success: false, error: 'Unauthorized admin access' }, { status: 401 });
-    }
-
     const driverId = parseInt(params.id, 10);
     if (isNaN(driverId)) {
       return NextResponse.json({ success: false, error: 'Invalid driver ID' }, { status: 400 });

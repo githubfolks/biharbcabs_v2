@@ -1,6 +1,8 @@
 import crypto from 'crypto';
 import { query } from './db';
 import { cookies } from 'next/headers';
+import { NextRequest, NextResponse } from 'next/server';
+import { Permission, hasPermission } from './permissions';
 
 export interface AdminUser {
   id: number;
@@ -107,6 +109,30 @@ export async function getCurrentAdmin(): Promise<AdminUser | null> {
   } catch {
     return null;
   }
+}
+
+/**
+ * Guard for admin API routes. The middleware only checks that a session cookie is present (it runs
+ * where the database is not available), so every admin route must call this to validate the session.
+ *
+ *   const auth = await requireAdmin(req, 'settings.change');
+ *   if (auth instanceof NextResponse) return auth;
+ *   const admin = auth;
+ *
+ * 401 unless the session is valid, unexpired and the admin is active; 403 if the admin's role lacks
+ * the permission (see src/lib/permissions.ts).
+ */
+export async function requireAdmin(req: NextRequest, permission: Permission): Promise<AdminUser | NextResponse> {
+  const token = req.cookies.get(SESSION_COOKIE_NAME)?.value;
+  const admin = token ? await validateSession(token).catch(() => null) : null;
+  if (!admin) {
+    return NextResponse.json({ success: false, error: 'Not signed in' }, { status: 401 });
+  }
+  if (!hasPermission(admin.role, permission)) {
+    console.warn(`[Auth] Admin #${admin.id} (${admin.role}) denied ${permission}`);
+    return NextResponse.json({ success: false, error: 'Your role does not allow this action' }, { status: 403 });
+  }
+  return admin;
 }
 
 export { SESSION_COOKIE_NAME };

@@ -284,6 +284,34 @@ export async function getRevenueProtectionPolicy(): Promise<RevenueProtectionPol
 
 
 
+export interface AdvanceCollectionPolicy {
+  /** Trip types that always need the advance paid online before drivers see the ride. */
+  required_trip_types: string[];
+  /** Any ride at or above this fare needs the advance online. null: no fare rule. */
+  required_above_fare: number | null;
+  /** Minutes the customer has to pay; Razorpay requires at least 15. */
+  payment_window_minutes: number;
+}
+
+/**
+ * Advance collection rules, validated. Missing or invalid settings fail safe: every ride needs
+ * the advance online, so a configuration mistake never sends unpaid rides to drivers.
+ */
+export async function getAdvanceCollectionPolicy(): Promise<AdvanceCollectionPolicy> {
+  const raw = await getSetting<any>('advance_collection_policy', {});
+  const types = Array.isArray(raw.required_trip_types)
+    ? raw.required_trip_types.filter((t: unknown) => typeof t === 'string').map((t: string) => t.toLowerCase())
+    : null;
+  const fare = raw.required_above_fare === null ? null : Number(raw.required_above_fare);
+  const windowMins = Number(raw.payment_window_minutes);
+  const valid = types !== null && (fare === null || (Number.isFinite(fare) && fare >= 0)) && Number.isInteger(windowMins) && windowMins >= 15;
+  if (!valid) {
+    console.error('[Settings] advance_collection_policy is missing or invalid; requiring the advance online for every ride.');
+    return { required_trip_types: [], required_above_fare: 0, payment_window_minutes: 30 };
+  }
+  return { required_trip_types: types, required_above_fare: fare, payment_window_minutes: windowMins };
+}
+
 /** Return-trip priority and discount settings, validated: incomplete or invalid settings leave the feature off. */
 export async function getReturnTripPolicy(): Promise<ReturnTripPolicyCheck> {
   const raw = await getSetting<any>('return_trip_policy', {});

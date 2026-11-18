@@ -121,3 +121,49 @@ Apply `crm-design/09_webhook_events.sql` before deploying this code; without the
 DATABASE_URL=postgresql://localhost/biharcabs_crm_test npx tsx --test src/tests/security.integration.ts
 ```
 
+
+## Customer advance (Razorpay Payment Links)
+
+`crm_bookings.advance_paid` holds only money that Razorpay has confirmed. A booking that needs the advance waits in `AWAITING_ADVANCE`, and drivers see it only after a signed `payment_link.paid` webhook confirms the exact amount was captured in INR.
+
+- **Which rides need it:** `advance_collection_policy` in `crm_settings` (trip types, a fare threshold, and the payment window in minutes, at least 15). On other rides the WhatsApp customer chooses between the online advance and full cash to the driver. If the policy is missing or invalid, every ride needs the advance.
+- **Admin bookings** send `advance_mode`: `PAYMENT_LINK`, `FULL_CASH` (refused where the advance is required), or `WAIVED` (needs a reason; the admin id and reason are saved on the booking). The route now requires a valid admin session.
+- **Statuses:** `AWAITING_ADVANCE` → `CONFIRMED_AWAITING_DRIVER` → normal dispatch. Unpaid links end in `ADVANCE_EXPIRED`. If Razorpay cannot create the link, the booking becomes `ADVANCE_LINK_FAILED`. None of these can be broadcast or force-assigned. A payment that does not match is marked `REVIEW_REQUIRED` on `crm_payment_links`, and admins get a WhatsApp alert. Money received after a booking closed is recorded as `PAID_AFTER_CLOSE`, for staff to reinstate the booking or refund.
+- **Webhook:** `POST /api/payments/razorpay/webhook`. Subscribe to `payment_link.paid`, `payment_link.expired` and `payment_link.cancelled`. The HMAC is checked on the raw body before parsing, each `x-razorpay-event-id` is processed once, and the event claim and payment update commit together, so a failed attempt is retried by Razorpay.
+- **Configuration:** `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET` (see `.env.example`). Until the webhook secret is set, webhook calls get 503.
+
+Apply `crm-design/11_advance_collection.sql` before deploying. Existing bookings keep their values; rows that already carry an `advance_paid` (never actually collected) are marked `advance_status = 'LEGACY_UNVERIFIED'` for staff review. Tests use a disposable `_test` database with migrations 08 to 11:
+```bash
+DATABASE_URL=postgresql://localhost/biharcabs_crm_test npx tsx --test src/tests/advance-payments.integration.ts
+```
+
+## Admin API authorization
+
+The middleware runs without database access, so it only checks that a session cookie is present. Without one, API calls get 401 JSON and pages redirect to `/login`. **Every admin API route validates the session itself** at the start of each handler:
+
+```ts
+const auth = await requireAdmin(req, 'ledger.settle');  // src/lib/auth.ts
+if (auth instanceof NextResponse) return auth;          // 401: no valid, unexpired session of an active admin; 403: role lacks the permission
+```
+
+Role permissions are defined once in `src/lib/permissions.ts`. The API enforces them, and the sidebar uses the same map only to hide pages a role cannot use. Unknown roles get nothing.
+
+| Area | SUPER_ADMIN | DISPATCHER | FINANCE_MANAGER |
+|---|---|---|---|
+| Bookings: view | ✓ | ✓ | ✓ |
+| Bookings: create · dispatch / force-assign | ✓ | ✓ | |
+| Waive a customer advance | ✓ | | ✓ |
+| Drivers and ratings: view | ✓ | ✓ | ✓ |
+| Drivers: add / edit · ratings: dispute | ✓ | ✓ | |
+| Incentives · finance ledger · settle trip | ✓ | | ✓ |
+| Settings: view (secrets masked) | ✓ | ✓ | ✓ |
+| Settings: change | ✓ | | |
+| WhatsApp inbox / send | ✓ | ✓ | |
+| Price quote | ✓ | ✓ | ✓ |
+
+**Secrets in settings** (`meta_whatsapp_config.access_token`, `meta_whatsapp_config.webhook_verify_token`, `biharcabs_wp_api.api_key`; listed in `src/lib/settings-secrets.ts`) are never returned: a set value shows as `********`. Saving a setting with `********`, or without the field, keeps the stored secret; sending a new value replaces it.
+
+Routes that are public on purpose, each with its own authentication: `auth/login`, `auth/logout`, `auth/me`, `whatsapp/webhook` (Meta signature), `payments/razorpay/webhook` (Razorpay signature), `dispatch/cron` and `dispatch/cron/daily` (`CRON_SECRET`). A test scans every `route.ts` and fails if any other handler lacks `requireAdmin(req, <permission>)`. It also calls every route as each role and checks the result against the table:
+```bash
+DATABASE_URL=postgresql://localhost/biharcabs_crm_test npx tsx --test src/tests/admin-auth.integration.ts
+```

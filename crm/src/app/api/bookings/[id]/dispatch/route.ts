@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { broadcastRideToDrivers, acceptRideOffer } from '@/lib/dispatch-engine';
+import { requireAdmin } from '@/lib/auth';
+import { broadcastRideToDrivers, acceptRideOffer, assertAdvanceSettled } from '@/lib/dispatch-engine';
 import { query, withTransaction } from '@/lib/db';
 import { settleReturnDiscountFunding } from '@/lib/return-trips';
 
@@ -7,6 +8,8 @@ export async function POST(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  const auth = await requireAdmin(req, 'dispatch.manage');
+  if (auth instanceof NextResponse) return auth;
   try {
     const bookingId = parseInt(params.id, 10);
     const body = await req.json();
@@ -43,6 +46,7 @@ export async function POST(
       await withTransaction(async (client) => {
         // Lock the booking, then apply the return-trip funding rule before assigning.
         const locked = await client.query('SELECT * FROM crm_bookings WHERE id = $1 FOR UPDATE', [bookingId]);
+        assertAdvanceSettled(locked.rows[0]);
         await settleReturnDiscountFunding(client, locked.rows[0], Number(driver_id));
         await client.query(
           `UPDATE crm_bookings
