@@ -223,6 +223,8 @@ export interface RevenueProtectionPolicyConfig {
   reserve_deduction_per_trip: number;
   streak_bonus_target_trips: number;
   streak_bonus_amount: number;
+  /** Trips below this fare do not count toward the streak bonus; null or invalid: no bonus is paid. */
+  streak_min_fare: number | null;
   /** GST on a customer advance when received (18%: rate not determinable at receipt, per CA). */
   advance_gst_pct: number;
 }
@@ -262,6 +264,7 @@ export async function getRevenueProtectionPolicy(): Promise<RevenueProtectionPol
     reserve_deduction_per_trip: Number(raw.reserve_deduction_per_trip ?? 100.0),
     streak_bonus_target_trips: Number(raw.streak_bonus_target_trips ?? 5),
     streak_bonus_amount: Number(raw.streak_bonus_amount ?? 150.0),
+    streak_min_fare: Number.isFinite(Number(raw.streak_min_fare)) && Number(raw.streak_min_fare) > 0 ? Number(raw.streak_min_fare) : null,
     advance_gst_pct: Number(raw.advance_gst_pct ?? 18.0),
   };
 }

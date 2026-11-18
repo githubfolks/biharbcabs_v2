@@ -714,8 +714,8 @@ describe('BiharCabs Operational CRM Core Engine Tests', () => {
 
     // 1. Create Driver with 4 completed trips, negative balance of -₹120, and ₹0 reserve
     const dRes = await query(
-      `INSERT INTO crm_drivers (full_name, phone, whatsapp_phone, base_city, onboarding_status, rating, total_trips_completed, wallet_balance, security_reserve_balance, is_available)
-       VALUES ('Incentive Test Driver', $1, $1, 'Patna', 'APPROVED_ACTIVE', 4.8, 4, -120.00, 0.00, true)
+      `INSERT INTO crm_drivers (full_name, phone, whatsapp_phone, base_city, onboarding_status, rating, total_trips_completed, streak_qualifying_trips, wallet_balance, security_reserve_balance, is_available)
+       VALUES ('Incentive Test Driver', $1, $1, 'Patna', 'APPROVED_ACTIVE', 4.8, 4, 4, -120.00, 0.00, true)
        RETURNING id`,
       [dPhone]
     );

@@ -335,3 +335,16 @@ Apply `crm-design/20_staff_booking_fares.sql` before deploying. Tests:
 ```bash
 DATABASE_URL=postgresql://localhost/biharcabs_crm_test npx tsx --test src/tests/staff-fare.integration.ts
 ```
+
+## Ride streak bonus
+
+`streak_bonus_amount` (₹150) is paid on every `streak_bonus_target_trips`-th (5th) **qualifying** trip.
+
+- **Qualifying trip:** a completed trip whose booked fare is at least `revenue_protection_policy.streak_min_fare` (₹700, just above break-even, so five qualifying trips always earn BiharCabs at least the bonus).
+- **Two counters:** qualifying trips have their own counter (`crm_drivers.streak_qualifying_trips`), so small trips neither count toward the streak nor complete it. `total_trips_completed` still counts every trip, for credit tiers.
+- **Missing setting:** if `streak_min_fare` is missing or invalid, no bonus is paid.
+
+Apply `crm-design/21_streak_bonus_min_fare.sql`; counters start at 0 for every driver. Tests:
+```bash
+DATABASE_URL=postgresql://localhost/biharcabs_crm_test npx tsx --test src/tests/streak-bonus.integration.ts
+```

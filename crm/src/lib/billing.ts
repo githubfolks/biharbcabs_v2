@@ -49,7 +49,7 @@ export async function completeTripAndSettle(
     // 1. Fetch booking with row lock
     const bookingRes = await client.query(
       `SELECT b.*, d.wallet_balance AS driver_wallet, d.full_name AS driver_name,
-              d.security_reserve_balance, d.total_trips_completed, d.onboarding_status,
+              d.security_reserve_balance, d.total_trips_completed, d.streak_qualifying_trips, d.onboarding_status,
               c.full_name AS customer_name, c.phone AS customer_phone, c.email AS customer_email
        FROM crm_bookings b
        JOIN crm_drivers d ON d.id = b.assigned_driver_id
@@ -107,12 +107,18 @@ export async function completeTripAndSettle(
     }
     const newReserveBalance = parseFloat((currentReserve + reserveDeduction).toFixed(2));
 
-    // Ride Streak Milestone Bonus (e.g. every 5th trip awards ₹150)
-    const currentTrips = Number(b.total_trips_completed || 0);
-    const newTrips = currentTrips + 1;
+    // Every trip counts toward the driver's tier.
+    const newTrips = Number(b.total_trips_completed || 0) + 1;
+
+    // Ride streak bonus: only trips with a fare of at least streak_min_fare count, on their own counter,
+    // so small trips cannot be booked just to farm it. Without a valid minimum no bonus is paid.
+    const minFare = revPolicy.streak_min_fare;
+    if (minFare === null) console.error('[Billing] streak_min_fare is not set; no streak bonus is paid.');
+    const qualifies = minFare !== null && baseFare >= minFare;
+    const newQualifyingTrips = Number(b.streak_qualifying_trips || 0) + (qualifies ? 1 : 0);
     let streakBonus = 0;
-    if (revPolicy.streak_bonus_target_trips > 0 && newTrips % revPolicy.streak_bonus_target_trips === 0) {
-      streakBonus = Number(revPolicy.streak_bonus_amount || 150);
+    if (qualifies && revPolicy.streak_bonus_target_trips > 0 && newQualifyingTrips % revPolicy.streak_bonus_target_trips === 0) {
+      streakBonus = Number(revPolicy.streak_bonus_amount);
     }
 
     // BiharCabs Bidirectional Commission Formula with Reserve & Streak Bonus:
@@ -147,9 +153,10 @@ export async function completeTripAndSettle(
            is_available = true,
            onboarding_status = $3,
            total_trips_completed = $4,
+           streak_qualifying_trips = $6,
            updated_at = CURRENT_TIMESTAMP
        WHERE id = $5`,
-      [newDriverWalletBalance, newReserveBalance, newStatus, newTrips, b.assigned_driver_id]
+      [newDriverWalletBalance, newReserveBalance, newStatus, newTrips, b.assigned_driver_id, newQualifyingTrips]
     );
 
     // Update Booking Status
