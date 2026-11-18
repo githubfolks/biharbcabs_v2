@@ -23,6 +23,7 @@ export default function DispatchBoard() {
   const [waiving, setWaiving] = useState(false);
   const canWaive = hasPermission(role, 'bookings.waive_advance');
   const canCancel = hasPermission(role, 'bookings.cancel');
+  const canOverrideFare = hasPermission(role, 'bookings.override_fare');
 
   // Cancelling a booking (staff): who is at fault decides the refund; the outcome is shown before confirming.
   const [cancelTarget, setCancelTarget] = useState<any | null>(null);
@@ -123,7 +124,9 @@ export default function DispatchBoard() {
     trip_type: 'oneway',
     wp_vehicle_code: 'sedan',
     distance_km: 145,
-    customer_total_fare: 2499,
+    // Empty: the server uses the rate-card fare. A different fare needs the super admin and a reason.
+    customer_total_fare: '' as string | number,
+    fare_override_reason: '',
     auto_broadcast: true,
     advance_mode: 'PAYMENT_LINK',
     advance_waiver_reason: '',
@@ -596,14 +599,28 @@ export default function DispatchBoard() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700">Total Customer Fare (₹)</label>
+                  <label className="block text-xs font-semibold text-slate-700">Fare (₹)</label>
                   <input
                     type="number"
-                    required
+                    min="1"
+                    placeholder="Rate card"
+                    disabled={!canOverrideFare}
                     value={newBooking.customer_total_fare}
-                    onChange={(e) => setNewBooking({ ...newBooking, customer_total_fare: Number(e.target.value) })}
-                    className="w-full mt-1 px-3 py-1.5 border rounded-md text-sm"
+                    onChange={(e) => setNewBooking({ ...newBooking, customer_total_fare: e.target.value === '' ? '' : Number(e.target.value) })}
+                    className="w-full mt-1 px-3 py-1.5 border rounded-md text-sm disabled:bg-slate-50"
                   />
+                  <p className="text-[10px] text-slate-500 mt-0.5">
+                    {canOverrideFare ? 'Leave empty for the rate-card fare.' : 'Priced from the rate card. Only the super admin can set a different fare.'}
+                  </p>
+                  {canOverrideFare && newBooking.customer_total_fare !== '' && (
+                    <input
+                      minLength={10}
+                      placeholder="Why a different fare? (recorded)"
+                      value={newBooking.fare_override_reason}
+                      onChange={(e) => setNewBooking({ ...newBooking, fare_override_reason: e.target.value })}
+                      className="w-full mt-1 px-3 py-1.5 border rounded-md text-sm"
+                    />
+                  )}
                 </div>
                 <div className="flex items-center pt-5">
                   <label className="flex items-center space-x-2 text-xs font-semibold text-slate-700 cursor-pointer">

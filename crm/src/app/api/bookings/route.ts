@@ -9,6 +9,7 @@ import { sendWhatsAppText } from '@/lib/whatsapp';
 import { notify } from '@/lib/wa-notify';
 import { notifyOfferedDrivers } from '@/lib/dispatch-notify';
 import { insertWithBookingCode } from '@/lib/booking-code';
+import { FareError, resolveStaffFare } from '@/lib/staff-fare';
 
 export const dynamic = 'force-dynamic';
 
@@ -78,6 +79,7 @@ export async function POST(req: NextRequest) {
       auto_broadcast,
       advance_mode,
       advance_waiver_reason,
+      fare_override_reason,
     } = body;
 
     if (!customer_phone || !origin_city || !pickup_date || !pickup_time || !wp_vehicle_code) {
@@ -105,10 +107,26 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
-    const fareInput = Number(customer_total_fare || 0);
-    if (!(fareInput > 0)) {
-      return NextResponse.json({ success: false, error: 'customer_total_fare must be greater than 0' }, { status: 400 });
+    // The fare comes from the rate card, not the request; only the super admin may book a different one.
+    let priced;
+    try {
+      priced = await resolveStaffFare({
+        originCity: origin_city,
+        destinationCity: destination_city,
+        tripType: trip_type || 'oneway',
+        pickupDate: pickup_date,
+        pickupTime: pickup_time,
+        vehicleCode: wp_vehicle_code,
+        requestedFare: customer_total_fare,
+        overrideReason: fare_override_reason,
+        requestedDistanceKm: distance_km,
+        role: admin.role,
+      });
+    } catch (err: any) {
+      if (err instanceof FareError) return NextResponse.json({ success: false, error: err.message }, { status: err.status });
+      throw err;
     }
+    const fareInput = priced.fare;
     const advancePolicy = await getAdvanceCollectionPolicy();
     const required = isAdvanceRequired(advancePolicy, trip_type || 'oneway', fareInput);
     if (mode === 'FULL_CASH' && required) {
@@ -134,6 +152,9 @@ export async function POST(req: NextRequest) {
     // 2. Calculate dynamic commission, statutory GST, tech fee, advance token and driver payout
     const fare = fareInput;
     const taxSplit = await calculateRideSplitWithTaxes(fare);
+    if (!(taxSplit.driverGrossEarnings > 0)) {
+      return NextResponse.json({ success: false, error: 'This fare does not cover BiharCabs\' share and GST; the driver would earn nothing.' }, { status: 400 });
+    }
 
     // advance_paid stays 0 until Razorpay confirms the money; a link booking waits for it.
     const viaLink = mode === 'PAYMENT_LINK';
@@ -152,8 +173,9 @@ export async function POST(req: NextRequest) {
         distance_km, customer_total_fare, driver_payout_amount, commission_amount,
         gst_amount, tech_fee_amount, advance_paid, balance_cash_due_from_customer,
         booking_status, payment_status, payment_mode, advance_due_amount, advance_status,
-        advance_waived_by, advance_waiver_reason, ride_gst_amount, platform_commission_amount, created_at, updated_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, 0, $17, $18, 'PENDING', $19, $20, $21, $22, $23, $24, $25, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        advance_waived_by, advance_waiver_reason, ride_gst_amount, platform_commission_amount,
+        fare_source, rate_card_fare, fare_override_by, fare_override_reason, created_at, updated_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, 0, $17, $18, 'PENDING', $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
       RETURNING *`,
       [
         bookingCode,
@@ -166,7 +188,7 @@ export async function POST(req: NextRequest) {
         pickup_date,
         pickup_time,
         wp_vehicle_code,
-        distance_km || 0,
+        priced.distanceKm,
         fare,
         taxSplit.driverGrossEarnings,
         taxSplit.totalCompanyDuesZ,
@@ -181,6 +203,10 @@ export async function POST(req: NextRequest) {
         mode === 'WAIVED' ? waiverReason : null,
         taxSplit.rideGstAmount,
         taxSplit.platformCommission,
+        priced.source,
+        priced.rateCardFare,
+        priced.source === 'OVERRIDE' ? admin.id : null,
+        priced.overrideReason,
       ]
     ));
     const bookingCode: string = bookRes.rows[0].booking_code;

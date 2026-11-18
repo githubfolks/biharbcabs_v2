@@ -322,3 +322,16 @@ All are numbered consecutively from database sequences (`src/lib/gst-documents.t
 - **Kept advance on a late cancellation:** a taxable cancellation charge. It is recorded in `crm_cancellation_charges` at once, linked to its receipt voucher. Its tax document (`CC…`, GST included in the kept amount) is issued **only once `cancellation_policy.cancellation_charge_gst_pct` is set**. It is empty until the CA confirms the rate, then the waiting documents are issued at the next cancellation or by the daily job. Finance → Refunds shows how many are waiting. An invalid rate stops these documents but not the other daily jobs.
 
 Apply `crm-design/19_refund_vouchers_cancellation_charges.sql` before deploying.
+
+## Staff booking fares
+
+Bookings created by staff (`POST /api/bookings`) are priced on the server from the **same WordPress rate card the WhatsApp bot uses** (`src/lib/staff-fare.ts`), for the route and cab type. The distance also comes from the rate card. The fare sent by the form is not trusted.
+
+- **Dispatchers** book at the rate-card fare. Leaving the fare empty, or typing the rate-card fare, are both fine. A different fare is refused (403). If the route isn't priced (`NO_TARIFF` / `OUT_OF_SERVICE_AREA`) or the rate card can't be reached, the dispatcher is told to ask the super admin (409).
+- **The super admin** (`bookings.override_fare`) may book a different fare for an unlisted route or a negotiated price, with a reason. The booking keeps `fare_source = OVERRIDE`, the rate-card fare (if any), who changed it and why.
+- **Any fare** that leaves the driver nothing after BiharCabs' share and GST is refused.
+
+Apply `crm-design/20_staff_booking_fares.sql` before deploying. Tests:
+```bash
+DATABASE_URL=postgresql://localhost/biharcabs_crm_test npx tsx --test src/tests/staff-fare.integration.ts
+```
