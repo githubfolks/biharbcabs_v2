@@ -19,6 +19,65 @@ export default function FinancePage() {
   const [loading, setLoading] = useState(true);
   const [typeFilter, setTypeFilter] = useState('ALL');
 
+  // Drivers BiharCabs owes money to, and the payout being recorded
+  const [owedDrivers, setOwedDrivers] = useState<any[]>([]);
+  const [owedError, setOwedError] = useState<string | null>(null);
+  const [payoutDriver, setPayoutDriver] = useState<any | null>(null);
+  const [payoutForm, setPayoutForm] = useState({ amount: '', channel: 'UPI', reference: '', notes: '' });
+  const [payoutError, setPayoutError] = useState<string | null>(null);
+  const [savingPayout, setSavingPayout] = useState(false);
+
+  async function loadOwedDrivers() {
+    try {
+      const res = await fetch('/api/finance/payouts');
+      const data = await res.json();
+      if (data.success) {
+        setOwedDrivers(data.drivers);
+        setOwedError(null);
+      } else {
+        setOwedError(data.error || 'Could not load drivers owed money');
+      }
+    } catch {
+      setOwedError('Could not load drivers owed money');
+    }
+  }
+
+  function openPayout(driver: any) {
+    setPayoutDriver(driver);
+    setPayoutForm({ amount: String(driver.wallet_balance), channel: 'UPI', reference: '', notes: '' });
+    setPayoutError(null);
+  }
+
+  async function handleRecordPayout(e: React.FormEvent) {
+    e.preventDefault();
+    if (!payoutDriver) return;
+    setSavingPayout(true);
+    setPayoutError(null);
+    try {
+      const res = await fetch('/api/finance/payouts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ driverId: payoutDriver.id, ...payoutForm, amount: Number(payoutForm.amount) }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setPayoutDriver(null);
+        loadOwedDrivers();
+        loadFinance(typeFilter);
+      } else {
+        setPayoutError(data.error || 'Payout not recorded');
+      }
+    } catch {
+      setPayoutError('Payout not recorded: network error');
+    } finally {
+      setSavingPayout(false);
+    }
+  }
+
+  useEffect(() => {
+    loadOwedDrivers();
+  }, []);
+
   async function loadFinance(filter = typeFilter) {
     setLoading(true);
     try {
@@ -135,12 +194,64 @@ export default function FinancePage() {
         </div>
       </div>
 
+      {/* Drivers BiharCabs owes money to */}
+      <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
+        <div className="px-4 py-3 border-b bg-slate-50">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700">
+            Drivers Owed Money ({owedDrivers.length})
+          </h3>
+        </div>
+        {owedError ? (
+          <div className="px-4 py-3 text-sm text-rose-600">{owedError}</div>
+        ) : owedDrivers.length === 0 ? (
+          <div className="px-4 py-3 text-sm text-slate-500">BiharCabs owes no driver money right now.</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
+              <thead className="bg-slate-50 text-slate-600 text-xs font-semibold uppercase">
+                <tr>
+                  <th className="px-4 py-2">Driver</th>
+                  <th className="px-4 py-2">Owed</th>
+                  <th className="px-4 py-2">Last payout</th>
+                  <th className="px-4 py-2"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {owedDrivers.map((d) => (
+                  <tr key={d.id}>
+                    <td className="px-4 py-2">
+                      <div className="font-medium text-slate-900">{d.full_name}</div>
+                      <div className="text-xs text-slate-500">{d.phone}</div>
+                    </td>
+                    <td className="px-4 py-2 font-semibold text-emerald-700">
+                      ₹{Number(d.wallet_balance).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                    </td>
+                    <td className="px-4 py-2 text-xs text-slate-500">
+                      {d.last_payout_at ? new Date(d.last_payout_at).toLocaleString('en-IN') : 'Never'}
+                    </td>
+                    <td className="px-4 py-2 text-right">
+                      <button
+                        onClick={() => openPayout(d)}
+                        className="px-3 py-1.5 rounded-md text-xs font-semibold bg-slate-900 text-white hover:bg-slate-700"
+                      >
+                        Record payout
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
       {/* Filter Tabs */}
       <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 pb-3">
         {[
           { id: 'ALL', label: 'All Transactions' },
-          { id: 'COMMISSION_DEDUCTION', label: 'Commission Deductions' },
-          { id: 'PAYOUT_SETTLEMENT', label: 'Driver Payouts' },
+          { id: 'DRIVER_COMMISSION_DEDUCTION', label: 'Commission Deductions' },
+          { id: 'DRIVER_PAYOUT', label: 'Owed to Drivers (Trips)' },
+          { id: 'DRIVER_PAYOUT_SENT', label: 'Payouts Sent' },
           { id: 'SECURITY_RESERVE_DEPOSIT', label: 'Security Reserve Floats' },
           { id: 'INCENTIVE_STREAK_BONUS', label: 'Ride Streak Bonuses' },
           { id: 'INCENTIVE_BONUS', label: 'Promotional Bonuses' },
@@ -243,6 +354,83 @@ export default function FinancePage() {
           </table>
         </div>
       </div>
+
+      {/* Record Payout Modal */}
+      {payoutDriver && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <form onSubmit={handleRecordPayout} className="bg-white rounded-lg shadow-xl w-full max-w-md p-5 space-y-3">
+            <h3 className="text-base font-bold text-slate-900">Record payout to {payoutDriver.full_name}</h3>
+            <p className="text-xs text-slate-500">
+              BiharCabs owes ₹{Number(payoutDriver.wallet_balance).toLocaleString('en-IN', { minimumFractionDigits: 2 })}.
+              Record only money already sent. The driver is notified on WhatsApp.
+            </p>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700">Amount paid (₹)</label>
+              <input
+                type="number"
+                required
+                min="0.01"
+                step="0.01"
+                max={payoutDriver.wallet_balance}
+                value={payoutForm.amount}
+                onChange={(e) => setPayoutForm({ ...payoutForm, amount: e.target.value })}
+                className="w-full mt-1 px-3 py-1.5 border rounded-md text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700">Paid by</label>
+              <select
+                value={payoutForm.channel}
+                onChange={(e) => setPayoutForm({ ...payoutForm, channel: e.target.value })}
+                className="w-full mt-1 px-3 py-1.5 border rounded-md text-sm"
+              >
+                <option value="UPI">UPI</option>
+                <option value="BANK_TRANSFER">Bank transfer</option>
+                <option value="CASH">Cash</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700">
+                {payoutForm.channel === 'CASH' ? 'Receipt number' : 'Transaction reference (UTR)'}
+              </label>
+              <input
+                required
+                minLength={6}
+                maxLength={100}
+                value={payoutForm.reference}
+                onChange={(e) => setPayoutForm({ ...payoutForm, reference: e.target.value })}
+                className="w-full mt-1 px-3 py-1.5 border rounded-md text-sm font-mono"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700">Notes (optional)</label>
+              <input
+                maxLength={500}
+                value={payoutForm.notes}
+                onChange={(e) => setPayoutForm({ ...payoutForm, notes: e.target.value })}
+                className="w-full mt-1 px-3 py-1.5 border rounded-md text-sm"
+              />
+            </div>
+            {payoutError && <div className="text-sm text-rose-600">{payoutError}</div>}
+            <div className="flex justify-end space-x-2 pt-2 border-t">
+              <button
+                type="button"
+                onClick={() => setPayoutDriver(null)}
+                className="px-4 py-2 border rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={savingPayout}
+                className="px-4 py-2 rounded-md text-sm font-semibold bg-orange-600 text-white hover:bg-orange-700 disabled:opacity-50"
+              >
+                {savingPayout ? 'Recording…' : 'Record payout'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,0 +1,48 @@
+sequenceDiagram
+    autonumber
+    actor Driver as Driver (WA)
+    participant CRM as CRM Plans & Billing
+    participant RZP as Razorpay
+    actor Customer as Customer (WA)
+
+    Note over Driver,CRM: Buying a plan (Local / Outstation / Premium)
+    Driver->>CRM: Sends "PLANS"
+    alt Unpaid dues on wallet
+        CRM->>Driver: "Clear dues of ₹X first" + pay link
+    else No dues
+        CRM->>Driver: Plan list (price incl. GST, rides covered)
+        Driver->>CRM: Picks a plan
+        CRM->>RZP: Create Payment Link (purpose = PLAN)
+        CRM->>Driver: Payment link
+        Driver->>RZP: Pays
+        RZP->>CRM: payment_link.paid (signed webhook)
+        CRM->>CRM: Plan ACTIVE, balance = price paid
+        CRM->>Driver: "Plan active. Balance ₹X"
+    end
+
+    Note over CRM,Customer: Dispatch
+    CRM->>CRM: Full-cash outstation ride = PLAN-ONLY<br/>Other rides = OPEN (plan drivers + commission drivers within credit limit)
+    CRM->>CRM: Plan driver eligible only if plan ACTIVE, covers trip type & fare,<br/>and free balance ≥ ride share not covered by advance
+    CRM->>Driver: Ride offer (Premium plans first)
+    Driver->>CRM: Accepts
+    CRM->>CRM: Lock billing model = PLAN<br/>Reserve uncovered share on plan
+
+    Note over Driver,CRM: Trip completion
+    Driver->>CRM: Complete Trip (cash collected)
+    CRM->>CRM: share = commission + GST + tech fee<br/>from_advance = min(share, advance held)<br/>from_plan = share − from_advance (deduct reservation)<br/>owed to driver = advance held − from_advance
+    CRM->>Driver: "Trip settled. ₹Y from plan. Balance ₹Z"
+    alt Balance below alert level
+        CRM->>Driver: Low-balance warning + buy link
+    end
+    alt Balance reaches ₹0
+        CRM->>CRM: Plan EXHAUSTED
+        CRM->>Driver: "Plan finished. Buy a new plan to get plan-only rides"
+        CRM->>CRM: Driver falls back to commission model:<br/>OPEN rides only, within credit limit
+    end
+
+    Note over Driver,CRM: Upgrade (e.g. Local → Premium)
+    Driver->>CRM: Buys higher plan
+    CRM->>CRM: New plan balance = price paid + remaining balance carried over
+
+    Note over Driver,CRM: Suspension (documents, rating, dues)
+    CRM->>CRM: Plan PAUSED (no rides, balance kept)<br/>Back to ACTIVE when reinstated

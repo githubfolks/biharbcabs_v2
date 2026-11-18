@@ -6,11 +6,9 @@ import {
   getSetting,
   updateSetting,
   getDispatchSlaTimeoutMinutes,
-  getCommissionConfig,
   getRevenueProtectionPolicy,
 } from '../lib/settings';
 import {
-  calculateFareSplit,
   calculateRideSplitWithTaxes,
   findEligibleDrivers,
   acceptRideOffer,
@@ -65,10 +63,15 @@ describe('BiharCabs Operational CRM Core Engine Tests', () => {
   });
 
   it('3. Commission Engine: Dynamically calculates fare split & commission', async () => {
-    const split = await calculateFareSplit(3000);
-    // 12% of 3000 = 360, Driver = 2640
-    assert.strictEqual(split.commissionAmount, 360);
-    assert.strictEqual(split.driverPayoutAmount, 2640);
+    // The split bookings use: commission from revenue_protection_policy, GST on it, plus the tech fee.
+    const policy = await getRevenueProtectionPolicy();
+    const split = await calculateRideSplitWithTaxes(3000);
+    const commission = Math.round((3000 * policy.platform_commission_pct) / 100);
+    const gst = parseFloat(((commission * policy.gst_on_commission_pct) / 100).toFixed(2));
+    assert.strictEqual(split.platformCommission, commission);
+    assert.strictEqual(split.gstAmount, gst);
+    assert.strictEqual(split.totalCompanyDuesZ, parseFloat((commission + gst + policy.tech_fee_amount).toFixed(2)));
+    assert.strictEqual(split.driverGrossEarnings, 3000 - split.totalCompanyDuesZ);
   });
 
   it('4. Tariff Bridge: Fails gracefully without generating synthetic data when WP is unreachable', async () => {

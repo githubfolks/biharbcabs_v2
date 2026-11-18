@@ -167,3 +167,18 @@ Routes that are public on purpose, each with its own authentication: `auth/login
 ```bash
 DATABASE_URL=postgresql://localhost/biharcabs_crm_test npx tsx --test src/tests/admin-auth.integration.ts
 ```
+
+## Driver payouts
+
+A positive `crm_drivers.wallet_balance` is money BiharCabs owes the driver, e.g. when the customer's advance was more than BiharCabs' share of the ride. Finance records each payment on **Finance → Drivers Owed Money → Record payout**, or `POST /api/finance/payouts` with `{ driverId, amount, channel: UPI | BANK_TRANSFER | CASH, reference, notes? }`. Permission: `payouts.record` (SUPER_ADMIN, FINANCE_MANAGER).
+
+- A payout writes a `DRIVER_PAYOUT_SENT` ledger entry (`recorded_by` = the admin) and lowers the wallet in the same transaction. The driver is told on WhatsApp.
+- It can never exceed what is owed; concurrent payouts are serialised on the driver row.
+- The same reference (UTR, bank reference or cash receipt number) can be recorded only once per channel.
+
+Apply `crm-design/12_driver_payouts.sql` before deploying. Tests:
+```bash
+DATABASE_URL=postgresql://localhost/biharcabs_crm_test npx tsx --test src/tests/payouts.integration.ts
+```
+
+**Commission setting:** bookings take commission from `revenue_protection_policy.platform_commission_pct` (Settings → "Platform Facilitation / Take-Rate"). The old `commission_model` and `driver_max_negative_balance_limit` settings were not used by any booking, dispatch or billing code, so their fields were removed from Settings. Credit limits are the tiered `dynamic_credit_limits`. The old rows remain in `crm_settings`, unused.

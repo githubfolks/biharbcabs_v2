@@ -9,12 +9,6 @@ interface CacheEntry {
 let settingsCache: CacheEntry | null = null;
 const CACHE_TTL_MS = 60 * 1000; // 1 minute in-memory cache
 
-export interface CommissionModelConfig {
-  type: 'PERCENTAGE' | 'FIXED_MARGIN';
-  percentage?: number;
-  fixed_margin?: number;
-}
-
 export interface MetaWhatsAppConfig {
   api_version: string;
   phone_number_id: string;
@@ -143,19 +137,6 @@ export async function getDispatchSlaTimeoutMinutes(): Promise<number> {
 
 export async function getDriverWakeupCheckHours(): Promise<number> {
   const setting = await getSetting<{ value: number }>('driver_wakeup_check_hours_before', { value: 2 });
-  return setting.value;
-}
-
-export async function getCommissionConfig(): Promise<CommissionModelConfig> {
-  return getSetting<CommissionModelConfig>('commission_model', {
-    type: 'PERCENTAGE',
-    percentage: 12.0,
-    fixed_margin: 300,
-  });
-}
-
-export async function getDriverMaxNegativeBalance(): Promise<number> {
-  const setting = await getSetting<{ value: number }>('driver_max_negative_balance_limit', { value: 1500.0 });
   return setting.value;
 }
 
