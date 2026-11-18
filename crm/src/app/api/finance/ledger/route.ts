@@ -36,7 +36,7 @@ export async function GET(req: NextRequest) {
     const kpiRes = await query(`
       SELECT
         COALESCE(SUM(b.commission_amount), 0) AS total_commission_revenue,
-        COALESCE(SUM(b.gst_amount), 0) AS total_gst_statutory_collected,
+        COALESCE(SUM(b.gst_amount + b.ride_gst_amount), 0) AS total_gst_statutory_collected,
         COALESCE(SUM(b.tech_fee_amount), 0) AS total_tech_fees_collected,
         COALESCE((SELECT SUM(security_reserve_balance) FROM crm_drivers), 0) AS total_security_reserve_held,
         COALESCE((SELECT SUM(ABS(wallet_balance)) FROM crm_drivers WHERE wallet_balance < 0), 0) AS total_driver_dues_outstanding,

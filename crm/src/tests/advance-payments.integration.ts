@@ -283,6 +283,20 @@ describe('Razorpay webhook', () => {
     assert.strictEqual(ledger.length, 1);
     assert.strictEqual(Number(ledger[0].amount), paise / 100);
     assert.strictEqual(ledger[0].payment_channel, 'RAZORPAY');
+
+    // GST due on receipt of the advance (18%, included), with a consecutive receipt voucher number.
+    const paidLink = await linkFor(bookingId);
+    const expectedGst = Math.round(((paise / 100) * 18 / 118) * 100) / 100;
+    assert.strictEqual(Number(paidLink.gst_amount), expectedGst);
+    assert.strictEqual(Number((await bookingFor(cust)).advance_gst_amount), expectedGst);
+    assert.match(paidLink.receipt_voucher_number, /^RV\d{4}\d{6}$/);
+    assert.ok(ledger[0].notes.includes(paidLink.receipt_voucher_number));
+    const other = phone();
+    await bookViaBot(other, TRIP());
+    const otherLink = await linkFor(Number((await bookingFor(other)).id));
+    await postWebhook(paidEvent(otherLink.provider_link_id, otherLink.amount_paise));
+    const nextVoucher = (await linkFor(Number((await bookingFor(other)).id))).receipt_voucher_number;
+    assert.ok(Number(nextVoucher.slice(-6)) > Number(paidLink.receipt_voucher_number.slice(-6)), 'voucher numbers increase');
     assert.ok((await offersFor(bookingId)) > 0, 'drivers were offered the ride after payment');
 
     // Same event delivered again, and a different event for the same paid link: no second credit.

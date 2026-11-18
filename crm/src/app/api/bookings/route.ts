@@ -152,8 +152,8 @@ export async function POST(req: NextRequest) {
         distance_km, customer_total_fare, driver_payout_amount, commission_amount,
         gst_amount, tech_fee_amount, advance_paid, balance_cash_due_from_customer,
         booking_status, payment_status, payment_mode, advance_due_amount, advance_status,
-        advance_waived_by, advance_waiver_reason, created_at, updated_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, 0, $17, $18, 'PENDING', $19, $20, $21, $22, $23, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        advance_waived_by, advance_waiver_reason, ride_gst_amount, platform_commission_amount, created_at, updated_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, 0, $17, $18, 'PENDING', $19, $20, $21, $22, $23, $24, $25, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
       RETURNING *`,
       [
         bookingCode,
@@ -179,6 +179,8 @@ export async function POST(req: NextRequest) {
         advanceStatus,
         mode === 'WAIVED' ? admin.id : null,
         mode === 'WAIVED' ? waiverReason : null,
+        taxSplit.rideGstAmount,
+        taxSplit.platformCommission,
       ]
     );
 
