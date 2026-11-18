@@ -74,8 +74,59 @@ export default function FinancePage() {
     }
   }
 
+  // Drivers who owe BiharCabs dues, and the payment being recorded
+  const [owingDrivers, setOwingDrivers] = useState<any[]>([]);
+  const [owingError, setOwingError] = useState<string | null>(null);
+  const [duesDriver, setDuesDriver] = useState<any | null>(null);
+  const [duesForm, setDuesForm] = useState({ amount: '', channel: 'UPI', reference: '', notes: '' });
+  const [duesError, setDuesError] = useState<string | null>(null);
+  const [savingDues, setSavingDues] = useState(false);
+
+  async function loadOwingDrivers() {
+    try {
+      const res = await fetch('/api/finance/dues-payments');
+      const data = await res.json();
+      if (data.success) {
+        setOwingDrivers(data.drivers);
+        setOwingError(null);
+      } else {
+        setOwingError(data.error || 'Could not load drivers owing dues');
+      }
+    } catch {
+      setOwingError('Could not load drivers owing dues');
+    }
+  }
+
+  async function handleRecordDues(e: React.FormEvent) {
+    e.preventDefault();
+    if (!duesDriver) return;
+    setSavingDues(true);
+    setDuesError(null);
+    try {
+      const res = await fetch('/api/finance/dues-payments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ driverId: duesDriver.id, ...duesForm, amount: Number(duesForm.amount) }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setDuesDriver(null);
+        loadOwingDrivers();
+        loadOwedDrivers();
+        loadFinance(typeFilter);
+      } else {
+        setDuesError(data.error || 'Payment not recorded');
+      }
+    } catch {
+      setDuesError('Payment not recorded: network error');
+    } finally {
+      setSavingDues(false);
+    }
+  }
+
   useEffect(() => {
     loadOwedDrivers();
+    loadOwingDrivers();
   }, []);
 
   async function loadFinance(filter = typeFilter) {
@@ -245,6 +296,62 @@ export default function FinancePage() {
         )}
       </div>
 
+      {/* Drivers who owe BiharCabs dues */}
+      <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
+        <div className="px-4 py-3 border-b bg-slate-50">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700">
+            Drivers Owing Dues ({owingDrivers.length})
+          </h3>
+          <p className="text-[11px] text-slate-500 mt-0.5">Payments made through the driver&apos;s Razorpay link are recorded automatically. Record UPI to the company VPA, bank transfers and cash here.</p>
+        </div>
+        {owingError ? (
+          <div className="px-4 py-3 text-sm text-rose-600">{owingError}</div>
+        ) : owingDrivers.length === 0 ? (
+          <div className="px-4 py-3 text-sm text-slate-500">No driver owes BiharCabs dues right now.</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
+              <thead className="bg-slate-50 text-slate-600 text-xs font-semibold uppercase">
+                <tr>
+                  <th className="px-4 py-2">Driver</th>
+                  <th className="px-4 py-2">Owes</th>
+                  <th className="px-4 py-2">Credit limit</th>
+                  <th className="px-4 py-2">Status</th>
+                  <th className="px-4 py-2"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {owingDrivers.map((d) => (
+                  <tr key={d.id}>
+                    <td className="px-4 py-2">
+                      <div className="font-medium text-slate-900">{d.full_name}</div>
+                      <div className="text-xs text-slate-500">{d.phone}</div>
+                    </td>
+                    <td className={`px-4 py-2 font-semibold ${d.owed > d.credit_limit ? 'text-rose-700' : 'text-amber-700'}`}>
+                      ₹{Number(d.owed).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                    </td>
+                    <td className="px-4 py-2 text-xs text-slate-600">₹{Number(d.credit_limit).toLocaleString('en-IN')}</td>
+                    <td className="px-4 py-2 text-xs text-slate-600">{String(d.onboarding_status).replace(/_/g, ' ')}</td>
+                    <td className="px-4 py-2 text-right">
+                      <button
+                        onClick={() => {
+                          setDuesDriver(d);
+                          setDuesForm({ amount: String(d.owed), channel: 'UPI', reference: '', notes: '' });
+                          setDuesError(null);
+                        }}
+                        className="px-3 py-1.5 rounded-md text-xs font-semibold bg-slate-900 text-white hover:bg-slate-700"
+                      >
+                        Record payment
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
       {/* Filter Tabs */}
       <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 pb-3">
         {[
@@ -252,6 +359,7 @@ export default function FinancePage() {
           { id: 'DRIVER_COMMISSION_DEDUCTION', label: 'Commission Deductions' },
           { id: 'DRIVER_PAYOUT', label: 'Owed to Drivers (Trips)' },
           { id: 'DRIVER_PAYOUT_SENT', label: 'Payouts Sent' },
+          { id: 'DRIVER_DUES_PAYMENT', label: 'Dues Received' },
           { id: 'SECURITY_RESERVE_DEPOSIT', label: 'Security Reserve Floats' },
           { id: 'INCENTIVE_STREAK_BONUS', label: 'Ride Streak Bonuses' },
           { id: 'INCENTIVE_BONUS', label: 'Promotional Bonuses' },
@@ -354,6 +462,48 @@ export default function FinancePage() {
           </table>
         </div>
       </div>
+
+      {/* Record Dues Payment Modal */}
+      {duesDriver && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <form onSubmit={handleRecordDues} className="bg-white rounded-lg shadow-xl w-full max-w-md p-5 space-y-3">
+            <h3 className="text-base font-bold text-slate-900">Record dues payment from {duesDriver.full_name}</h3>
+            <p className="text-xs text-slate-500">
+              Owes ₹{Number(duesDriver.owed).toLocaleString('en-IN', { minimumFractionDigits: 2 })}. Record only money BiharCabs has received.
+              If the driver is back within their credit limit, their dues restriction is lifted. They are notified on WhatsApp.
+            </p>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700">Amount received (₹)</label>
+              <input type="number" required min="0.01" step="0.01" max={duesDriver.owed} value={duesForm.amount}
+                onChange={(e) => setDuesForm({ ...duesForm, amount: e.target.value })} className="w-full mt-1 px-3 py-1.5 border rounded-md text-sm" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700">Received by</label>
+              <select value={duesForm.channel} onChange={(e) => setDuesForm({ ...duesForm, channel: e.target.value })} className="w-full mt-1 px-3 py-1.5 border rounded-md text-sm">
+                <option value="UPI">UPI (company VPA)</option>
+                <option value="BANK_TRANSFER">Bank transfer</option>
+                <option value="CASH">Cash</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700">{duesForm.channel === 'CASH' ? 'Receipt number' : 'Transaction reference (UTR)'}</label>
+              <input required minLength={6} maxLength={100} value={duesForm.reference}
+                onChange={(e) => setDuesForm({ ...duesForm, reference: e.target.value })} className="w-full mt-1 px-3 py-1.5 border rounded-md text-sm font-mono" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700">Notes (optional)</label>
+              <input maxLength={500} value={duesForm.notes} onChange={(e) => setDuesForm({ ...duesForm, notes: e.target.value })} className="w-full mt-1 px-3 py-1.5 border rounded-md text-sm" />
+            </div>
+            {duesError && <div className="text-sm text-rose-600">{duesError}</div>}
+            <div className="flex justify-end space-x-2 pt-2 border-t">
+              <button type="button" onClick={() => setDuesDriver(null)} className="px-4 py-2 border rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50">Cancel</button>
+              <button type="submit" disabled={savingDues} className="px-4 py-2 rounded-md text-sm font-semibold bg-orange-600 text-white hover:bg-orange-700 disabled:opacity-50">
+                {savingDues ? 'Recording…' : 'Record payment'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
 
       {/* Record Payout Modal */}
       {payoutDriver && (

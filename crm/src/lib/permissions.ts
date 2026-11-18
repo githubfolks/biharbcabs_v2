@@ -27,6 +27,7 @@ export const PERMISSIONS = {
   'ledger.view': MONEY,
   'ledger.settle': MONEY,
   'payouts.record': MONEY,
+  'dues.record': MONEY,
   'settings.view': ALL,
   'settings.change': SUPER,
   'inbox.use': OPS,

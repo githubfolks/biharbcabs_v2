@@ -9,6 +9,7 @@ import { notifyOfferedDrivers } from './dispatch-notify';
 import { sendWhatsAppText } from './whatsapp';
 import { notify, notifyAdmins } from './wa-notify';
 import { MIN_WAIVER_REASON_LENGTH, WAIVABLE_STATUSES } from './advance-rules';
+import { applyDuesPayment } from './driver-dues';
 
 /**
  * Customer advance: which rides need it online, the Razorpay link for it, and the webhook that
@@ -96,6 +97,8 @@ interface AfterCommit {
   /** Booking code and plain update text for the template sent outside the service window. */
   customerUpdate?: { bookingCode: string; text: string };
   adminAlert?: string;
+  /** Driver notice (dues payment received). */
+  driverNotice?: { phone: string; text: string };
 }
 
 /**
@@ -145,6 +148,8 @@ async function handlePaid(client: PoolClient, event: any, after: AfterCommit): P
     Number(payment?.amount) === Number(link.amount_paise) &&
     String(payment?.currency || '').toUpperCase() === link.currency &&
     typeof payment?.id === 'string';
+
+  if (link.purpose === 'DRIVER_DUES') return handleDuesPaid(client, link, payment, matches, after);
 
   const bookingRes = await client.query(
     `SELECT b.*, c.phone AS customer_phone FROM crm_bookings b JOIN crm_customers c ON c.id = b.customer_id
@@ -215,6 +220,34 @@ async function handlePaid(client: PoolClient, event: any, after: AfterCommit): P
   return { status: 'advance_confirmed' };
 }
 
+/**
+ * A driver paid their dues link. The money is recorded on the driver's wallet (no GST: it settles commission
+ * already invoiced), and a dues restriction is lifted if they are back within their credit limit.
+ */
+async function handleDuesPaid(client: PoolClient, link: any, payment: any, matches: boolean, after: AfterCommit): Promise<WebhookOutcome> {
+  if (!matches) {
+    await client.query(`UPDATE crm_payment_links SET status = 'REVIEW_REQUIRED', updated_at = CURRENT_TIMESTAMP WHERE id = $1`, [link.id]);
+    after.adminAlert = `⚠️ Dues payment for driver #${link.driver_id} did not match the expected ₹${(link.amount_paise / 100).toFixed(2)}. Nothing was credited. Check Razorpay link ${link.provider_link_id}.`;
+    return { status: 'amount_mismatch_review' };
+  }
+  await client.query(
+    `UPDATE crm_payment_links SET status = 'PAID', provider_payment_id = $1, paid_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = $2`,
+    [payment.id, link.id]
+  );
+  const amount = Number(link.amount_paise) / 100;
+  const result = await applyDuesPayment(client, {
+    driverId: Number(link.driver_id), amount, channel: 'RAZORPAY', reference: payment.id,
+    notes: `Dues paid via Razorpay link ${link.provider_link_id}`, adminId: null, source: 'RAZORPAY',
+  });
+  const d = (await client.query(`SELECT phone, whatsapp_phone FROM crm_drivers WHERE id = $1`, [link.driver_id])).rows[0];
+  const balance = result.newWalletBalance;
+  after.driverNotice = {
+    phone: d.whatsapp_phone || d.phone,
+    text: `Dues payment of ₹${amount.toLocaleString('en-IN')} received. ${balance < 0 ? `Still owed: ₹${Math.abs(balance).toLocaleString('en-IN')}.` : 'You have no dues.'}${result.restored ? ' Your account is active again for all rides.' : ''}`,
+  };
+  return { status: 'dues_payment_recorded' };
+}
+
 async function handleClosed(client: PoolClient, event: any, newLinkStatus: 'EXPIRED' | 'CANCELLED', after: AfterCommit): Promise<WebhookOutcome> {
   const linkEntity = event?.payload?.payment_link?.entity;
   const linkRes = await client.query(
@@ -229,6 +262,8 @@ async function handleClosed(client: PoolClient, event: any, newLinkStatus: 'EXPI
     `UPDATE crm_payment_links SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`,
     [newLinkStatus, link.id]
   );
+  // An unpaid dues link just closes; the dues stay on the wallet and the driver can ask for a new link.
+  if (link.purpose === 'DRIVER_DUES') return { status: newLinkStatus === 'EXPIRED' ? 'dues_link_expired' : 'dues_link_cancelled' };
   const bRes = await client.query(
     `UPDATE crm_bookings b
      SET booking_status = 'ADVANCE_EXPIRED', advance_status = 'EXPIRED', updated_at = CURRENT_TIMESTAMP
@@ -274,6 +309,14 @@ async function runAfterCommit(after: AfterCommit): Promise<boolean> {
     }
   }
   if (after.adminAlert) await notifyAdmins(after.adminAlert);
+  if (after.driverNotice) {
+    const { phone, text } = after.driverNotice;
+    try {
+      await notify(phone, 'driver_account_notice', { params: [text], freeform: () => sendWhatsAppText(phone, `✅ ${text}`) });
+    } catch (err: any) {
+      console.error('[Dues] Driver notification failed:', err?.message);
+    }
+  }
   return dispatched;
 }
 
