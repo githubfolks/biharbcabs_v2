@@ -197,3 +197,15 @@ DATABASE_URL=postgresql://localhost/biharcabs_crm_test npx tsx --test src/tests/
 ```bash
 DATABASE_URL=postgresql://localhost/biharcabs_crm_test npx tsx --test src/tests/login-limits.integration.ts
 ```
+
+## Trip start OTP and cash settlement
+
+- **OTP on assignment:** when a driver accepts a ride, the customer gets a trip OTP on WhatsApp (`trip_otp_policy`: 4 digits, 5 wrong entries). Only a hash is stored.
+- **Starting the trip:** at pickup the driver taps **Start Trip** and types the code; only then is the trip `TRIP_IN_PROGRESS`. Wrong codes are counted under a row lock; after the limit the driver must ask the customer to reply **OTP**, which sends a new code and resets the count (admins are alerted when a trip locks).
+- **Who can start:** only the assigned driver, while the booking is `DRIVER_ASSIGNED`. Bookings assigned before this change get a code when the driver taps Start Trip.
+- **Completing:** **Complete Trip** works only on a started trip, and records the cash collected as **fare − advance confirmed by Razorpay**. On an advance ride BiharCabs owes the driver the advance minus its share; on a full-cash ride the driver owes the share.
+
+Apply `crm-design/14_trip_start_otp.sql` before deploying. Tests drive the real bot handlers:
+```bash
+DATABASE_URL=postgresql://localhost/biharcabs_crm_test npx tsx --test src/tests/trip-otp.integration.ts
+```

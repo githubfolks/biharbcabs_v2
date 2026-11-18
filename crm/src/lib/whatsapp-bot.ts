@@ -27,6 +27,7 @@ import { endDriverReturn, startDriverReturn } from './return-trips';
 import { notifyOfferedDrivers } from './dispatch-notify';
 import { formatPickup, parsePickupTime, PickupTime } from './pickup-time';
 import { recordCustomerRating } from './ratings';
+import { issueStartOtp, otpMessage, reissueOtpForCustomer, startTripWithOtp } from './trip-otp';
 
 export interface ConversationState {
   phone: string;
@@ -275,6 +276,64 @@ export async function processIncomingWhatsAppMessage(params: {
   const intents = await getWhatsAppIntents().catch(() => null);
 
   // =========================================================================
+  // 0. TRIP START OTP (driver enters the customer's code; customer can ask for a new one)
+  // =========================================================================
+
+  if (conv.state === 'AWAITING_START_OTP' && !buttonId && /^\d{4,8}$/.test(rawText)) {
+    const bookingId = Number(conv.context_data?.otp_booking_id);
+    const result = await startTripWithOtp(bookingId, fromPhone, rawText);
+
+    if (result.status === 'STARTED') {
+      const b = result.booking;
+      await resetConversation(fromPhone);
+      await sendWhatsAppButtons(
+        fromPhone,
+        `✅ OTP verified. Trip #${b.booking_code} is now IN PROGRESS.\nCollect ₹${Math.max(0, Number(b.customer_total_fare) - Number(b.advance_paid || 0)).toLocaleString('en-IN')} in cash at drop, then tap below:`,
+        [{ id: `complete_trip_${b.id}`, title: '🏁 Complete Trip' }]
+      );
+      if (b.customer_phone) {
+        await sendWhatsAppText(b.customer_phone, `🚖 Your BiharCabs trip (#${b.booking_code}) has started! Have a pleasant and safe journey.`);
+      }
+      return;
+    }
+    if (result.status === 'WRONG_OTP') {
+      await sendWhatsAppText(fromPhone, `❌ Wrong OTP. ${result.attemptsLeft} attempt${result.attemptsLeft === 1 ? '' : 's'} left. Check the code with the customer.`);
+      return;
+    }
+    if (result.status === 'LOCKED') {
+      await sendWhatsAppText(
+        fromPhone,
+        `🔒 Too many wrong OTPs for trip #${result.booking.booking_code}. Ask the customer to reply *OTP* to BiharCabs for a new code, then type the new code here.`
+      );
+      if (result.justLocked) {
+        console.warn(`[Trip OTP] Start locked for ${result.booking.booking_code} after repeated wrong codes`);
+        for (const admin of await getAdminContacts().catch(() => [])) {
+          if (admin.phone) {
+            await sendWhatsAppText(admin.phone, `⚠️ Trip #${result.booking.booking_code}: the driver entered the wrong start OTP too many times. Check with the customer.`);
+          }
+        }
+      }
+      return;
+    }
+    if (result.status === 'NO_OTP') {
+      await sendWhatsAppText(fromPhone, `Tap 🚀 Start Trip for #${result.booking.booking_code} again to send the customer a code.`);
+      return;
+    }
+    await resetConversation(fromPhone);
+    await sendWhatsAppText(fromPhone, 'This trip cannot be started from your number. Please contact BiharCabs support.');
+    return;
+  }
+
+  if (lowerText === 'otp' && !buttonId) {
+    const reissued = await reissueOtpForCustomer(fromPhone);
+    if (reissued) {
+      await sendWhatsAppText(fromPhone, otpMessage(reissued.bookingCode, reissued.otp));
+      return;
+    }
+    // Not a customer with an assigned trip: fall through to the normal flows.
+  }
+
+  // =========================================================================
   // 1. DRIVER WORKFLOW INTERACTIONS (Accept, Decline, Wake-up, Trip Lifecycle)
   // =========================================================================
 
@@ -309,7 +368,7 @@ export async function processIncomingWhatsAppMessage(params: {
       // Send driver the trip action buttons with explicit cash collection instructions
       await sendWhatsAppButtons(
         fromPhone,
-        `🚖 Trip #${b.booking_code} Confirmed!\nPickup: ${b.pickup_address}\nDate: ${b.pickup_date} at ${b.pickup_time}\nCustomer: ${b.customer_name || 'Passenger'} (${b.customer_phone})\n\n💵 Payment Breakdown:\nTotal Fare: ₹${Number(b.customer_total_fare).toLocaleString('en-IN')}\nAdvance Paid: ₹${advancePaid.toLocaleString('en-IN')}\n👉 COLLECT CASH AT DROP: ₹${balanceCashDue.toLocaleString('en-IN')}\nYour Net Payout: ₹${Number(b.driver_payout_amount).toLocaleString('en-IN')}`,
+        `🚖 Trip #${b.booking_code} Confirmed!\nPickup: ${b.pickup_address}\nDate: ${b.pickup_date} at ${b.pickup_time}\nCustomer: ${b.customer_name || 'Passenger'} (${b.customer_phone})\n\n💵 Payment Breakdown:\nTotal Fare: ₹${Number(b.customer_total_fare).toLocaleString('en-IN')}\nAdvance Paid: ₹${advancePaid.toLocaleString('en-IN')}\n👉 COLLECT CASH AT DROP: ₹${balanceCashDue.toLocaleString('en-IN')}\nYour Net Payout: ₹${Number(b.driver_payout_amount).toLocaleString('en-IN')}\n\n🔐 At pickup, tap Start Trip and enter the OTP the customer received.`,
         [
           { id: `start_trip_${b.id}`, title: '🚀 Start Trip' },
         ],
@@ -323,6 +382,7 @@ export async function processIncomingWhatsAppMessage(params: {
           b.customer_phone,
           `✅ Booking Confirmed (#${b.booking_code})!\nYour cab for ${b.origin_city} to ${b.destination_city || 'destination'} is locked.\n\nDriver: ${driver.full_name}\nDriver Phone: ${driver.phone}\nCab Type: ${cabDetails}\nPickup Location: ${b.pickup_address}\nScheduled: ${b.pickup_date} at ${b.pickup_time}.\nAdvance Paid: ₹${advancePaid.toLocaleString('en-IN')}\nBalance to pay driver: ₹${balanceCashDue.toLocaleString('en-IN')}\n\nYour driver will arrive 10 minutes prior to pickup.`
         );
+        if (result.startOtp) await sendWhatsAppText(b.customer_phone, otpMessage(b.booking_code, result.startOtp));
       }
     }
     return;
@@ -359,37 +419,33 @@ export async function processIncomingWhatsAppMessage(params: {
       : rawText.replace(/\D/g, '');
     const bookingId = parseInt(bookingIdStr, 10);
 
+    // The trip starts only with the customer's OTP (see the OTP entry step at the top).
     const bRes = await query(
-      `UPDATE crm_bookings 
-       SET booking_status = 'TRIP_IN_PROGRESS', updated_at = CURRENT_TIMESTAMP
-       WHERE id = $1
-         AND booking_status = 'DRIVER_ASSIGNED'
-         AND assigned_driver_id IN (SELECT id FROM crm_drivers WHERE phone = $2 OR whatsapp_phone = $2)
-       RETURNING *`,
+      `SELECT b.id, b.booking_code, b.start_otp_hash, c.phone AS customer_phone
+       FROM crm_bookings b
+       JOIN crm_customers c ON c.id = b.customer_id
+       WHERE b.id = $1
+         AND b.booking_status = 'DRIVER_ASSIGNED'
+         AND b.assigned_driver_id IN (SELECT id FROM crm_drivers WHERE phone = $2 OR whatsapp_phone = $2)`,
       [bookingId, fromPhone]
     );
-    if (bRes.rows.length === 0) {
+    const b = bRes.rows[0];
+    if (!b) {
       await sendWhatsAppText(fromPhone, 'This trip cannot be started from your number. Please contact BiharCabs support.');
       return;
     }
 
-    if (bRes.rows.length > 0) {
-      const b = bRes.rows[0];
-      await sendWhatsAppButtons(
-        fromPhone,
-        `Trip #${b.booking_code} is now IN PROGRESS.\nOnce customer is dropped off at destination, tap below to complete trip & enter closing km:`,
-        [{ id: `complete_trip_${b.id}`, title: '🏁 Complete Trip' }]
-      );
-
-      // Alert customer that trip has started
-      const custRes = await query(`SELECT phone FROM crm_customers WHERE id = $1`, [b.customer_id]);
-      if (custRes.rows[0]?.phone) {
-        await sendWhatsAppText(
-          custRes.rows[0].phone,
-          `🚖 Your BiharCabs trip (#${b.booking_code}) has officially started! Have a pleasant and safe journey.`
-        );
-      }
+    // Bookings assigned before OTPs existed get one now.
+    if (!b.start_otp_hash) {
+      const otp = await withTransaction((client) => issueStartOtp(client, Number(b.id)));
+      if (b.customer_phone) await sendWhatsAppText(b.customer_phone, otpMessage(b.booking_code, otp));
     }
+
+    await updateConversation(fromPhone, 'AWAITING_START_OTP', { otp_booking_id: Number(b.id) }, 'DRIVER');
+    await sendWhatsAppText(
+      fromPhone,
+      `🔐 Trip #${b.booking_code}: ask the customer for their trip OTP (sent to them on WhatsApp) and type it here to start the trip.`
+    );
     return;
   }
 
@@ -407,15 +463,18 @@ export async function processIncomingWhatsAppMessage(params: {
     }
     if (bRes.rows.length > 0) {
       const b = bRes.rows[0];
+      // The driver collects only what the customer still owes: the fare minus the advance BiharCabs
+      // received (advance_paid holds only Razorpay-confirmed money).
+      const cashDue = Math.max(0, Number(b.customer_total_fare) - Number(b.advance_paid || 0));
       const result = await completeTripAndSettle({
         bookingId,
-        cashCollectedByDriver: Number(b.customer_total_fare),
+        cashCollectedByDriver: cashDue,
         tollParking: 0,
       });
 
       await sendWhatsAppText(
         fromPhone,
-        `🏁 Trip #${b.booking_code} Completed & Settled!\nTotal Fare: ₹${result.totalCustomerPayable}\nCash Collected: ₹${result.cashCollectedByDriver}\nBiharCabs Commission: ₹${result.companyCommission}\nYour Current Wallet Balance: ₹${result.newDriverWalletBalance.toFixed(2)}`
+        `🏁 Trip #${b.booking_code} Completed & Settled!\nTotal Fare: ₹${result.totalCustomerPayable}\nAdvance held by BiharCabs: ₹${result.advancePaid}\nCash Collected by you: ₹${result.cashCollectedByDriver}\nBiharCabs Commission: ₹${result.companyCommission}\nThis trip: ${result.driverNetSettlement >= 0 ? `₹${result.driverNetSettlement.toFixed(2)} owed to you` : `₹${Math.abs(result.driverNetSettlement).toFixed(2)} owed to BiharCabs`}\nYour Current Wallet Balance: ₹${result.newDriverWalletBalance.toFixed(2)}`
       );
 
       // Send Customer Invoice and Interactive 1-Tap Rating Buttons

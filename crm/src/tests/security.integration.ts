@@ -90,11 +90,14 @@ describe('webhook signature', () => {
     const body = metaBody(DRIVER_A, `start_trip_${id}`);
     assert.strictEqual((await postWebhook(body, null)).status, 401);
     assert.strictEqual((await postWebhook(body, sign(body, 'attacker-guess'))).status, 401);
+    const otpIssued = async () => (await query(`SELECT start_otp_hash IS NOT NULL AS issued FROM crm_bookings WHERE id = $1`, [id])).rows[0].issued;
     assert.strictEqual((await statusOf(id)).booking_status, 'DRIVER_ASSIGNED', 'forged event had no effect');
+    assert.strictEqual(await otpIssued(), false, 'forged event had no effect');
 
     const ok = await postWebhook(body, sign(body));
     assert.strictEqual(ok.status, 200);
-    assert.strictEqual((await statusOf(id)).booking_status, 'TRIP_IN_PROGRESS', 'genuine event processed');
+    // A genuine Start Trip asks for the customer's OTP (issuing one for this pre-OTP booking).
+    assert.strictEqual(await otpIssued(), true, 'genuine event processed');
   });
 
   it('a repeated delivery of the same message is ignored, so a trip is settled once', async () => {
@@ -155,6 +158,15 @@ describe('trip actions belong to the assigned driver', () => {
     await processIncomingWhatsAppMessage({ fromPhone: DRIVER_B, buttonId: `start_trip_${id}` });
     assert.strictEqual((await statusOf(id)).booking_status, 'DRIVER_ASSIGNED');
     await processIncomingWhatsAppMessage({ fromPhone: DRIVER_A, buttonId: `start_trip_${id}` });
+    // The trip starts only with the OTP the customer received.
+    const sent = await query(
+      `SELECT payload::text AS p FROM crm_whatsapp_logs WHERE direction = 'OUTBOUND' AND phone = $1 AND payload::text LIKE '%Trip OTP for booking%' ORDER BY id DESC LIMIT 1`,
+      [CUSTOMER]
+    );
+    const otp = sent.rows[0].p.match(/: \*(\d+)\*/)[1];
+    await processIncomingWhatsAppMessage({ fromPhone: DRIVER_B, text: otp });
+    assert.strictEqual((await statusOf(id)).booking_status, 'DRIVER_ASSIGNED', 'the other driver cannot use the code');
+    await processIncomingWhatsAppMessage({ fromPhone: DRIVER_A, text: otp });
     assert.strictEqual((await statusOf(id)).booking_status, 'TRIP_IN_PROGRESS');
 
     await processIncomingWhatsAppMessage({ fromPhone: STRANGER, buttonId: `complete_trip_${id}` });

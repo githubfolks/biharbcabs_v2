@@ -8,6 +8,7 @@ import {
 } from './settings';
 import { PoolClient } from 'pg';
 import { settleReturnDiscountFunding } from './return-trips';
+import { issueStartOtp } from './trip-otp';
 
 export interface DispatchCandidate {
   driver_id: number;
@@ -391,6 +392,8 @@ export async function acceptRideOffer(
   success: boolean;
   status: 'ASSIGNED' | 'ALREADY_ASSIGNED' | 'OFFER_EXPIRED' | 'NOT_FOUND' | 'NOT_OFFERED';
   booking?: BookingDetails;
+  /** On ASSIGNED: the customer's trip-start OTP, to send to the customer only. */
+  startOtp?: string;
   message: string;
 }> {
   return withTransaction(async (client: PoolClient) => {
@@ -505,6 +508,9 @@ export async function acceptRideOffer(
       [bookingId, driverId]
     );
 
+    // The customer's code for starting the trip, issued with the assignment.
+    const startOtp = await issueStartOtp(client, bookingId);
+
     // Re-read so callers see the payout after any return-trip funding change.
     const fresh = await client.query(
       `SELECT b.*, c.full_name AS customer_name, c.phone AS customer_phone
@@ -517,6 +523,7 @@ export async function acceptRideOffer(
       success: true,
       status: 'ASSIGNED',
       booking,
+      startOtp,
       message: `Ride #${booking.booking_code} successfully assigned to you!`,
     };
   });
