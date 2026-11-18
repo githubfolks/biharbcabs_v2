@@ -224,3 +224,23 @@ Apply `crm-design/15_gst_on_rides_and_advances.sql` before deploying. Bookings c
 npx tsx --test src/tests/fare-split.test.ts
 DATABASE_URL=postgresql://localhost/biharcabs_crm_test npx tsx --test src/tests/trip-otp.integration.ts
 ```
+
+## WhatsApp templates (24-hour window)
+
+Per Meta's Cloud API docs, WhatsApp delivers free-form text and interactive messages only within 24 hours of the recipient's last message to BiharCabs; outside that window only **approved template messages** are delivered.
+
+- **`notify()`** (`src/lib/wa-notify.ts`) sends the rich message while the window is open (checked from `crm_whatsapp_logs`), and the approved template otherwise. Used for every message BiharCabs starts:
+  - **drivers:** ride alerts, assignment, wake-up, dues, document notices, payouts;
+  - **customers:** driver assigned + trip OTP, trip OTP, trip started, trip completed + rating, payment link, booking updates;
+  - **admins:** alerts.
+  
+  Replies to someone who just messaged are always inside the window and stay free-form.
+- **Template text** lives in `src/lib/wa-templates.ts`. **`crm-design/whatsapp_templates.md` is what to submit to Meta** (a test checks it matches the code). Approved names go in `crm_settings.whatsapp_templates`, with the language code under `language`. **Until a template is approved, that notification fails outside the window** and is logged as FAILED.
+- **Template button taps** (Accept, Decline, Start Trip, I am ready, Pay dues, ratings) arrive with the button label and the template's message id. Each send is recorded in `crm_wa_template_sends` (migration 16), so the tap is mapped back to its booking and handled like the interactive button. Only the number the template went to can use it.
+- **Drivers are alerted on every dispatch path:** the bot, staff "create and broadcast", the manual Broadcast button, payment confirmation and waivers. **Force-assign** now issues the trip OTP, tells the driver (with Start Trip) and tells the customer. If none of the offered drivers can be reached, admins are alerted at once.
+- **Staff inbox** refuses a typed message outside the window (409) instead of failing silently.
+
+Apply `crm-design/16_whatsapp_templates.sql` before deploying. Tests:
+```bash
+DATABASE_URL=postgresql://localhost/biharcabs_crm_test npx tsx --test src/tests/wa-notify.integration.ts
+```

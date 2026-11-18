@@ -6,6 +6,8 @@ import { hasPermission } from '@/lib/permissions';
 import { getAdvanceCollectionPolicy } from '@/lib/settings';
 import { MIN_WAIVER_REASON_LENGTH, advanceLinkMessage, isAdvanceRequired, requestAdvancePayment } from '@/lib/advance-payments';
 import { sendWhatsAppText } from '@/lib/whatsapp';
+import { notify } from '@/lib/wa-notify';
+import { notifyOfferedDrivers } from '@/lib/dispatch-notify';
 
 export const dynamic = 'force-dynamic';
 
@@ -194,7 +196,18 @@ export async function POST(req: NextRequest) {
       // Drivers see this booking only after the payment webhook confirms the advance.
       try {
         const request = await requestAdvancePayment(Number(booking.id));
-        await sendWhatsAppText(cleanPhone, await advanceLinkMessage(bookingCode, request, balanceDue));
+        // Staff bookings: the customer may never have messaged us, so outside the window this is a template.
+        const linkText = await advanceLinkMessage(bookingCode, request, balanceDue);
+        await notify(cleanPhone, 'customer_payment_link', {
+          params: [
+            `₹${request.amount.toLocaleString('en-IN')}`,
+            `#${bookingCode}`,
+            request.shortUrl,
+            Math.max(1, Math.round((request.expireBy.getTime() - Date.now()) / 60000)),
+            `₹${balanceDue.toLocaleString('en-IN')}`,
+          ],
+          freeform: () => sendWhatsAppText(cleanPhone, linkText),
+        });
         return NextResponse.json({ success: true, booking, payment_link_url: request.shortUrl, dispatch: null });
       } catch (err: any) {
         return NextResponse.json(
@@ -207,6 +220,7 @@ export async function POST(req: NextRequest) {
     let dispatchResult = null;
     if (auto_broadcast) {
       dispatchResult = await broadcastRideToDrivers(booking.id);
+      await notifyOfferedDrivers(Number(booking.id), dispatchResult);
     }
 
     return NextResponse.json({

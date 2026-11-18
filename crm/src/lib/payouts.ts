@@ -1,4 +1,5 @@
 import { query, withTransaction } from './db';
+import { notify } from './wa-notify';
 import { sendWhatsAppText } from './whatsapp';
 
 /**
@@ -94,10 +95,13 @@ export async function recordDriverPayout(input: RecordPayoutInput): Promise<Reco
   const phone = driver.whatsapp_phone || driver.phone;
   if (phone) {
     try {
-      await sendWhatsAppText(
-        phone,
-        `💸 BiharCabs paid you ₹${amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })} by ${input.channel.replace('_', ' ')} (ref ${reference}).\nAmount still owed to you: ₹${newWalletBalance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`
-      );
+      const paid = `₹${amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+      const owed = `₹${newWalletBalance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+      const method = input.channel.replace('_', ' ');
+      await notify(phone, 'driver_payout_sent', {
+        params: [paid, method, reference, owed],
+        freeform: () => sendWhatsAppText(phone, `💸 BiharCabs paid you ${paid} by ${method} (ref ${reference}).\nAmount still owed to you: ${owed}`),
+      });
     } catch (err: any) {
       console.error(`[Payouts] Driver notification failed for driver #${input.driverId}:`, err?.message);
     }

@@ -3,6 +3,7 @@ import { getMetaWhatsAppConfig } from '@/lib/settings';
 import { parseIncomingWebhook, logWhatsAppMessage } from '@/lib/whatsapp';
 import { processIncomingWhatsAppMessage } from '@/lib/whatsapp-bot';
 import { claimWebhookMessage, getMetaAppSecret, verifyMetaSignature } from '@/lib/webhook-security';
+import { resolveTemplateButton } from '@/lib/wa-notify';
 
 export const dynamic = 'force-dynamic';
 
@@ -76,12 +77,18 @@ export async function POST(req: NextRequest) {
       'RECEIVED'
     );
 
+    // A tap on a template's quick-reply button arrives with the button label; map it back to its booking.
+    let buttonId = parsed.buttonId;
+    if (parsed.messageType === 'button') {
+      buttonId = (await resolveTemplateButton(parsed.contextId, parsed.buttonText ?? parsed.buttonId, parsed.fromPhone)) ?? parsed.buttonId;
+    }
+
     // Route event through the BiharCabs WhatsApp State Machine
     await processIncomingWhatsAppMessage({
       fromPhone: parsed.fromPhone,
       customerName: parsed.customerName,
       text: parsed.text,
-      buttonId: parsed.buttonId,
+      buttonId,
       buttonText: parsed.buttonText,
     });
 

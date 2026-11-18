@@ -3,6 +3,8 @@ import { requireAdmin } from '@/lib/auth';
 import { broadcastRideToDrivers, acceptRideOffer, assertAdvanceSettled } from '@/lib/dispatch-engine';
 import { query, withTransaction } from '@/lib/db';
 import { settleReturnDiscountFunding } from '@/lib/return-trips';
+import { notifyAssignment, notifyOfferedDrivers } from '@/lib/dispatch-notify';
+import { issueStartOtp } from '@/lib/trip-otp';
 
 export async function POST(
   req: NextRequest,
@@ -17,7 +19,8 @@ export async function POST(
 
     if (action === 'broadcast' || action === 'rebroadcast') {
       const result = await broadcastRideToDrivers(bookingId);
-      return NextResponse.json({ success: true, dispatch: result });
+      const alerted = await notifyOfferedDrivers(bookingId, result);
+      return NextResponse.json({ success: true, dispatch: result, driversAlerted: alerted });
     }
 
     if (action === 'force_assign') {
@@ -43,7 +46,7 @@ export async function POST(
 
       const vehicleId = vehicleRes.rows[0]?.id || null;
 
-      await withTransaction(async (client) => {
+      const startOtp = await withTransaction(async (client) => {
         // Lock the booking, then apply the return-trip funding rule before assigning.
         const locked = await client.query('SELECT * FROM crm_bookings WHERE id = $1 FOR UPDATE', [bookingId]);
         assertAdvanceSettled(locked.rows[0]);
@@ -57,7 +60,13 @@ export async function POST(
            WHERE id = $3`,
           [driver_id, vehicleId, bookingId]
         );
+        // The customer's code for starting the trip, issued with the assignment.
+        return issueStartOtp(client, bookingId);
       });
+
+      // The driver did not accept this themselves, so tell both the driver and the customer.
+      await notifyAssignment(bookingId, startOtp, { notifyDriver: true });
+      console.info(`[Dispatch] Booking #${bookingId} force-assigned to driver #${driver_id} by admin #${auth.id}`);
 
       return NextResponse.json({
         success: true,

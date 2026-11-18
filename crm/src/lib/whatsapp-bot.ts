@@ -25,7 +25,8 @@ import {
 import { PaymentMode, isAdvanceRequired, requestAdvancePayment, advanceLinkMessage } from './advance-payments';
 import { applyReturnDiscount } from './return-trip-pricing';
 import { endDriverReturn, startDriverReturn } from './return-trips';
-import { notifyOfferedDrivers } from './dispatch-notify';
+import { notifyAssignment, notifyOfferedDrivers } from './dispatch-notify';
+import { notify, notifyAdmins } from './wa-notify';
 import { formatPickup, parsePickupTime, PickupTime } from './pickup-time';
 import { recordCustomerRating } from './ratings';
 import { issueStartOtp, otpMessage, reissueOtpForCustomer, startTripWithOtp } from './trip-otp';
@@ -293,7 +294,10 @@ export async function processIncomingWhatsAppMessage(params: {
         [{ id: `complete_trip_${b.id}`, title: '🏁 Complete Trip' }]
       );
       if (b.customer_phone) {
-        await sendWhatsAppText(b.customer_phone, `🚖 Your BiharCabs trip (#${b.booking_code}) has started! Have a pleasant and safe journey.`);
+        await notify(b.customer_phone, 'customer_trip_started', {
+          params: [`#${b.booking_code}`],
+          freeform: () => sendWhatsAppText(b.customer_phone, `🚖 Your BiharCabs trip (#${b.booking_code}) has started! Have a pleasant and safe journey.`),
+        });
       }
       return;
     }
@@ -308,11 +312,7 @@ export async function processIncomingWhatsAppMessage(params: {
       );
       if (result.justLocked) {
         console.warn(`[Trip OTP] Start locked for ${result.booking.booking_code} after repeated wrong codes`);
-        for (const admin of await getAdminContacts().catch(() => [])) {
-          if (admin.phone) {
-            await sendWhatsAppText(admin.phone, `⚠️ Trip #${result.booking.booking_code}: the driver entered the wrong start OTP too many times. Check with the customer.`);
-          }
-        }
+        await notifyAdmins(`⚠️ Trip #${result.booking.booking_code}: the driver entered the wrong start OTP too many times. Check with the customer.`);
       }
       return;
     }
@@ -376,15 +376,8 @@ export async function processIncomingWhatsAppMessage(params: {
         'Trip Details & Cash Collection'
       );
 
-      // Notify Customer
-      if (b.customer_phone) {
-        const cabDetails = `${b.wp_vehicle_code.toUpperCase()}`;
-        await sendWhatsAppText(
-          b.customer_phone,
-          `✅ Booking Confirmed (#${b.booking_code})!\nYour cab for ${b.origin_city} to ${b.destination_city || 'destination'} is locked.\n\nDriver: ${driver.full_name}\nDriver Phone: ${driver.phone}\nCab Type: ${cabDetails}\nPickup Location: ${b.pickup_address}\nScheduled: ${b.pickup_date} at ${b.pickup_time}.\nAdvance Paid: ₹${advancePaid.toLocaleString('en-IN')}\nBalance to pay driver: ₹${balanceCashDue.toLocaleString('en-IN')}\n\nYour driver will arrive 10 minutes prior to pickup.`
-        );
-        if (result.startOtp) await sendWhatsAppText(b.customer_phone, otpMessage(b.booking_code, result.startOtp));
-      }
+      // Notify the customer (driver details + trip OTP); the driver was answered above.
+      await notifyAssignment(Number(b.id), result.startOtp, { notifyDriver: false });
     }
     return;
   }
@@ -439,7 +432,12 @@ export async function processIncomingWhatsAppMessage(params: {
     // Bookings assigned before OTPs existed get one now.
     if (!b.start_otp_hash) {
       const otp = await withTransaction((client) => issueStartOtp(client, Number(b.id)));
-      if (b.customer_phone) await sendWhatsAppText(b.customer_phone, otpMessage(b.booking_code, otp));
+      if (b.customer_phone) {
+        await notify(b.customer_phone, 'customer_trip_otp', {
+          params: [`#${b.booking_code}`, otp],
+          freeform: () => sendWhatsAppText(b.customer_phone, otpMessage(b.booking_code, otp)),
+        });
+      }
     }
 
     await updateConversation(fromPhone, 'AWAITING_START_OTP', { otp_booking_id: Number(b.id) }, 'DRIVER');
@@ -484,13 +482,17 @@ export async function processIncomingWhatsAppMessage(params: {
         const driverRes = await query(`SELECT full_name FROM crm_drivers WHERE id = $1`, [b.assigned_driver_id]);
         const driverName = driverRes.rows[0]?.full_name || 'your BiharCabs driver';
 
-        await sendWhatsAppText(
-          custRes.rows[0].phone,
-          `🙏 Thank you for traveling with BiharCabs!\n\nYour Trip #${b.booking_code} (${b.origin_city} → ${b.destination_city || 'Local'}) is completed.\nTotal Amount Paid: ₹${result.totalCustomerPayable}\nInvoice: ${result.invoiceNumber}`
-        );
-
-        await sendWhatsAppButtons(
-          custRes.rows[0].phone,
+        const customerPhone = custRes.rows[0].phone;
+        await notify(customerPhone, 'customer_trip_completed', {
+          ref: Number(b.id),
+          params: [`#${b.booking_code}`, `₹${result.totalCustomerPayable}`, result.invoiceNumber],
+          freeform: async () => {
+            const first = await sendWhatsAppText(
+              customerPhone,
+              `🙏 Thank you for traveling with BiharCabs!\n\nYour Trip #${b.booking_code} (${b.origin_city} → ${b.destination_city || 'Local'}) is completed.\nTotal Amount Paid: ₹${result.totalCustomerPayable}\nInvoice: ${result.invoiceNumber}`
+            );
+            await sendWhatsAppButtons(
+          customerPhone,
           `⭐ How was your journey with driver *${driverName}*?\nPlease tap below to rate your experience:`,
           [
             { id: `rate_trip_${b.id}_5`, title: '⭐⭐⭐⭐⭐ 5 Stars' },
@@ -499,7 +501,10 @@ export async function processIncomingWhatsAppMessage(params: {
           ],
           'BiharCabs Trip Feedback',
           'Your feedback directly impacts driver quality!'
-        );
+            );
+            return first;
+          },
+        });
       }
       await offerReturnTrip(fromPhone, b);
     }

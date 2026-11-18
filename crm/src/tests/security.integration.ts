@@ -11,6 +11,7 @@ import assert from 'node:assert';
 import crypto from 'crypto';
 import { NextRequest } from 'next/server';
 import { query, getDbPool } from '../lib/db';
+import { latestOtpSentTo } from './helpers/sent-otp';
 import { verifyMetaSignature } from '../lib/webhook-security';
 import { acceptRideOffer } from '../lib/dispatch-engine';
 import { completeTripAndSettle } from '../lib/billing';
@@ -159,11 +160,7 @@ describe('trip actions belong to the assigned driver', () => {
     assert.strictEqual((await statusOf(id)).booking_status, 'DRIVER_ASSIGNED');
     await processIncomingWhatsAppMessage({ fromPhone: DRIVER_A, buttonId: `start_trip_${id}` });
     // The trip starts only with the OTP the customer received.
-    const sent = await query(
-      `SELECT payload::text AS p FROM crm_whatsapp_logs WHERE direction = 'OUTBOUND' AND phone = $1 AND payload::text LIKE '%Trip OTP for booking%' ORDER BY id DESC LIMIT 1`,
-      [CUSTOMER]
-    );
-    const otp = sent.rows[0].p.match(/: \*(\d+)\*/)[1];
+    const otp = (await latestOtpSentTo(CUSTOMER))!;
     await processIncomingWhatsAppMessage({ fromPhone: DRIVER_B, text: otp });
     assert.strictEqual((await statusOf(id)).booking_status, 'DRIVER_ASSIGNED', 'the other driver cannot use the code');
     await processIncomingWhatsAppMessage({ fromPhone: DRIVER_A, text: otp });
