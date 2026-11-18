@@ -2,11 +2,12 @@ import crypto from 'crypto';
 import { PoolClient } from 'pg';
 import { query, withTransaction } from './db';
 import { cancelPaymentLink, createPaymentLink, fetchPaymentLinkStatus } from './razorpay';
-import { AdvanceCollectionPolicy, getAdminContacts, getAdvanceCollectionPolicy, getCompanyBillingInfo, getRevenueProtectionPolicy } from './settings';
+import { AdvanceCollectionPolicy, getAdvanceCollectionPolicy, getCompanyBillingInfo, getRevenueProtectionPolicy } from './settings';
 import { gstIncluded } from './fare-split';
 import { bookingPickupAt, broadcastRideToDrivers } from './dispatch-engine';
 import { notifyOfferedDrivers } from './dispatch-notify';
 import { sendWhatsAppText } from './whatsapp';
+import { notify, notifyAdmins } from './wa-notify';
 import { MIN_WAIVER_REASON_LENGTH, WAIVABLE_STATUSES } from './advance-rules';
 
 /**
@@ -92,6 +93,8 @@ interface AfterCommit {
   dispatchBookingId?: number;
   customerPhone?: string;
   customerMessage?: string;
+  /** Booking code and plain update text for the template sent outside the service window. */
+  customerUpdate?: { bookingCode: string; text: string };
   adminAlert?: string;
 }
 
@@ -205,6 +208,10 @@ async function handlePaid(client: PoolClient, event: any, after: AfterCommit): P
   after.dispatchBookingId = b.id;
   after.customerPhone = b.customer_phone;
   after.customerMessage = `✅ Advance ₹${amount.toLocaleString('en-IN')} received for booking #${b.booking_code}. Your booking is confirmed and we are assigning your driver now.\nBalance payable to the driver at drop: ₹${Math.max(0, fare - amount).toLocaleString('en-IN')}`;
+  after.customerUpdate = {
+    bookingCode: b.booking_code,
+    text: `Advance ₹${amount.toLocaleString('en-IN')} received. Your booking is confirmed and we are assigning your driver. Balance payable to the driver at drop: ₹${Math.max(0, fare - amount).toLocaleString('en-IN')}.`,
+  };
   return { status: 'advance_confirmed' };
 }
 
@@ -233,6 +240,7 @@ async function handleClosed(client: PoolClient, event: any, newLinkStatus: 'EXPI
   if (bRes.rows[0]) {
     after.customerPhone = bRes.rows[0].customer_phone;
     after.customerMessage = `Booking #${bRes.rows[0].booking_code} was not confirmed because the advance was not received in time. Reply *HI* to book again.`;
+    after.customerUpdate = { bookingCode: bRes.rows[0].booking_code, text: 'Not confirmed: the advance was not received in time. Reply HI to book again.' };
   }
   return { status: newLinkStatus === 'EXPIRED' ? 'booking_expired' : 'booking_cancelled' };
 }
@@ -241,8 +249,17 @@ async function handleClosed(client: PoolClient, event: any, newLinkStatus: 'EXPI
 async function runAfterCommit(after: AfterCommit): Promise<boolean> {
   let dispatched = false;
   if (after.customerPhone && after.customerMessage) {
+    const phone = after.customerPhone;
+    const message = after.customerMessage;
     try {
-      await sendWhatsAppText(after.customerPhone, after.customerMessage);
+      if (after.customerUpdate) {
+        await notify(phone, 'customer_booking_update', {
+          params: [`#${after.customerUpdate.bookingCode}`, after.customerUpdate.text],
+          freeform: () => sendWhatsAppText(phone, message),
+        });
+      } else {
+        await sendWhatsAppText(phone, message);
+      }
     } catch (err: any) {
       console.error('[Advance] Customer notification failed:', err?.message);
     }
@@ -256,15 +273,7 @@ async function runAfterCommit(after: AfterCommit): Promise<boolean> {
       console.error(`[Advance] Dispatch after payment failed for booking #${after.dispatchBookingId}; it stays CONFIRMED_AWAITING_DRIVER for manual broadcast:`, err?.message);
     }
   }
-  if (after.adminAlert) {
-    try {
-      for (const admin of await getAdminContacts()) {
-        if (admin.phone) await sendWhatsAppText(admin.phone, after.adminAlert);
-      }
-    } catch (err: any) {
-      console.error('[Advance] Admin alert failed:', err?.message);
-    }
-  }
+  if (after.adminAlert) await notifyAdmins(after.adminAlert);
   return dispatched;
 }
 
@@ -362,6 +371,7 @@ export async function waiveBookingAdvance(input: { bookingId: number; adminId: n
     after.dispatchBookingId = Number(b.id);
     after.customerPhone = b.customer_phone;
     after.customerMessage = `✅ Booking #${b.booking_code} is confirmed without an online advance. Please pay the full fare of ₹${fare.toLocaleString('en-IN')} in cash to the driver at drop. We are assigning your driver now.`;
+    after.customerUpdate = { bookingCode: b.booking_code, text: `Confirmed without an online advance. Pay the full fare of ₹${fare.toLocaleString('en-IN')} in cash to the driver at drop. We are assigning your driver.` };
     return String(b.booking_code);
   });
 

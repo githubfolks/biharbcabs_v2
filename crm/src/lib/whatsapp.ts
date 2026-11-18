@@ -50,7 +50,7 @@ async function dispatchToMetaApi(
   if (!config.access_token || !config.phone_number_id) {
     console.log(`[WhatsApp Sim] -> To: ${cleanPhone} | Type: ${messageType}`, JSON.stringify(messagePayload));
     await logWhatsAppMessage('OUTBOUND', cleanPhone, messageType, fullPayload, 'SENT');
-    return { success: true, messageId: `local-sim-${Date.now()}` };
+    return { success: true, messageId: `local-sim-${Date.now()}-${Math.random().toString(36).slice(2, 10)}` };
   }
 
   const url = `https://graph.facebook.com/${config.api_version}/${config.phone_number_id}/messages`;
@@ -211,6 +211,8 @@ export function parseIncomingWebhook(body: any): {
   text?: string;
   buttonId?: string;
   buttonText?: string;
+  /** For a tap on a template button: id of the template message that was tapped. */
+  contextId?: string;
   rawPayload: any;
 } | null {
   const entry = body?.entry?.[0];
@@ -255,6 +257,7 @@ export function parseIncomingWebhook(body: any): {
     text,
     buttonId,
     buttonText,
+    contextId: typeof message.context?.id === 'string' ? message.context.id : undefined,
     rawPayload: message,
   };
 }

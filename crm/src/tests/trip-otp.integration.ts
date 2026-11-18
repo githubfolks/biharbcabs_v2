@@ -10,6 +10,7 @@ import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert';
 import crypto from 'crypto';
 import { query, getDbPool } from '../lib/db';
+import { latestOtpSentTo, lastMessageIs } from './helpers/sent-otp';
 import { processIncomingWhatsAppMessage } from '../lib/whatsapp-bot';
 import { getTripOtpPolicy } from '../lib/trip-otp';
 import { calculateRideSplitWithTaxes } from '../lib/dispatch-engine';
@@ -31,14 +32,7 @@ const lastTextTo = async (to: string) => {
   return JSON.stringify(r.rows[0]?.payload || '');
 };
 /** The OTP as the customer received it on WhatsApp. */
-const otpSentTo = async (customer: string) => {
-  const r = await query(
-    `SELECT payload FROM crm_whatsapp_logs WHERE direction = 'OUTBOUND' AND phone = $1 AND payload::text LIKE '%Trip OTP for booking%' ORDER BY id DESC LIMIT 1`,
-    [customer]
-  );
-  const m = JSON.stringify(r.rows[0]?.payload || '').match(/Trip OTP for booking #[\w-]+: \*(\d+)\*/);
-  return m ? m[1] : null;
-};
+const otpSentTo = (customer: string) => latestOtpSentTo(customer);
 const booking = async (id: number) => (await query(`SELECT * FROM crm_bookings WHERE id = $1`, [id])).rows[0];
 const conversationState = async (p: string) => (await query(`SELECT state FROM crm_whatsapp_conversations WHERE phone = $1`, [p])).rows[0]?.state;
 
@@ -117,7 +111,7 @@ describe('trip start OTP', () => {
     assert.strictEqual(row.booking_status, 'TRIP_IN_PROGRESS');
     assert.ok(row.trip_started_at);
     assert.strictEqual(row.start_otp_hash, null, 'a code works once');
-    assert.ok((await lastTextTo(b.cust)).includes('has started'));
+    assert.ok(await lastMessageIs(b.cust, 'bc_customer_trip_started', 'has started'), 'customer told the trip started');
     assert.notStrictEqual(await conversationState(d.phone), 'AWAITING_START_OTP');
   });
 

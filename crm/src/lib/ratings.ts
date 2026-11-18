@@ -1,6 +1,6 @@
 import { query, withTransaction } from './db';
-import { getDriverRatingPolicy, getAdminContacts } from './settings';
-import { sendWhatsAppText } from './whatsapp';
+import { notifyAdmins } from './wa-notify';
+import { getDriverRatingPolicy } from './settings';
 import { PoolClient } from 'pg';
 
 export interface RecordRatingInput {
@@ -171,18 +171,11 @@ export async function recordCustomerRating(input: RecordRatingInput): Promise<{
 
     // Send WhatsApp notification to Admin if critical or low rating
     if (alertAdmin) {
-      const admins = await getAdminContacts();
       const driverRes = await client.query(`SELECT full_name, phone FROM crm_drivers WHERE id = $1`, [driverId]);
       const driverName = driverRes.rows[0]?.full_name || `Driver #${driverId}`;
-
-      for (const admin of admins) {
-        if (admin.phone) {
-          await sendWhatsAppText(
-            admin.phone,
-            `⚠️ Driver Quality Alert:\nDriver: ${driverName} (${driverRes.rows[0]?.phone})\nBooking: #${booking.booking_code}\nRating: ${normalizedRating} Stars\nCategory: ${input.feedbackCategory || 'Unspecified'}\nNew Average: ${calculatedRating} ★\nStatus: ${newOnboardingStatus || 'ACTIVE'}`
-          );
-        }
-      }
+      await notifyAdmins(
+        `⚠️ Driver Quality Alert:\nDriver: ${driverName} (${driverRes.rows[0]?.phone})\nBooking: #${booking.booking_code}\nRating: ${normalizedRating} Stars\nCategory: ${input.feedbackCategory || 'Unspecified'}\nNew Average: ${calculatedRating} ★\nStatus: ${newOnboardingStatus || 'ACTIVE'}`
+      );
     }
 
     const shouldPromptGoogleReview = normalizedRating >= policy.min_rating_for_google_prompt;

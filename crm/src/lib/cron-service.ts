@@ -2,12 +2,12 @@ import { query } from './db';
 import { purgeOldLoginAttempts } from './login-security';
 import {
   getDriverWakeupCheckHours,
-  getAdminContacts,
   getCompanyBillingInfo,
   getRevenueProtectionPolicy,
 } from './settings';
 import { checkAndEscalateSlaBreaches, BookingDetails, releaseExpiredReturnWindows } from './dispatch-engine';
 import { notifyOfferedDrivers } from './dispatch-notify';
+import { notify, notifyAdmins } from './wa-notify';
 import { expireDriverReturns } from './return-trips';
 import { sendWhatsAppText, sendWhatsAppButtons } from './whatsapp';
 
@@ -30,17 +30,8 @@ export interface DailyCronResult {
  */
 export async function runSlaEscalation(): Promise<BookingDetails[]> {
   const breachedBookings = await checkAndEscalateSlaBreaches();
-  const adminContacts = await getAdminContacts();
-
-  if (breachedBookings.length > 0 && adminContacts.length > 0) {
-    for (const booking of breachedBookings) {
-      const alertMsg = `⚠️ SLA Alert: Booking #${booking.booking_code} (${booking.origin_city} → ${booking.destination_city || 'Local'}) on ${booking.pickup_date} at ${booking.pickup_time} has NOT been confirmed by any driver! Tap to assign manually in CRM.`;
-      for (const admin of adminContacts) {
-        if (admin.phone) {
-          await sendWhatsAppText(admin.phone, alertMsg);
-        }
-      }
-    }
+  for (const booking of breachedBookings) {
+    await notifyAdmins(`⚠️ SLA Alert: Booking #${booking.booking_code} (${booking.origin_city} → ${booking.destination_city || 'Local'}) on ${booking.pickup_date} at ${booking.pickup_time} has NOT been confirmed by any driver! Assign it manually in the CRM.`);
   }
 
   return breachedBookings;
@@ -74,12 +65,18 @@ export async function runDriverWakeupChecks(): Promise<number> {
   for (const b of res.rows) {
     const targetPhone = b.whatsapp_phone || b.driver_phone;
     if (targetPhone) {
-      await sendWhatsAppButtons(
-        targetPhone,
-        `⏰ Upcoming Pickup Reminder (#${b.booking_code}) in ${hoursBefore} hours at ${b.pickup_time}!\nPickup: ${b.pickup_address}\n\nPlease tap below to confirm you are awake, vehicle is ready, and you will arrive on time:`,
-        [{ id: `wakeup_ready_${b.id}`, title: '⏰ I Am Ready & On Time' }],
-        'BiharCabs Driver Wake-up Check'
-      );
+      const when = `${new Date(b.pickup_date).toLocaleDateString('en-IN')} ${String(b.pickup_time).slice(0, 5)}`;
+      await notify(targetPhone, 'driver_wakeup', {
+        ref: Number(b.id),
+        params: [`#${b.booking_code}`, when, b.pickup_address],
+        freeform: () =>
+          sendWhatsAppButtons(
+            targetPhone,
+            `⏰ Upcoming Pickup Reminder (#${b.booking_code}) on ${when}!\nPickup: ${b.pickup_address}\n\nPlease tap below to confirm you are awake, vehicle is ready, and you will arrive on time:`,
+            [{ id: `wakeup_ready_${b.id}`, title: '⏰ I Am Ready & On Time' }],
+            'BiharCabs Driver Wake-up Check'
+          ),
+      });
 
       await query(
         `UPDATE crm_bookings SET wakeup_sent_at = CURRENT_TIMESTAMP WHERE id = $1`,
@@ -123,10 +120,8 @@ export async function runExpiredDocumentSuspensions(): Promise<number> {
 
     const targetPhone = d.whatsapp_phone || d.phone;
     if (targetPhone) {
-      await sendWhatsAppText(
-        targetPhone,
-        `⚠️ Account Suspended: One or more vehicle/license documents for vehicle ${d.registration_no || ''} have expired. To resume receiving ride broadcasts, please submit renewed documents to BiharCabs office.`
-      );
+      const notice = `Account suspended: one or more vehicle/license documents for vehicle ${d.registration_no || ''} have expired. To resume receiving rides, submit renewed documents to the BiharCabs office.`;
+      await notify(targetPhone, 'driver_account_notice', { params: [notice], freeform: () => sendWhatsAppText(targetPhone, `⚠️ ${notice}`) });
     }
     suspendedCount++;
   }
@@ -155,10 +150,8 @@ export async function runDocumentExpiryWarnings(): Promise<number> {
   for (const d of warnRes.rows) {
     const targetPhone = d.whatsapp_phone || d.phone;
     if (targetPhone) {
-      await sendWhatsAppText(
-        targetPhone,
-        `⚠️ Document Renewal Reminder: Your cab commercial documents for ${d.registration_no || 'your vehicle'} expire soon (on ${new Date(d.earliest_expiry).toLocaleDateString('en-IN')}). Please renew and upload promptly to avoid automatic dispatch suspension.`
-      );
+      const notice = `Your cab commercial documents for ${d.registration_no || 'your vehicle'} expire on ${new Date(d.earliest_expiry).toLocaleDateString('en-IN')}. Renew and upload them to avoid automatic suspension from rides.`;
+      await notify(targetPhone, 'driver_account_notice', { params: [notice], freeform: () => sendWhatsAppText(targetPhone, `⚠️ Document Renewal Reminder: ${notice}`) });
       warningCount++;
     }
   }
@@ -224,21 +217,27 @@ export async function runUnpaidDuesGuardrails(): Promise<number> {
     const upiLink = `upi://pay?pa=${revPolicy.company_upi_vpa}&pn=${encodeURIComponent(revPolicy.company_upi_name)}&am=${unpaidAmount}&cu=INR&tn=Dues-Driver-${d.id}`;
 
     if (targetPhone) {
-      if (revPolicy.enable_digital_only_soft_mode) {
-        await sendWhatsAppButtons(
+      const limit = `₹${Number(d.dynamic_leeway).toFixed(0)}`;
+      const effect = revPolicy.enable_digital_only_soft_mode
+        ? 'Until then you get advance-paid rides only, which clear your dues automatically.'
+        : 'Your account is paused until the dues are cleared.';
+      await notify(targetPhone, 'driver_dues_reminder', {
+        ref: Number(d.id),
+        params: [`₹${unpaidAmount}`, limit, effect],
+        freeform: () => revPolicy.enable_digital_only_soft_mode
+          ? sendWhatsAppButtons(
           targetPhone,
           `⚠️ Account Placed in Digital-Only Mode (Dues: ₹${unpaidAmount}):\nNamaste ${d.full_name}, your balance exceeds your credit limit of ₹${Number(d.dynamic_leeway).toFixed(0)}.\n\nTo ensure you keep earning, you will receive advance-paid & corporate rides to automatically clear your dues.\n\nTo instantly restore full access to high-value cash & outstation rides, tap below to clear dues via UPI:`,
           [
             { id: `pay_dues_${d.id}`, title: `💳 Pay ₹${unpaidAmount} via UPI` },
           ],
           'BiharCabs Dues Settlement'
-        );
-      } else {
-        await sendWhatsAppText(
+        )
+          : sendWhatsAppText(
           targetPhone,
           `⚠️ Account Paused (Unpaid Dues: ₹${unpaidAmount}):\nYour balance exceeds the limit of ₹${Number(d.dynamic_leeway).toFixed(0)}.\nPlease clear your balance via UPI: ${revPolicy.company_upi_vpa}\nDispatch support: ${company.phone}`
-        );
-      }
+        ),
+      });
       restrictedCount++;
     }
   }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth';
 import { query } from '@/lib/db';
 import { sendWhatsAppText } from '@/lib/whatsapp';
+import { isServiceWindowOpen } from '@/lib/wa-notify';
 
 export const dynamic = 'force-dynamic';
 
@@ -81,6 +82,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // WhatsApp delivers a free-form message only within 24 hours of the customer's last message.
+    if (!(await isServiceWindowOpen(phone))) {
+      return NextResponse.json(
+        { success: false, error: 'This number has not messaged BiharCabs in the last 24 hours, so WhatsApp will not deliver a typed message. Ask them to message first, or call them.' },
+        { status: 409 }
+      );
+    }
     const result = await sendWhatsAppText(phone, text);
     return NextResponse.json(result);
   } catch (err: any) {
