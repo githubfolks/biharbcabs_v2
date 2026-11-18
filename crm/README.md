@@ -244,3 +244,16 @@ Apply `crm-design/16_whatsapp_templates.sql` before deploying. Tests:
 ```bash
 DATABASE_URL=postgresql://localhost/biharcabs_crm_test npx tsx --test src/tests/wa-notify.integration.ts
 ```
+
+## Driver dues payments
+
+A negative `crm_drivers.wallet_balance` is what the driver owes BiharCabs. A payment writes a `DRIVER_DUES_PAYMENT` ledger entry and raises the wallet in one transaction, locked on the driver row.
+
+- **Through the bot:** **Pay dues** sends a Razorpay link for exactly what is owed. An open link for the same amount is reused; a driver who owes nothing is told so. Only the signed `payment_link.paid` webhook records the payment, once per event, with the exact amount checked. A mismatch is not credited and admins are alerted. Dues carry no GST and no receipt voucher, because they settle commission already invoiced.
+- **Recorded by finance:** **Finance → Drivers Owing Dues → Record payment**, or `POST /api/finance/dues-payments` with `{ driverId, amount, channel: UPI | BANK_TRANSFER | CASH, reference, notes? }`. Permission: `dues.record` (SUPER_ADMIN, FINANCE_MANAGER). A payment can't exceed what is owed, and a reference is accepted once per channel. The driver is notified.
+- **Restriction lifted:** when the driver is back within their tier credit limit (the same rule that restricted them), `RESTRICTED_DIGITAL_ONLY` / `SUSPENDED_UNPAID_DUES` returns to `APPROVED_ACTIVE`. Other suspensions (documents, ratings) are never lifted here.
+
+Apply `crm-design/17_driver_dues_payments.sql` before deploying (payment links can now belong to a driver's dues). Tests:
+```bash
+DATABASE_URL=postgresql://localhost/biharcabs_crm_test npx tsx --test src/tests/dues-payments.integration.ts
+```

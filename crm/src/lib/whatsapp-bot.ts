@@ -27,6 +27,7 @@ import { applyReturnDiscount } from './return-trip-pricing';
 import { endDriverReturn, startDriverReturn } from './return-trips';
 import { notifyAssignment, notifyOfferedDrivers } from './dispatch-notify';
 import { notify, notifyAdmins } from './wa-notify';
+import { requestDuesPaymentLink } from './driver-dues';
 import { formatPickup, parsePickupTime, PickupTime } from './pickup-time';
 import { recordCustomerRating } from './ratings';
 import { issueStartOtp, otpMessage, reissueOtpForCustomer, startTripWithOtp } from './trip-otp';
@@ -557,14 +558,26 @@ export async function processIncomingWhatsAppMessage(params: {
       await sendWhatsAppText(fromPhone, 'These dues are not linked to your number.');
       return;
     }
-    const unpaidAmount = Math.abs(Number(dRes.rows[0]?.wallet_balance || 0)).toFixed(2);
-    const revPolicy = await getRevenueProtectionPolicy();
-    const upiLink = `upi://pay?pa=${revPolicy.company_upi_vpa}&pn=${encodeURIComponent(revPolicy.company_upi_name)}&am=${unpaidAmount}&cu=INR&tn=Dues-Driver-${driverId}`;
-
-    await sendWhatsAppText(
-      fromPhone,
-      `📲 *Instant UPI Payment for BiharCabs Dues:*\n\nAmount to Clear: ₹${unpaidAmount}\nCompany VPA: *${revPolicy.company_upi_vpa}*\nAccount Name: *${revPolicy.company_upi_name}*\n\n👉 *Tap to pay directly with PhonePe / Google Pay / Paytm:*\n${upiLink}\n\nAlternatively, send ₹${unpaidAmount} to UPI ID: \`${revPolicy.company_upi_vpa}\` and reply with your 12-digit UPI UTR number.`
-    );
+    // A Razorpay link for exactly what is owed; the signed webhook records the payment and lifts the restriction.
+    try {
+      const link = await requestDuesPaymentLink(driverId);
+      if (!link) {
+        await sendWhatsAppText(fromPhone, '✅ You have no dues with BiharCabs.');
+        return;
+      }
+      const minutes = Math.max(1, Math.round((link.expireBy.getTime() - Date.now()) / 60000));
+      await sendWhatsAppText(
+        fromPhone,
+        `📲 *Pay your BiharCabs dues: ₹${link.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}*\n${link.shortUrl}\n\nPay with any UPI app or card. The link is valid for ${minutes} minutes. Your account updates as soon as the payment is received.`
+      );
+    } catch (err: any) {
+      console.error(`[Dues] Payment link failed for driver #${driverId}:`, err?.message);
+      const company = await getCompanyBillingInfo().catch(() => null);
+      await sendWhatsAppText(
+        fromPhone,
+        `Sorry, we could not create your payment link right now. You can pay at the BiharCabs office${company?.phone ? ` (${company.phone})` : ''}; finance will record it against your dues.`
+      );
+    }
     return;
   }
 
