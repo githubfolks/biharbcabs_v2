@@ -24,6 +24,7 @@ import * as drivers from '../app/api/drivers/route';
 import * as driverIncentives from '../app/api/drivers/[id]/incentives/route';
 import * as driverRatings from '../app/api/drivers/[id]/ratings/route';
 import * as ledger from '../app/api/finance/ledger/route';
+import * as payouts from '../app/api/finance/payouts/route';
 import * as quote from '../app/api/pricing/quote/route';
 import * as settings from '../app/api/settings/route';
 import * as messages from '../app/api/whatsapp/messages/route';
@@ -59,6 +60,8 @@ const PROTECTED: ProtectedRoute[] = [
   { name: 'POST /api/drivers/[id]/ratings', method: 'POST', handler: driverRatings.POST, permission: 'ratings.dispute', body: { action: 'dispute' }, ctx: NONE },
   { name: 'GET /api/finance/ledger', method: 'GET', handler: ledger.GET, permission: 'ledger.view' },
   { name: 'POST /api/finance/ledger', method: 'POST', handler: ledger.POST, permission: 'ledger.settle', body: {} },
+  { name: 'GET /api/finance/payouts', method: 'GET', handler: payouts.GET, permission: 'ledger.view' },
+  { name: 'POST /api/finance/payouts', method: 'POST', handler: payouts.POST, permission: 'payouts.record', body: {} },
   { name: 'POST /api/pricing/quote', method: 'POST', handler: quote.POST, permission: 'pricing.quote', body: {} },
   { name: 'GET /api/settings', method: 'GET', handler: settings.GET, permission: 'settings.view' },
   { name: 'POST /api/settings', method: 'POST', handler: settings.POST, permission: 'settings.change', body: {} },
@@ -183,6 +186,7 @@ describe('every admin route checks the session and the role', () => {
     const allowed = (p: Permission) => ROLES.filter((role) => hasPermission(role, p)).join(',');
     assert.strictEqual(allowed('settings.change'), 'SUPER_ADMIN');
     assert.strictEqual(allowed('ledger.settle'), 'SUPER_ADMIN,FINANCE_MANAGER');
+    assert.strictEqual(allowed('payouts.record'), 'SUPER_ADMIN,FINANCE_MANAGER');
     assert.strictEqual(allowed('incentives.award'), 'SUPER_ADMIN,FINANCE_MANAGER');
     assert.strictEqual(allowed('bookings.waive_advance'), 'SUPER_ADMIN,FINANCE_MANAGER');
     assert.strictEqual(allowed('dispatch.manage'), 'SUPER_ADMIN,DISPATCHER');

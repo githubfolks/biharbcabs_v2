@@ -1,7 +1,6 @@
 import { query } from './db';
 import {
   getDriverWakeupCheckHours,
-  getDriverMaxNegativeBalance,
   getAdminContacts,
   getCompanyBillingInfo,
   getRevenueProtectionPolicy,

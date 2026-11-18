@@ -1,8 +1,6 @@
 import { query, withTransaction } from './db';
 import {
   getDispatchSlaTimeoutMinutes,
-  getCommissionConfig,
-  getDriverMaxNegativeBalance,
   getAdminContacts,
   getDriverRatingPolicy,
   getRevenueProtectionPolicy,
@@ -88,31 +86,6 @@ export async function calculateRideSplitWithTaxes(customerTotalFare: number): Pr
     advanceTokenAmount,
     balanceCashDueFromCustomer,
     driverGrossEarnings,
-  };
-}
-
-/**
- * Calculate the commission and driver payout dynamically according to crm_settings.
- */
-export async function calculateFareSplit(customerTotalFare: number): Promise<{
-  commissionAmount: number;
-  driverPayoutAmount: number;
-}> {
-  const config = await getCommissionConfig();
-  let commission = 0;
-
-  if (config.type === 'PERCENTAGE' && config.percentage) {
-    commission = Math.round((customerTotalFare * config.percentage) / 100);
-  } else if (config.type === 'FIXED_MARGIN' && config.fixed_margin) {
-    commission = Math.min(config.fixed_margin, customerTotalFare);
-  } else {
-    commission = Math.round((customerTotalFare * 12) / 100);
-  }
-
-  const driverPayout = Math.max(0, customerTotalFare - commission);
-  return {
-    commissionAmount: commission,
-    driverPayoutAmount: driverPayout,
   };
 }
 

@@ -26,6 +26,7 @@ export const PERMISSIONS = {
   'incentives.award': MONEY,
   'ledger.view': MONEY,
   'ledger.settle': MONEY,
+  'payouts.record': MONEY,
   'settings.view': ALL,
   'settings.change': SUPER,
   'inbox.use': OPS,

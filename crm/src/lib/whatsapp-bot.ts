@@ -7,7 +7,6 @@ import {
 } from './whatsapp';
 import { fetchLiveQuote, QuoteResponse } from './tariff-bridge';
 import {
-  calculateFareSplit,
   calculateRideSplitWithTaxes,
   broadcastRideToDrivers,
   acceptRideOffer,

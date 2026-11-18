@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Settings, Save, RefreshCw, Sliders, Shield, MessageSquare, Database, Star, DollarSign, Award, ShieldCheck, Landmark } from 'lucide-react';
+import { Settings, Save, RefreshCw, Sliders, MessageSquare, Database, Star, DollarSign, Award, ShieldCheck, Landmark } from 'lucide-react';
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState<Record<string, any>>({});
@@ -52,8 +52,6 @@ export default function SettingsPage() {
   const slaTimeout = settings.dispatch_sla_timeout_minutes?.value ?? 15;
   const returnPolicy = settings.return_trip_policy ?? { enabled: false, discount_type: 'PERCENT', discount_value: null, exclusive_window_minutes: 10, return_status_hours: null };
   const wakeupHours = settings.driver_wakeup_check_hours_before?.value ?? 2;
-  const commModel = settings.commission_model ?? { type: 'PERCENTAGE', percentage: 12.0, fixed_margin: 300 };
-  const maxNegative = settings.driver_max_negative_balance_limit?.value ?? 1500;
   const wpApi = settings.biharcabs_wp_api ?? { base_url: 'http://localhost:8080', quote_endpoint: '/wp-json/biharcabs/v1/quote' };
   const ratingPolicy = settings.driver_rating_policy ?? {
     default_initial_rating: 5.0,
@@ -216,61 +214,6 @@ export default function SettingsPage() {
           >
             Save Return Trip Settings
           </button>
-        </div>
-
-        {/* Commission & Finance Rules */}
-        <div className="bg-white p-5 rounded-lg border border-slate-200 shadow-sm space-y-4">
-          <div className="flex items-center space-x-2 border-b pb-3">
-            <Shield className="h-5 w-5 text-emerald-600" />
-            <h3 className="font-bold text-slate-900">Commission & Wallet Rules</h3>
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-slate-700">Commission Percentage (%)</label>
-            <p className="text-xs text-slate-500 mb-1">Default company platform commission deducted from driver earnings</p>
-            <div className="flex space-x-2">
-              <input
-                type="number"
-                step="0.5"
-                defaultValue={commModel.percentage}
-                id="comm_input"
-                className="w-full px-3 py-1.5 border rounded-md text-sm font-mono"
-              />
-              <button
-                onClick={() => {
-                  const pct = Number((document.getElementById('comm_input') as HTMLInputElement).value);
-                  handleSaveSetting('commission_model', { ...commModel, percentage: pct });
-                }}
-                disabled={savingKey === 'commission_model'}
-                className="px-3 py-1.5 bg-orange-600 text-white rounded-md text-xs font-semibold hover:bg-orange-700"
-              >
-                Save
-              </button>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-slate-700">Driver Max Negative Balance Limit (₹)</label>
-            <p className="text-xs text-slate-500 mb-1">Drivers owing more than this amount are suspended from ride broadcasts</p>
-            <div className="flex space-x-2">
-              <input
-                type="number"
-                defaultValue={maxNegative}
-                id="neg_input"
-                className="w-full px-3 py-1.5 border rounded-md text-sm font-mono"
-              />
-              <button
-                onClick={() => {
-                  const val = Number((document.getElementById('neg_input') as HTMLInputElement).value);
-                  handleSaveSetting('driver_max_negative_balance_limit', { value: val });
-                }}
-                disabled={savingKey === 'driver_max_negative_balance_limit'}
-                className="px-3 py-1.5 bg-orange-600 text-white rounded-md text-xs font-semibold hover:bg-orange-700"
-              >
-                Save
-              </button>
-            </div>
-          </div>
         </div>
 
         {/* Live Tariff Bridge & WordPress API Connector */}
