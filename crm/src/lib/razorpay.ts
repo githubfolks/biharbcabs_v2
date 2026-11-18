@@ -58,6 +58,56 @@ export interface CreatedPaymentLink {
   status: string;
 }
 
+/** Calls the Razorpay API. Throws with Razorpay's error description on a non-2xx response. */
+async function razorpayRequest(method: 'GET' | 'POST', path: string, body?: unknown): Promise<any> {
+  const { keyId, keySecret } = getApiKeys();
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}${path}`, {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Basic ' + Buffer.from(`${keyId}:${keySecret}`).toString('base64'),
+      },
+      body: body === undefined ? undefined : JSON.stringify(body),
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    });
+  } catch (err: any) {
+    throw new Error(`Razorpay request failed: ${err?.name === 'TimeoutError' ? 'timed out' : err?.message || 'network error'}`);
+  }
+  let data: any = null;
+  try {
+    data = await res.json();
+  } catch {
+    // Handled below.
+  }
+  if (!res.ok) {
+    throw new Error(`Razorpay error: ${data?.error?.description || `HTTP ${res.status}`}`);
+  }
+  if (!data || typeof data !== 'object') throw new Error('Razorpay returned an invalid response.');
+  return data;
+}
+
+const LINK_ID = /^plink_[A-Za-z0-9]+$/;
+
+/**
+ * POST /v1/payment_links/{id}/cancel. Only a link in the "created" state can be cancelled; Razorpay
+ * answers 400 if it is already paid, partially paid, expired or cancelled.
+ */
+export async function cancelPaymentLink(linkId: string): Promise<string> {
+  if (!LINK_ID.test(linkId)) throw new Error('Invalid payment link id.');
+  const data = await razorpayRequest('POST', `/payment_links/${linkId}/cancel`);
+  return String(data.status || '');
+}
+
+/** GET /v1/payment_links/{id}: created, partially_paid, expired, cancelled or paid. */
+export async function fetchPaymentLinkStatus(linkId: string): Promise<string> {
+  if (!LINK_ID.test(linkId)) throw new Error('Invalid payment link id.');
+  const data = await razorpayRequest('GET', `/payment_links/${linkId}`);
+  if (typeof data.status !== 'string') throw new Error('Razorpay returned a payment link without a status.');
+  return data.status;
+}
+
 export async function createPaymentLink(input: CreatePaymentLinkInput): Promise<CreatedPaymentLink> {
   if (!Number.isInteger(input.amountPaise) || input.amountPaise < 100) {
     throw new Error(`Invalid payment link amount: ${input.amountPaise} paise.`);
@@ -65,8 +115,6 @@ export async function createPaymentLink(input: CreatePaymentLinkInput): Promise<
   if (!input.referenceId || input.referenceId.length > 40) {
     throw new Error('Payment link reference_id must be 1 to 40 characters.');
   }
-  const { keyId, keySecret } = getApiKeys();
-
   const body = {
     amount: input.amountPaise,
     currency: 'INR',
@@ -80,32 +128,8 @@ export async function createPaymentLink(input: CreatePaymentLinkInput): Promise<
     notes: input.notes || {},
   };
 
-  let res: Response;
-  try {
-    res = await fetch(`${API_BASE}/payment_links`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: 'Basic ' + Buffer.from(`${keyId}:${keySecret}`).toString('base64'),
-      },
-      body: JSON.stringify(body),
-      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-    });
-  } catch (err: any) {
-    throw new Error(`Razorpay request failed: ${err?.name === 'TimeoutError' ? 'timed out' : err?.message || 'network error'}`);
-  }
-
-  let data: any = null;
-  try {
-    data = await res.json();
-  } catch {
-    // Handled below as an invalid response.
-  }
-  if (!res.ok) {
-    const reason = data?.error?.description || `HTTP ${res.status}`;
-    throw new Error(`Razorpay refused the payment link: ${reason}`);
-  }
-  if (!data || typeof data.id !== 'string' || !data.id.startsWith('plink_') || typeof data.short_url !== 'string') {
+  const data = await razorpayRequest('POST', '/payment_links', body);
+  if (typeof data.id !== 'string' || !data.id.startsWith('plink_') || typeof data.short_url !== 'string') {
     throw new Error('Razorpay returned an invalid payment link response.');
   }
   return { id: data.id, shortUrl: data.short_url, status: String(data.status || 'created') };

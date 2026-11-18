@@ -20,6 +20,7 @@ import { middleware } from '../middleware';
 
 import * as bookings from '../app/api/bookings/route';
 import * as bookingDispatch from '../app/api/bookings/[id]/dispatch/route';
+import * as bookingAdvance from '../app/api/bookings/[id]/advance/route';
 import * as drivers from '../app/api/drivers/route';
 import * as driverIncentives from '../app/api/drivers/[id]/incentives/route';
 import * as driverRatings from '../app/api/drivers/[id]/ratings/route';
@@ -53,6 +54,7 @@ const PROTECTED: ProtectedRoute[] = [
   { name: 'GET /api/bookings', method: 'GET', handler: bookings.GET, permission: 'bookings.view' },
   { name: 'POST /api/bookings', method: 'POST', handler: bookings.POST, permission: 'bookings.create', body: {} },
   { name: 'POST /api/bookings/[id]/dispatch', method: 'POST', handler: bookingDispatch.POST, permission: 'dispatch.manage', body: { action: 'none' }, ctx: NONE },
+  { name: 'POST /api/bookings/[id]/advance', method: 'POST', handler: bookingAdvance.POST, permission: 'bookings.waive_advance', body: { action: 'none' }, ctx: NONE },
   { name: 'GET /api/drivers', method: 'GET', handler: drivers.GET, permission: 'drivers.view' },
   { name: 'POST /api/drivers', method: 'POST', handler: drivers.POST, permission: 'drivers.manage', body: {} },
   { name: 'POST /api/drivers/[id]/incentives', method: 'POST', handler: driverIncentives.POST, permission: 'incentives.award', body: { amount: -1 }, ctx: NONE },

@@ -5,6 +5,8 @@ import {
   Car, Clock, AlertTriangle, CheckCircle, RefreshCw, Send, UserCheck, 
   PlusCircle, Phone, MapPin, DollarSign, Calendar
 } from 'lucide-react';
+import { hasPermission } from '@/lib/permissions';
+import { MIN_WAIVER_REASON_LENGTH, WAIVABLE_STATUSES } from '@/lib/advance-rules';
 
 export default function DispatchBoard() {
   const [bookings, setBookings] = useState<any[]>([]);
@@ -12,6 +14,47 @@ export default function DispatchBoard() {
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [showNewModal, setShowNewModal] = useState(false);
   const [actionLoading, setActionLoading] = useState<number | null>(null);
+
+  // Advance waiver on bookings waiting for their advance (finance / super admin only; the API enforces it)
+  const [role, setRole] = useState<string | null>(null);
+  const [waiveBooking, setWaiveBooking] = useState<any | null>(null);
+  const [waiveReason, setWaiveReason] = useState('');
+  const [waiveError, setWaiveError] = useState<string | null>(null);
+  const [waiving, setWaiving] = useState(false);
+  const canWaive = hasPermission(role, 'bookings.waive_advance');
+
+  useEffect(() => {
+    fetch('/api/auth/me')
+      .then((res) => res.json())
+      .then((data) => setRole(data?.user?.role ?? null))
+      .catch(() => setRole(null));
+  }, []);
+
+  async function handleWaive(e: React.FormEvent) {
+    e.preventDefault();
+    if (!waiveBooking) return;
+    setWaiving(true);
+    setWaiveError(null);
+    try {
+      const res = await fetch(`/api/bookings/${waiveBooking.id}/advance`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'waive', reason: waiveReason }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setWaiveBooking(null);
+        alert(data.message);
+        loadBookings();
+      } else {
+        setWaiveError(data.error || 'Advance not waived');
+      }
+    } catch {
+      setWaiveError('Advance not waived: network error');
+    } finally {
+      setWaiving(false);
+    }
+  }
 
   // New Booking Form State
   const [newBooking, setNewBooking] = useState({
@@ -165,7 +208,7 @@ export default function DispatchBoard() {
 
       {/* Filter Tabs */}
       <div className="border-b border-slate-200 flex space-x-2">
-        {['ALL', 'AWAITING_DRIVER', 'ESCALATED_NO_DRIVER', 'DRIVER_ASSIGNED', 'COMPLETED_SETTLED'].map((st) => (
+        {['ALL', 'AWAITING_ADVANCE', 'AWAITING_DRIVER', 'ESCALATED_NO_DRIVER', 'DRIVER_ASSIGNED', 'COMPLETED_SETTLED'].map((st) => (
           <button
             key={st}
             onClick={() => setStatusFilter(st)}
@@ -277,6 +320,17 @@ export default function DispatchBoard() {
                           <Send className="h-3 w-3 mr-1" />
                           {actionLoading === b.id ? 'Broadcasting...' : 'Broadcast'}
                         </button>
+                      ) : canWaive && WAIVABLE_STATUSES.includes(b.booking_status) ? (
+                        <button
+                          onClick={() => {
+                            setWaiveBooking(b);
+                            setWaiveReason('');
+                            setWaiveError(null);
+                          }}
+                          className="inline-flex items-center px-2.5 py-1.5 border border-slate-300 text-xs font-medium rounded text-slate-700 bg-white hover:bg-slate-50"
+                        >
+                          Waive advance
+                        </button>
                       ) : (
                         <span className="text-xs text-slate-400">&mdash;</span>
                       )}
@@ -288,6 +342,48 @@ export default function DispatchBoard() {
           </table>
         </div>
       </div>
+
+      {/* Modal: Waive Advance */}
+      {waiveBooking && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <form onSubmit={handleWaive} className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 space-y-3">
+            <h3 className="text-base font-bold text-slate-900">Waive advance on #{waiveBooking.booking_code}</h3>
+            <p className="text-xs text-slate-500">
+              The payment link is cancelled, the customer pays the full fare of ₹
+              {Number(waiveBooking.customer_total_fare).toLocaleString('en-IN')} in cash to the driver, and the ride goes to
+              drivers now. BiharCabs&apos; share is then collected from the driver.
+            </p>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700">Reason (recorded with your name)</label>
+              <textarea
+                required
+                minLength={MIN_WAIVER_REASON_LENGTH}
+                value={waiveReason}
+                onChange={(e) => setWaiveReason(e.target.value)}
+                placeholder="e.g. Customer has no UPI; regular customer, confirmed by phone"
+                className="w-full mt-1 px-3 py-1.5 border rounded-md text-sm"
+              />
+            </div>
+            {waiveError && <div className="text-sm text-rose-600">{waiveError}</div>}
+            <div className="flex justify-end space-x-2 pt-2 border-t">
+              <button
+                type="button"
+                onClick={() => setWaiveBooking(null)}
+                className="px-4 py-2 border rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={waiving}
+                className="px-4 py-2 rounded-md text-sm font-semibold bg-orange-600 text-white hover:bg-orange-700 disabled:opacity-50"
+              >
+                {waiving ? 'Waiving…' : 'Waive and dispatch'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
 
       {/* Modal: New Ride Dispatch */}
       {showNewModal && (
