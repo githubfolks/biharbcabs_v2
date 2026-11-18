@@ -1,11 +1,12 @@
 import crypto from 'crypto';
 import { PoolClient } from 'pg';
 import { query, withTransaction } from './db';
-import { createPaymentLink } from './razorpay';
+import { cancelPaymentLink, createPaymentLink, fetchPaymentLinkStatus } from './razorpay';
 import { AdvanceCollectionPolicy, getAdminContacts, getAdvanceCollectionPolicy, getCompanyBillingInfo } from './settings';
-import { broadcastRideToDrivers } from './dispatch-engine';
+import { bookingPickupAt, broadcastRideToDrivers } from './dispatch-engine';
 import { notifyOfferedDrivers } from './dispatch-notify';
 import { sendWhatsAppText } from './whatsapp';
+import { MIN_WAIVER_REASON_LENGTH, WAIVABLE_STATUSES } from './advance-rules';
 
 /**
  * Customer advance: which rides need it online, the Razorpay link for it, and the webhook that
@@ -229,7 +230,8 @@ async function handleClosed(client: PoolClient, event: any, newLinkStatus: 'EXPI
 }
 
 /** Messages and dispatch run only after the payment is committed. A failure here is logged; the booking stays visible to staff. */
-async function runAfterCommit(after: AfterCommit): Promise<void> {
+async function runAfterCommit(after: AfterCommit): Promise<boolean> {
+  let dispatched = false;
   if (after.customerPhone && after.customerMessage) {
     try {
       await sendWhatsAppText(after.customerPhone, after.customerMessage);
@@ -241,6 +243,7 @@ async function runAfterCommit(after: AfterCommit): Promise<void> {
     try {
       const result = await broadcastRideToDrivers(after.dispatchBookingId);
       await notifyOfferedDrivers(after.dispatchBookingId, result);
+      dispatched = true;
     } catch (err: any) {
       console.error(`[Advance] Dispatch after payment failed for booking #${after.dispatchBookingId}; it stays CONFIRMED_AWAITING_DRIVER for manual broadcast:`, err?.message);
     }
@@ -253,6 +256,121 @@ async function runAfterCommit(after: AfterCommit): Promise<void> {
     } catch (err: any) {
       console.error('[Advance] Admin alert failed:', err?.message);
     }
+  }
+  return dispatched;
+}
+
+// ---------------------------------------------------------------------------------------------
+// Waiving the advance on a booking that is waiting for it (finance / super admin)
+// ---------------------------------------------------------------------------------------------
+
+export { MIN_WAIVER_REASON_LENGTH, WAIVABLE_STATUSES };
+
+export class WaiverError extends Error {
+  constructor(message: string, readonly status: number) {
+    super(message);
+  }
+}
+
+/**
+ * Make sure the customer can no longer pay this link. Cancels it at Razorpay; if Razorpay refuses,
+ * checks the link's state: already expired or cancelled is fine, paid means the waiver must not happen.
+ */
+async function closeLinkAtRazorpay(providerLinkId: string): Promise<void> {
+  try {
+    await cancelPaymentLink(providerLinkId);
+    return;
+  } catch (cancelErr: any) {
+    let status: string;
+    try {
+      status = await fetchPaymentLinkStatus(providerLinkId);
+    } catch {
+      throw new WaiverError(`Could not cancel the payment link at Razorpay (${cancelErr?.message}). Nothing was changed; try again.`, 502);
+    }
+    if (status === 'cancelled' || status === 'expired') return;
+    if (status === 'paid' || status === 'partially_paid') {
+      throw new WaiverError('The customer has already paid this advance; its confirmation is on the way. Nothing was waived.', 409);
+    }
+    throw new WaiverError(`Could not cancel the payment link at Razorpay (${cancelErr?.message}). Nothing was changed; try again.`, 502);
+  }
+}
+
+export interface WaiveAdvanceResult {
+  bookingCode: string;
+  dispatched: boolean;
+}
+
+/**
+ * Waive the advance on a booking that is waiting for it: the ride becomes full cash to the driver
+ * and goes to drivers. The payment link is cancelled at Razorpay first, so the customer cannot pay
+ * after the waiver; if that cannot be confirmed, nothing changes.
+ */
+export async function waiveBookingAdvance(input: { bookingId: number; adminId: number; reason: string }): Promise<WaiveAdvanceResult> {
+  const reason = String(input.reason || '').trim();
+  if (reason.length < MIN_WAIVER_REASON_LENGTH) {
+    throw new WaiverError(`A waiver needs a reason of at least ${MIN_WAIVER_REASON_LENGTH} characters.`, 400);
+  }
+
+  const bRes = await query(`SELECT * FROM crm_bookings WHERE id = $1`, [input.bookingId]);
+  const booking = bRes.rows[0];
+  if (!booking) throw new WaiverError('Booking not found.', 404);
+  checkWaivable(booking);
+
+  const openLinks = await query(
+    `SELECT provider_link_id FROM crm_payment_links WHERE booking_id = $1 AND status = 'CREATED'`,
+    [input.bookingId]
+  );
+  for (const link of openLinks.rows) await closeLinkAtRazorpay(link.provider_link_id);
+
+  const after: AfterCommit = {};
+  const bookingCode = await withTransaction(async (client) => {
+    const locked = await client.query(
+      `SELECT b.*, c.phone AS customer_phone FROM crm_bookings b JOIN crm_customers c ON c.id = b.customer_id
+       WHERE b.id = $1 FOR UPDATE OF b`,
+      [input.bookingId]
+    );
+    const b = locked.rows[0];
+    checkWaivable(b); // A payment webhook may have landed while the link was being cancelled.
+
+    await client.query(
+      `UPDATE crm_payment_links SET status = 'CANCELLED', updated_at = CURRENT_TIMESTAMP WHERE booking_id = $1 AND status = 'CREATED'`,
+      [b.id]
+    );
+    const fare = Number(b.customer_total_fare);
+    await client.query(
+      `UPDATE crm_bookings
+       SET payment_mode = 'FULL_CASH',
+           advance_due_amount = 0,
+           advance_status = 'WAIVED',
+           advance_waived_by = $1,
+           advance_waiver_reason = $2,
+           balance_cash_due_from_customer = $3,
+           booking_status = 'CONFIRMED_AWAITING_DRIVER',
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $4`,
+      [input.adminId, reason, Math.max(0, fare - Number(b.advance_paid || 0)), b.id]
+    );
+
+    after.dispatchBookingId = Number(b.id);
+    after.customerPhone = b.customer_phone;
+    after.customerMessage = `✅ Booking #${b.booking_code} is confirmed without an online advance. Please pay the full fare of ₹${fare.toLocaleString('en-IN')} in cash to the driver at drop. We are assigning your driver now.`;
+    return String(b.booking_code);
+  });
+
+  console.info(`[Advance] Advance waived on ${bookingCode} by admin #${input.adminId}`);
+  const dispatched = await runAfterCommit(after);
+  return { bookingCode, dispatched };
+}
+
+function checkWaivable(b: any): void {
+  if (b.advance_status === 'PAID_AFTER_CLOSE') {
+    throw new WaiverError('The customer already paid this advance after the booking closed. Reinstate or refund it instead of waiving.', 409);
+  }
+  if (!WAIVABLE_STATUSES.includes(b.booking_status)) {
+    throw new WaiverError(`Booking ${b.booking_code} is not waiting for an advance (status ${b.booking_status}).`, 409);
+  }
+  if (bookingPickupAt(b).getTime() <= Date.now()) {
+    throw new WaiverError(`The pickup time for booking ${b.booking_code} has already passed.`, 409);
   }
 }
 

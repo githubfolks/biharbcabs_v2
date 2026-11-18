@@ -20,6 +20,9 @@ import { completeTripAndSettle } from '../lib/billing';
 import { processIncomingWhatsAppMessage, updateConversation } from '../lib/whatsapp-bot';
 import { POST as razorpayWebhookPOST } from '../app/api/payments/razorpay/webhook/route';
 import { POST as bookingsPOST } from '../app/api/bookings/route';
+import * as advanceRoute from '../app/api/bookings/[id]/advance/route';
+import { createAdminSession, hashPassword, SESSION_COOKIE_NAME } from '../lib/auth';
+import { WAIVABLE_STATUSES as WAIVABLE } from '../lib/advance-rules';
 
 const dbName = new URL(process.env.DATABASE_URL || 'postgresql://x/none').pathname.slice(1);
 if (!dbName.endsWith('_test')) throw new Error(`Refusing to run: ${dbName} is not a _test database.`);
@@ -36,17 +39,32 @@ const phone = () => `9177${RUN}${String(seq++).padStart(2, '0')}`;
 // ---- Razorpay simulation (test only) ----
 type RzpMode = 'ok' | 'fail';
 let rzpMode: RzpMode = 'ok';
+/** How a cancel call behaves: succeed, or fail with the link already paid / expired, or Razorpay down. */
+let rzpCancelMode: 'ok' | 'paid' | 'expired' | 'down' = 'ok';
+const rzpLinks = new Map<string, string>();
 const rzpCalls: any[] = [];
 const realFetch = globalThis.fetch;
+const json = (data: any, status = 200) => new Response(JSON.stringify(data), { status });
 globalThis.fetch = (async (url: any, init?: any) => {
-  if (String(url).startsWith('https://api.razorpay.com/')) {
-    const body = JSON.parse(init.body);
-    rzpCalls.push({ url: String(url), auth: init.headers.Authorization, body });
-    if (rzpMode === 'fail') {
-      return new Response(JSON.stringify({ error: { description: 'simulated outage' } }), { status: 500 });
+  const u = String(url);
+  if (u.startsWith('https://api.razorpay.com/')) {
+    const body = init.body ? JSON.parse(init.body) : undefined;
+    rzpCalls.push({ url: u, method: init.method, auth: init.headers.Authorization, body });
+    const m = u.match(/\/payment_links\/(plink_[A-Za-z0-9]+)(\/cancel)?$/);
+    if (m) {
+      if (rzpCancelMode === 'down') return json({ error: { description: 'simulated outage' } }, 500);
+      if (m[2]) {
+        if (rzpCancelMode === 'paid') { rzpLinks.set(m[1], 'paid'); return json({ error: { description: 'already paid' } }, 400); }
+        if (rzpCancelMode === 'expired') { rzpLinks.set(m[1], 'expired'); return json({ error: { description: 'cannot cancel or expire an expired link' } }, 400); }
+        rzpLinks.set(m[1], 'cancelled');
+        return json({ id: m[1], status: 'cancelled' });
+      }
+      return json({ id: m[1], status: rzpLinks.get(m[1]) || 'created' });
     }
+    if (rzpMode === 'fail') return json({ error: { description: 'simulated outage' } }, 500);
     const id = `plink_${crypto.randomBytes(7).toString('hex')}`;
-    return new Response(JSON.stringify({ id, short_url: `https://rzp.io/i/${id.slice(6, 14)}`, status: 'created', amount: body.amount }), { status: 200 });
+    rzpLinks.set(id, 'created');
+    return json({ id, short_url: `https://rzp.io/i/${id.slice(6, 14)}`, status: 'created', amount: body.amount });
   }
   return realFetch(url, init);
 }) as typeof fetch;
@@ -343,5 +361,160 @@ describe('admin booking route', () => {
       headers: { 'content-type': 'application/json', cookie: 'biharcabs_crm_session=forged-token' },
     }));
     assert.strictEqual(res.status, 401);
+  });
+});
+
+describe('waiving the advance on a pending booking', () => {
+  let financeId = 0;
+  let financeToken = '';
+  let dispatcherToken = '';
+  const adminIds: number[] = [];
+
+  async function admin(role: string) {
+    const { hash, salt } = hashPassword(crypto.randomBytes(16).toString('hex'));
+    const r = await query(
+      `INSERT INTO crm_admin_users (email, password_hash, salt, full_name, role, is_active) VALUES ($1, $2, $3, 'Waiver Tester', $4, true) RETURNING id`,
+      [`waiver-${RUN}-${adminIds.length}@example.test`, hash, salt, role]
+    );
+    adminIds.push(Number(r.rows[0].id));
+    return Number(r.rows[0].id);
+  }
+  const waive = (bookingId: number, token: string, reason = 'Customer has no UPI; confirmed by phone') =>
+    advanceRoute.POST(
+      new NextRequest(`http://localhost:3001/api/bookings/${bookingId}/advance`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', cookie: `${SESSION_COOKIE_NAME}=${token}` },
+        body: JSON.stringify({ action: 'waive', reason }),
+      }),
+      { params: { id: String(bookingId) } }
+    );
+  async function pendingBooking() {
+    const c = phone();
+    await bookViaBot(c, TRIP());
+    const b = await bookingFor(c);
+    return { cust: c, b, link: await linkFor(Number(b.id)) };
+  }
+
+  before(async () => {
+    financeId = await admin('FINANCE_MANAGER');
+    financeToken = (await createAdminSession(financeId)).token;
+    dispatcherToken = (await createAdminSession(await admin('DISPATCHER'))).token;
+  });
+  after(async () => {
+    rzpCancelMode = 'ok';
+    await query(`DELETE FROM crm_admin_sessions WHERE user_id = ANY($1)`, [adminIds]);
+    await query(`UPDATE crm_admin_users SET is_active = false WHERE id = ANY($1)`, [adminIds]);
+  });
+
+  it('finance waives: the link is cancelled at Razorpay, the ride becomes full cash and goes to drivers', async () => {
+    const { cust, b, link } = await pendingBooking();
+    rzpCalls.length = 0;
+    const res = await waive(Number(b.id), financeToken);
+    assert.strictEqual(res.status, 200);
+    const body = await res.json();
+    assert.strictEqual(body.dispatched, true);
+    assert.ok(rzpCalls.some((c) => c.method === 'POST' && c.url.endsWith(`/payment_links/${link.provider_link_id}/cancel`)), 'link cancelled at Razorpay');
+
+    const w = await bookingFor(cust);
+    assert.strictEqual(w.payment_mode, 'FULL_CASH');
+    assert.strictEqual(w.advance_status, 'WAIVED');
+    assert.strictEqual(Number(w.advance_waived_by), financeId);
+    assert.ok(w.advance_waiver_reason.includes('no UPI'));
+    assert.strictEqual(Number(w.advance_due_amount), 0);
+    assert.strictEqual(Number(w.balance_cash_due_from_customer), Number(w.customer_total_fare));
+    assert.ok(!WAIVABLE.includes(w.booking_status), `left the pending statuses (now ${w.booking_status})`);
+    assert.strictEqual((await linkFor(Number(b.id))).status, 'CANCELLED');
+    assert.ok((await offersFor(Number(b.id))) > 0, 'drivers were offered the ride');
+    assert.ok(JSON.stringify(await lastMessageTo(cust)).includes('in cash'), 'customer told to pay cash');
+
+    // Razorpay's own "cancelled" webhook arriving afterwards changes nothing.
+    const late = await postWebhook(closedEvent(link.provider_link_id, 'payment_link.cancelled'));
+    assert.strictEqual(late.json.status, 'link_already_closed');
+    assert.strictEqual((await bookingFor(cust)).advance_status, 'WAIVED');
+  });
+
+  it('refuses when the customer has already paid the link, and changes nothing', async () => {
+    const { cust, b } = await pendingBooking();
+    rzpCancelMode = 'paid';
+    try {
+      const res = await waive(Number(b.id), financeToken);
+      assert.strictEqual(res.status, 409);
+      assert.ok((await res.json()).error.includes('already paid'));
+    } finally {
+      rzpCancelMode = 'ok';
+    }
+    const after = await bookingFor(cust);
+    assert.strictEqual(after.booking_status, 'AWAITING_ADVANCE');
+    assert.strictEqual(after.advance_status, 'PENDING');
+    assert.strictEqual((await linkFor(Number(b.id))).status, 'CREATED');
+  });
+
+  it('proceeds when Razorpay says the link already expired (webhook not here yet)', async () => {
+    const { cust, b } = await pendingBooking();
+    rzpCancelMode = 'expired';
+    try {
+      assert.strictEqual((await waive(Number(b.id), financeToken)).status, 200);
+    } finally {
+      rzpCancelMode = 'ok';
+    }
+    assert.strictEqual((await bookingFor(cust)).advance_status, 'WAIVED');
+  });
+
+  it('refuses when Razorpay cannot be reached, and changes nothing', async () => {
+    const { cust, b } = await pendingBooking();
+    rzpCancelMode = 'down';
+    try {
+      const res = await waive(Number(b.id), financeToken);
+      assert.strictEqual(res.status, 502);
+    } finally {
+      rzpCancelMode = 'ok';
+    }
+    assert.strictEqual((await bookingFor(cust)).booking_status, 'AWAITING_ADVANCE');
+    assert.strictEqual(await offersFor(Number(b.id)), 0);
+  });
+
+  it('waives a booking whose link failed or expired, without calling Razorpay for a closed link', async () => {
+    rzpMode = 'fail';
+    const failed = await pendingBooking().finally(() => { rzpMode = 'ok'; });
+    assert.strictEqual(failed.b.booking_status, 'ADVANCE_LINK_FAILED');
+    rzpCalls.length = 0;
+    assert.strictEqual((await waive(Number(failed.b.id), financeToken)).status, 200);
+    assert.strictEqual(rzpCalls.length, 0, 'no link, no Razorpay call');
+
+    const expired = await pendingBooking();
+    await postWebhook(closedEvent(expired.link.provider_link_id));
+    assert.strictEqual((await bookingFor(expired.cust)).booking_status, 'ADVANCE_EXPIRED');
+    rzpCalls.length = 0;
+    assert.strictEqual((await waive(Number(expired.b.id), financeToken)).status, 200);
+    assert.strictEqual(rzpCalls.length, 0, 'link already closed');
+    assert.strictEqual((await bookingFor(expired.cust)).advance_status, 'WAIVED');
+  });
+
+  it('refuses bookings that are not pending, already paid after closing, past pickup, or a short reason', async () => {
+    const paid = await pendingBooking();
+    await postWebhook(paidEvent(paid.link.provider_link_id, paid.link.amount_paise));
+    assert.strictEqual((await waive(Number(paid.b.id), financeToken)).status, 409, 'advance already paid and confirmed');
+
+    const late = await pendingBooking();
+    await postWebhook(closedEvent(late.link.provider_link_id));
+    await postWebhook(paidEvent(late.link.provider_link_id, late.link.amount_paise));
+    assert.strictEqual((await bookingFor(late.cust)).advance_status, 'PAID_AFTER_CLOSE');
+    const lateRes = await waive(Number(late.b.id), financeToken);
+    assert.strictEqual(lateRes.status, 409);
+    assert.ok((await lateRes.json()).error.includes('Reinstate or refund'));
+
+    const past = await pendingBooking();
+    await query(`UPDATE crm_bookings SET pickup_date = CURRENT_DATE - 1 WHERE id = $1`, [past.b.id]);
+    assert.strictEqual((await waive(Number(past.b.id), financeToken)).status, 409, 'pickup already passed');
+
+    const short = await pendingBooking();
+    assert.strictEqual((await waive(Number(short.b.id), financeToken, 'too short')).status, 400);
+    assert.strictEqual((await bookingFor(short.cust)).booking_status, 'AWAITING_ADVANCE');
+  });
+
+  it('a dispatcher cannot waive', async () => {
+    const { cust, b } = await pendingBooking();
+    assert.strictEqual((await waive(Number(b.id), dispatcherToken)).status, 403);
+    assert.strictEqual((await bookingFor(cust)).booking_status, 'AWAITING_ADVANCE');
   });
 });

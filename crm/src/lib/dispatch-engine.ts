@@ -227,7 +227,7 @@ export async function findEligibleDrivers(
 }
 
 /** Pickup moment of a stored booking, read as India time. */
-function bookingPickupAt(booking: any): Date {
+export function bookingPickupAt(booking: any): Date {
   const date = booking.pickup_date instanceof Date
     ? `${booking.pickup_date.getFullYear()}-${String(booking.pickup_date.getMonth() + 1).padStart(2, '0')}-${String(booking.pickup_date.getDate()).padStart(2, '0')}`
     : String(booking.pickup_date).slice(0, 10);

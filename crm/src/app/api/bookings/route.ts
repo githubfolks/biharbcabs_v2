@@ -4,7 +4,7 @@ import { calculateRideSplitWithTaxes, broadcastRideToDrivers } from '@/lib/dispa
 import { requireAdmin } from '@/lib/auth';
 import { hasPermission } from '@/lib/permissions';
 import { getAdvanceCollectionPolicy } from '@/lib/settings';
-import { advanceLinkMessage, isAdvanceRequired, requestAdvancePayment } from '@/lib/advance-payments';
+import { MIN_WAIVER_REASON_LENGTH, advanceLinkMessage, isAdvanceRequired, requestAdvancePayment } from '@/lib/advance-payments';
 import { sendWhatsAppText } from '@/lib/whatsapp';
 
 export const dynamic = 'force-dynamic';
@@ -12,7 +12,6 @@ export const dynamic = 'force-dynamic';
 /** How staff settle the advance on a booking they create. */
 const ADVANCE_MODES = ['PAYMENT_LINK', 'FULL_CASH', 'WAIVED'] as const;
 type AdvanceMode = (typeof ADVANCE_MODES)[number];
-const MIN_WAIVER_REASON_LENGTH = 10;
 
 export async function GET(req: NextRequest) {
   const auth = await requireAdmin(req, 'bookings.view');
