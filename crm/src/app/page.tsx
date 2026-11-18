@@ -6,7 +6,7 @@ import {
   PlusCircle, Phone, MapPin, DollarSign, Calendar
 } from 'lucide-react';
 import { hasPermission } from '@/lib/permissions';
-import { MIN_WAIVER_REASON_LENGTH, WAIVABLE_STATUSES } from '@/lib/advance-rules';
+import { CANCELLABLE_STATUSES, MIN_WAIVER_REASON_LENGTH, WAIVABLE_STATUSES } from '@/lib/advance-rules';
 
 export default function DispatchBoard() {
   const [bookings, setBookings] = useState<any[]>([]);
@@ -22,6 +22,61 @@ export default function DispatchBoard() {
   const [waiveError, setWaiveError] = useState<string | null>(null);
   const [waiving, setWaiving] = useState(false);
   const canWaive = hasPermission(role, 'bookings.waive_advance');
+  const canCancel = hasPermission(role, 'bookings.cancel');
+
+  // Cancelling a booking (staff): who is at fault decides the refund; the outcome is shown before confirming.
+  const [cancelTarget, setCancelTarget] = useState<any | null>(null);
+  const [cancelFault, setCancelFault] = useState<'CUSTOMER' | 'BIHARCABS'>('CUSTOMER');
+  const [cancelReason, setCancelReason] = useState('');
+  const [cancelPreview, setCancelPreview] = useState<string | null>(null);
+  const [cancelError, setCancelError] = useState<string | null>(null);
+  const [cancelling, setCancelling] = useState(false);
+
+  async function loadCancelPreview(b: any, fault: 'CUSTOMER' | 'BIHARCABS') {
+    setCancelPreview(null);
+    try {
+      const res = await fetch(`/api/bookings/${b.id}/cancel?fault=${fault}`);
+      const data = await res.json();
+      if (data.success) setCancelPreview(data.decision.explanation);
+      else setCancelError(data.error || 'Cannot cancel this booking');
+    } catch {
+      setCancelError('Could not load the refund outcome');
+    }
+  }
+
+  function openCancel(b: any) {
+    setCancelTarget(b);
+    setCancelFault('CUSTOMER');
+    setCancelReason('');
+    setCancelError(null);
+    loadCancelPreview(b, 'CUSTOMER');
+  }
+
+  async function handleCancel(e: React.FormEvent) {
+    e.preventDefault();
+    if (!cancelTarget) return;
+    setCancelling(true);
+    setCancelError(null);
+    try {
+      const res = await fetch(`/api/bookings/${cancelTarget.id}/cancel`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fault: cancelFault, reason: cancelReason }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setCancelTarget(null);
+        alert(`Booking #${data.bookingCode} cancelled. ${data.explanation}${data.refundStatus === 'FAILED' || data.refundStatus === 'MANUAL' ? ' The refund needs attention in Finance → Refunds.' : ''}`);
+        loadBookings();
+      } else {
+        setCancelError(data.error || 'Booking not cancelled');
+      }
+    } catch {
+      setCancelError('Booking not cancelled: network error');
+    } finally {
+      setCancelling(false);
+    }
+  }
 
   useEffect(() => {
     fetch('/api/auth/me')
@@ -310,7 +365,7 @@ export default function DispatchBoard() {
                         {b.booking_status.replace(/_/g, ' ')}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-right">
+                    <td className="px-4 py-3 text-right space-x-2 whitespace-nowrap">
                       {b.booking_status === 'CONFIRMED_AWAITING_DRIVER' || b.booking_status === 'ESCALATED_NO_DRIVER' ? (
                         <button
                           onClick={() => handleBroadcast(b.id)}
@@ -331,8 +386,16 @@ export default function DispatchBoard() {
                         >
                           Waive advance
                         </button>
-                      ) : (
+                      ) : !(canCancel && CANCELLABLE_STATUSES.includes(b.booking_status)) ? (
                         <span className="text-xs text-slate-400">&mdash;</span>
+                      ) : null}
+                      {canCancel && CANCELLABLE_STATUSES.includes(b.booking_status) && (
+                        <button
+                          onClick={() => openCancel(b)}
+                          className="inline-flex items-center px-2.5 py-1.5 border border-rose-200 text-xs font-medium rounded text-rose-700 bg-white hover:bg-rose-50"
+                        >
+                          Cancel
+                        </button>
                       )}
                     </td>
                   </tr>
@@ -342,6 +405,48 @@ export default function DispatchBoard() {
           </table>
         </div>
       </div>
+
+      {/* Modal: Cancel Booking */}
+      {cancelTarget && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <form onSubmit={handleCancel} className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 space-y-3">
+            <h3 className="text-base font-bold text-slate-900">Cancel booking #{cancelTarget.booking_code}</h3>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700">Why is it cancelled?</label>
+              <select
+                value={cancelFault}
+                onChange={(e) => {
+                  const fault = e.target.value as 'CUSTOMER' | 'BIHARCABS';
+                  setCancelFault(fault);
+                  loadCancelPreview(cancelTarget, fault);
+                }}
+                className="w-full mt-1 px-3 py-1.5 border rounded-md text-sm"
+              >
+                <option value="CUSTOMER">Customer asked to cancel</option>
+                <option value="BIHARCABS">BiharCabs cancelled (no driver, driver no-show, operational)</option>
+              </select>
+            </div>
+            <p className="text-xs text-slate-600 bg-slate-50 rounded p-2">{cancelPreview || 'Working out the refund…'}</p>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700">Reason (recorded with your name)</label>
+              <textarea
+                required
+                minLength={5}
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                className="w-full mt-1 px-3 py-1.5 border rounded-md text-sm"
+              />
+            </div>
+            {cancelError && <div className="text-sm text-rose-600">{cancelError}</div>}
+            <div className="flex justify-end space-x-2 pt-2 border-t">
+              <button type="button" onClick={() => setCancelTarget(null)} className="px-4 py-2 border rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50">Keep booking</button>
+              <button type="submit" disabled={cancelling} className="px-4 py-2 rounded-md text-sm font-semibold bg-rose-600 text-white hover:bg-rose-700 disabled:opacity-50">
+                {cancelling ? 'Cancelling…' : 'Cancel booking'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
 
       {/* Modal: Waive Advance */}
       {waiveBooking && (

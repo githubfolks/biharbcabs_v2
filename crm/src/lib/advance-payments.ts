@@ -10,6 +10,7 @@ import { sendWhatsAppText } from './whatsapp';
 import { notify, notifyAdmins } from './wa-notify';
 import { MIN_WAIVER_REASON_LENGTH, WAIVABLE_STATUSES } from './advance-rules';
 import { applyDuesPayment } from './driver-dues';
+import { markRefundProcessed } from './refunds';
 
 /**
  * Customer advance: which rides need it online, the Razorpay link for it, and the webhook that
@@ -122,6 +123,7 @@ export async function processRazorpayEvent(eventId: string, event: any): Promise
     if (eventType === 'payment_link.expired' || eventType === 'payment_link.cancelled') {
       return handleClosed(client, event, eventType === 'payment_link.expired' ? 'EXPIRED' : 'CANCELLED', after);
     }
+    if (eventType === 'refund.processed' || eventType === 'refund.failed') return handleRefundEvent(client, event, eventType, after);
     return { status: 'ignored_event_type' };
   });
 
@@ -248,6 +250,38 @@ async function handleDuesPaid(client: PoolClient, link: any, payment: any, match
   return { status: 'dues_payment_recorded' };
 }
 
+/**
+ * Razorpay reports a refund's outcome. Matched on the refund id, or on our receipt ("refund-<id>"), because
+ * the webhook can arrive before the refund API response stored Razorpay's id. Only the amount we asked for
+ * is accepted.
+ */
+async function handleRefundEvent(client: PoolClient, event: any, eventType: string, after: AfterCommit): Promise<WebhookOutcome> {
+  const entity = event?.payload?.refund?.entity;
+  const receiptId = /^refund-(\d+)$/.exec(String(entity?.receipt || ''))?.[1];
+  const res = await client.query(
+    `SELECT r.*, b.booking_code FROM crm_refunds r JOIN crm_bookings b ON b.id = r.booking_id
+     WHERE r.provider_refund_id = $1 OR r.id = $2 ORDER BY (r.provider_refund_id = $1) DESC LIMIT 1 FOR UPDATE OF r`,
+    [String(entity?.id || ''), receiptId ? Number(receiptId) : 0]
+  );
+  const refund = res.rows[0];
+  if (!refund) return { status: 'unknown_refund_ignored' };
+  if (Number(entity?.amount) !== Number(refund.amount_paise) || String(entity?.payment_id || '') !== refund.provider_payment_id) {
+    after.adminAlert = `⚠️ Razorpay refund ${entity?.id} for booking #${refund.booking_code} does not match the refund BiharCabs requested. Check it in Razorpay.`;
+    return { status: 'refund_mismatch_review' };
+  }
+  if (eventType === 'refund.processed') {
+    const booked = await markRefundProcessed(client, Number(refund.id), String(entity.id));
+    return { status: booked ? 'refund_processed' : 'refund_already_processed' };
+  }
+  if (refund.status === 'PROCESSED') return { status: 'refund_already_processed' };
+  await client.query(
+    `UPDATE crm_refunds SET status = 'FAILED', provider_refund_id = COALESCE(provider_refund_id, $1), last_error = 'Razorpay reported the refund failed', updated_at = CURRENT_TIMESTAMP WHERE id = $2`,
+    [String(entity.id), refund.id]
+  );
+  after.adminAlert = `⚠️ Razorpay could not process the ₹${(refund.amount_paise / 100).toFixed(2)} refund for cancelled booking #${refund.booking_code}. Retry it from Finance → Refunds.`;
+  return { status: 'refund_failed' };
+}
+
 async function handleClosed(client: PoolClient, event: any, newLinkStatus: 'EXPIRED' | 'CANCELLED', after: AfterCommit): Promise<WebhookOutcome> {
   const linkEntity = event?.payload?.payment_link?.entity;
   const linkRes = await client.query(
@@ -336,7 +370,7 @@ export class WaiverError extends Error {
  * Make sure the customer can no longer pay this link. Cancels it at Razorpay; if Razorpay refuses,
  * checks the link's state: already expired or cancelled is fine, paid means the waiver must not happen.
  */
-async function closeLinkAtRazorpay(providerLinkId: string): Promise<void> {
+export async function closeLinkAtRazorpay(providerLinkId: string): Promise<void> {
   try {
     await cancelPaymentLink(providerLinkId);
     return;

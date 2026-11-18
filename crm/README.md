@@ -284,3 +284,32 @@ DATABASE_URL=postgresql://localhost/biharcabs_crm_test npx tsx --test src/tests/
 ## Booking codes
 
 Customer-facing codes are `BC-` + 6 characters from an alphabet without look-alikes (no 0/O/1/I), drawn with `crypto`. That is about 1.07 billion values, and they can't be guessed or used to count bookings. Inserts retry with a new code on the rare collision (`src/lib/booking-code.ts`). The old 4-digit codes (9,000 values in a unique column) made inserts fail more often as bookings accumulated. Existing codes are unchanged.
+
+## Cancellations and refunds
+
+**Policy** (`cancellation_policy.free_cancellation_hours`, 2):
+- Customer cancels 2+ hours before pickup: the online advance is refunded in full.
+- Customer cancels later: no refund; BiharCabs keeps the advance, even if a driver was assigned.
+- BiharCabs cancels (no driver, driver no-show, operational): full refund at any time.
+
+**Who can cancel:**
+- **Customers:** reply **CANCEL** on WhatsApp. They see their next booking and exactly what they would get back, then confirm with **Yes, cancel** or **Keep booking**. The refund is decided at the moment they confirm. A trip already started is sent to support.
+- **Staff:** **Cancel** on the dispatch board (`bookings.cancel`: all roles), choosing the fault and giving a reason. The refund outcome is shown before confirming. `POST /api/bookings/{id}/cancel` with `{ fault: CUSTOMER | BIHARCABS, reason }`.
+
+**When a booking is cancelled:**
+- An unpaid advance link is closed at Razorpay first.
+- The booking becomes `CANCELLED`, recording who cancelled, the fault, the reason, the amount refunded and the amount kept.
+- Pending offers close, and the trip OTP is cleared.
+- The customer and any assigned driver are told.
+- A cancelled booking can't be broadcast again. Broadcasting is now allowed only while a booking waits for a driver.
+
+**Refunds** (`crm_refunds`, one per booking) go to the original Razorpay payment (`POST /v1/payments/{id}/refund`):
+- Each refund is claimed (`SUBMITTING`) before Razorpay is called, so it can never be sent twice.
+- It is booked to the ledger (`CUSTOMER_ADVANCE_REFUND`) when Razorpay reports it processed: at once, or by the `refund.processed` webhook.
+- `refund.failed`, or a failed request, leaves it `FAILED`. Finance retries it from **Finance → Refunds In Progress** (`refunds.manage`).
+- A refund stuck in `SUBMITTING` must be checked in the Razorpay dashboard first.
+
+Add **`refund.processed`** and **`refund.failed`** to the Razorpay webhook, and apply `crm-design/18_cancellations_refunds.sql`. Tests:
+```bash
+DATABASE_URL=postgresql://localhost/biharcabs_crm_test npx tsx --test src/tests/cancellations.integration.ts
+```

@@ -124,9 +124,47 @@ export default function FinancePage() {
     }
   }
 
+  // Refunds not yet processed (pending with Razorpay, failed, or stuck mid-request)
+  const [refunds, setRefunds] = useState<any[]>([]);
+  const [refundsError, setRefundsError] = useState<string | null>(null);
+  const [retrying, setRetrying] = useState<number | null>(null);
+
+  async function loadRefunds() {
+    try {
+      const res = await fetch('/api/finance/refunds');
+      const data = await res.json();
+      if (data.success) {
+        setRefunds(data.refunds);
+        setRefundsError(null);
+      } else {
+        setRefundsError(data.error || 'Could not load refunds');
+      }
+    } catch {
+      setRefundsError('Could not load refunds');
+    }
+  }
+
+  async function retryRefund(id: number) {
+    setRetrying(id);
+    try {
+      const res = await fetch('/api/finance/refunds', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refundId: id }),
+      });
+      const data = await res.json();
+      if (!data.success) alert(data.error || 'Retry failed');
+      loadRefunds();
+      loadFinance(typeFilter);
+    } finally {
+      setRetrying(null);
+    }
+  }
+
   useEffect(() => {
     loadOwedDrivers();
     loadOwingDrivers();
+    loadRefunds();
   }, []);
 
   async function loadFinance(filter = typeFilter) {
@@ -352,6 +390,54 @@ export default function FinancePage() {
         )}
       </div>
 
+      {/* Refunds that are not processed yet */}
+      <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
+        <div className="px-4 py-3 border-b bg-slate-50">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700">Refunds In Progress ({refunds.length})</h3>
+          <p className="text-[11px] text-slate-500 mt-0.5">Advance refunds for cancelled bookings. PENDING is with Razorpay; FAILED can be retried; SUBMITTING means a request may have reached Razorpay — check the Razorpay dashboard before doing anything.</p>
+        </div>
+        {refundsError ? (
+          <div className="px-4 py-3 text-sm text-rose-600">{refundsError}</div>
+        ) : refunds.length === 0 ? (
+          <div className="px-4 py-3 text-sm text-slate-500">No refunds waiting.</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
+              <thead className="bg-slate-50 text-slate-600 text-xs font-semibold uppercase">
+                <tr>
+                  <th className="px-4 py-2">Booking</th>
+                  <th className="px-4 py-2">Amount</th>
+                  <th className="px-4 py-2">Status</th>
+                  <th className="px-4 py-2">Detail</th>
+                  <th className="px-4 py-2"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {refunds.map((r) => (
+                  <tr key={r.id}>
+                    <td className="px-4 py-2 font-medium text-slate-900">#{r.booking_code}</td>
+                    <td className="px-4 py-2">₹{Number(r.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                    <td className={`px-4 py-2 text-xs font-semibold ${r.status === 'FAILED' ? 'text-rose-700' : 'text-slate-700'}`}>{r.status}</td>
+                    <td className="px-4 py-2 text-xs text-slate-500">{r.last_error || r.provider_refund_id || r.reason}</td>
+                    <td className="px-4 py-2 text-right">
+                      {r.status === 'FAILED' && (
+                        <button
+                          onClick={() => retryRefund(r.id)}
+                          disabled={retrying === r.id}
+                          className="px-3 py-1.5 rounded-md text-xs font-semibold bg-slate-900 text-white hover:bg-slate-700 disabled:opacity-50"
+                        >
+                          {retrying === r.id ? 'Retrying…' : 'Retry'}
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
       {/* Filter Tabs */}
       <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 pb-3">
         {[
@@ -360,6 +446,7 @@ export default function FinancePage() {
           { id: 'DRIVER_PAYOUT', label: 'Owed to Drivers (Trips)' },
           { id: 'DRIVER_PAYOUT_SENT', label: 'Payouts Sent' },
           { id: 'DRIVER_DUES_PAYMENT', label: 'Dues Received' },
+          { id: 'CUSTOMER_ADVANCE_REFUND', label: 'Refunds' },
           { id: 'SECURITY_RESERVE_DEPOSIT', label: 'Security Reserve Floats' },
           { id: 'INCENTIVE_STREAK_BONUS', label: 'Ride Streak Bonuses' },
           { id: 'INCENTIVE_BONUS', label: 'Promotional Bonuses' },
