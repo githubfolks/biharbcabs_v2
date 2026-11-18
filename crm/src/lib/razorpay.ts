@@ -134,3 +134,23 @@ export async function createPaymentLink(input: CreatePaymentLinkInput): Promise<
   }
   return { id: data.id, shortUrl: data.short_url, status: String(data.status || 'created') };
 }
+
+const PAYMENT_ID = /^pay_[A-Za-z0-9]+$/;
+
+/**
+ * POST /v1/payments/{id}/refund (normal speed). Per Razorpay's docs the refund may come back "pending"
+ * and later become "processed" or "failed" (refund.processed / refund.failed webhooks). `receipt` is our
+ * own reference for the refund.
+ */
+export async function createRefund(input: { paymentId: string; amountPaise: number; receipt: string; notes?: Record<string, string> }): Promise<{ id: string; status: string }> {
+  if (!PAYMENT_ID.test(input.paymentId)) throw new Error('Invalid payment id.');
+  if (!Number.isInteger(input.amountPaise) || input.amountPaise < 100) throw new Error(`Invalid refund amount: ${input.amountPaise} paise.`);
+  const data = await razorpayRequest('POST', `/payments/${input.paymentId}/refund`, {
+    amount: input.amountPaise,
+    speed: 'normal',
+    receipt: input.receipt.slice(0, 40),
+    notes: input.notes || {},
+  });
+  if (typeof data.id !== 'string' || !data.id.startsWith('rfnd_')) throw new Error('Razorpay returned an invalid refund response.');
+  return { id: data.id, status: String(data.status || 'pending') };
+}

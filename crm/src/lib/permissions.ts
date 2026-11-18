@@ -18,6 +18,8 @@ export const PERMISSIONS = {
   'bookings.view': ALL,
   'bookings.create': OPS,
   'bookings.waive_advance': MONEY,
+  'bookings.cancel': ALL,
+  'refunds.manage': MONEY,
   'dispatch.manage': OPS,
   'drivers.view': ALL,
   'drivers.manage': OPS,

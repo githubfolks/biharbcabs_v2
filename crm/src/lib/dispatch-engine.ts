@@ -287,6 +287,11 @@ export async function broadcastRideToDrivers(
 
     const booking = bookingRes.rows[0];
     assertAdvanceSettled(booking);
+    // Broadcasting resets the booking to AWAITING_DRIVER, so it is only allowed while the booking waits for a
+    // driver; otherwise a cancelled, assigned or finished booking would be reopened.
+    if (!ASSIGNABLE_STATUSES.includes(booking.booking_status)) {
+      throw new Error(`Booking ${booking.booking_code} cannot be broadcast (status ${booking.booking_status}).`);
+    }
     let slaDeadline = new Date(Date.now() + timeoutMins * 60 * 1000);
 
     // 2. Find eligible drivers (prepaid rides cross-absorb debt from digital-only restricted drivers)

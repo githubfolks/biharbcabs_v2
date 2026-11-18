@@ -29,6 +29,7 @@ import { notifyAssignment, notifyOfferedDrivers } from './dispatch-notify';
 import { notify, notifyAdmins } from './wa-notify';
 import { requestDuesPaymentLink } from './driver-dues';
 import { insertWithBookingCode } from './booking-code';
+import { CANCELLABLE_STATUSES, CancelError, cancelBooking, previewCancellation } from './cancellations';
 import { formatPickup, parsePickupTime, PickupTime } from './pickup-time';
 import { recordCustomerRating } from './ratings';
 import { issueStartOtp, otpMessage, reissueOtpForCustomer, startTripWithOtp } from './trip-otp';
@@ -334,6 +335,60 @@ export async function processIncomingWhatsAppMessage(params: {
       return;
     }
     // Not a customer with an assigned trip: fall through to the normal flows.
+  }
+
+  // Customer cancels: reply CANCEL, see what they get back, then confirm.
+  if (lowerText === 'cancel' && !buttonId) {
+    const own = (await query(
+      `SELECT b.id, b.booking_status FROM crm_bookings b JOIN crm_customers c ON c.id = b.customer_id
+       WHERE c.phone = $1 AND (b.booking_status = ANY($2) OR b.booking_status = 'TRIP_IN_PROGRESS')
+       ORDER BY (b.booking_status = 'TRIP_IN_PROGRESS') ASC, b.pickup_date, b.pickup_time LIMIT 1`,
+      [fromPhone.replace(/\D/g, ''), CANCELLABLE_STATUSES]
+    )).rows[0];
+    if (!own) {
+      await sendWhatsAppText(fromPhone, 'You have no upcoming booking to cancel. Reply *HI* to book a cab.');
+      return;
+    }
+    if (own.booking_status === 'TRIP_IN_PROGRESS') {
+      const company = await getCompanyBillingInfo().catch(() => null);
+      await sendWhatsAppText(fromPhone, `Your trip has already started, so it cannot be cancelled here. Please call BiharCabs support${company?.phone ? ` on ${company.phone}` : ''}.`);
+      return;
+    }
+    const preview = await previewCancellation(Number(own.id), 'CUSTOMER');
+    await sendWhatsAppButtons(
+      fromPhone,
+      `Cancel booking #${preview.bookingCode}?\n\n${preview.decision.explanation}`,
+      [
+        { id: `cancel_confirm_${own.id}`, title: 'Yes, cancel' },
+        { id: `cancel_keep_${own.id}`, title: 'Keep booking' },
+      ],
+      'Cancel Booking'
+    );
+    return;
+  }
+
+  if (buttonId?.startsWith('cancel_confirm_') || buttonId?.startsWith('cancel_keep_')) {
+    const confirm = buttonId.startsWith('cancel_confirm_');
+    const bookingId = parseInt(buttonId.replace(confirm ? 'cancel_confirm_' : 'cancel_keep_', ''), 10);
+    const owns = (await query(
+      `SELECT b.booking_code FROM crm_bookings b JOIN crm_customers c ON c.id = b.customer_id WHERE b.id = $1 AND c.phone = $2`,
+      [bookingId, fromPhone.replace(/\D/g, '')]
+    )).rows[0];
+    if (!owns) {
+      await sendWhatsAppText(fromPhone, 'This booking is not linked to your number.');
+      return;
+    }
+    if (!confirm) {
+      await sendWhatsAppText(fromPhone, `👍 Booking #${owns.booking_code} stays as it is.`);
+      return;
+    }
+    try {
+      // The refund is decided now, at confirmation, by the same rule (the customer is told the outcome).
+      await cancelBooking({ bookingId, by: 'CUSTOMER', fault: 'CUSTOMER', reason: 'Cancelled by the customer on WhatsApp' });
+    } catch (err: any) {
+      await sendWhatsAppText(fromPhone, err instanceof CancelError ? err.message : 'Sorry, we could not cancel the booking right now. Please call BiharCabs support.');
+    }
+    return;
   }
 
   // =========================================================================
