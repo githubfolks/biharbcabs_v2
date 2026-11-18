@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireAdmin } from '@/lib/auth';
 import { query } from '@/lib/db';
 import { getRevenueProtectionPolicy } from '@/lib/settings';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
+  const auth = await requireAdmin(req, 'drivers.view');
+  if (auth instanceof NextResponse) return auth;
   try {
     const { searchParams } = new URL(req.url);
     const city = searchParams.get('city');
@@ -83,6 +86,8 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const auth = await requireAdmin(req, 'drivers.manage');
+  if (auth instanceof NextResponse) return auth;
   try {
     const body = await req.json();
     const {

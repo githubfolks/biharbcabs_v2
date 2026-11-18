@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireAdmin } from '@/lib/auth';
 import { query } from '@/lib/db';
 import { completeTripAndSettle, FinalBillingInput } from '@/lib/billing';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
+  const auth = await requireAdmin(req, 'ledger.view');
+  if (auth instanceof NextResponse) return auth;
   try {
     const { searchParams } = new URL(req.url);
     const filterType = searchParams.get('type');
@@ -69,6 +72,8 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const auth = await requireAdmin(req, 'ledger.settle');
+  if (auth instanceof NextResponse) return auth;
   try {
     const body: FinalBillingInput = await req.json();
 

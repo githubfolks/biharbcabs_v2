@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireAdmin } from '@/lib/auth';
 import { query } from '@/lib/db';
 import { sendWhatsAppText } from '@/lib/whatsapp';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
+  const auth = await requireAdmin(req, 'inbox.use');
+  if (auth instanceof NextResponse) return auth;
   try {
     const { searchParams } = new URL(req.url);
     const phone = searchParams.get('phone');
@@ -66,6 +69,8 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const auth = await requireAdmin(req, 'inbox.use');
+  if (auth instanceof NextResponse) return auth;
   try {
     const { phone, text } = await req.json();
 

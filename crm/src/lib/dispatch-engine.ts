@@ -273,6 +273,15 @@ function bookingPickupAt(booking: any): Date {
  * or if no returning driver is free, it goes to regular drivers, who are paid as if there were no
  * discount because the company absorbs it.
  */
+/** Bookings in these statuses still owe the advance (or lost it) and must never reach drivers. */
+export const UNPAID_ADVANCE_STATUSES = ['AWAITING_ADVANCE', 'ADVANCE_EXPIRED', 'ADVANCE_LINK_FAILED'];
+
+export function assertAdvanceSettled(booking: { booking_code?: string; booking_status: string }): void {
+  if (UNPAID_ADVANCE_STATUSES.includes(booking.booking_status)) {
+    throw new Error(`Booking ${booking.booking_code || ''} cannot be dispatched: advance not paid (status ${booking.booking_status}).`);
+  }
+}
+
 export async function broadcastRideToDrivers(
   bookingId: number,
   options?: { releaseReturnWindow?: boolean }
@@ -299,6 +308,7 @@ export async function broadcastRideToDrivers(
     }
 
     const booking = bookingRes.rows[0];
+    assertAdvanceSettled(booking);
     let slaDeadline = new Date(Date.now() + timeoutMins * 60 * 1000);
 
     // 2. Find eligible drivers (prepaid rides cross-absorb debt from digital-only restricted drivers)

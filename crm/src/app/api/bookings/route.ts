@@ -1,10 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
-import { calculateFareSplit, calculateRideSplitWithTaxes, broadcastRideToDrivers } from '@/lib/dispatch-engine';
+import { calculateRideSplitWithTaxes, broadcastRideToDrivers } from '@/lib/dispatch-engine';
+import { requireAdmin } from '@/lib/auth';
+import { hasPermission } from '@/lib/permissions';
+import { getAdvanceCollectionPolicy } from '@/lib/settings';
+import { advanceLinkMessage, isAdvanceRequired, requestAdvancePayment } from '@/lib/advance-payments';
+import { sendWhatsAppText } from '@/lib/whatsapp';
 
 export const dynamic = 'force-dynamic';
 
+/** How staff settle the advance on a booking they create. */
+const ADVANCE_MODES = ['PAYMENT_LINK', 'FULL_CASH', 'WAIVED'] as const;
+type AdvanceMode = (typeof ADVANCE_MODES)[number];
+const MIN_WAIVER_REASON_LENGTH = 10;
+
 export async function GET(req: NextRequest) {
+  const auth = await requireAdmin(req, 'bookings.view');
+  if (auth instanceof NextResponse) return auth;
   try {
     const { searchParams } = new URL(req.url);
     const status = searchParams.get('status');
@@ -43,6 +55,9 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const auth = await requireAdmin(req, 'bookings.create');
+  if (auth instanceof NextResponse) return auth;
+  const admin = auth;
   try {
     const body = await req.json();
     const {
@@ -59,11 +74,44 @@ export async function POST(req: NextRequest) {
       distance_km,
       customer_total_fare,
       auto_broadcast,
+      advance_mode,
+      advance_waiver_reason,
     } = body;
 
     if (!customer_phone || !origin_city || !pickup_date || !pickup_time || !wp_vehicle_code) {
       return NextResponse.json(
         { success: false, error: 'Missing mandatory booking fields' },
+        { status: 400 }
+      );
+    }
+
+    if (!ADVANCE_MODES.includes(advance_mode)) {
+      return NextResponse.json(
+        { success: false, error: `advance_mode must be one of: ${ADVANCE_MODES.join(', ')}` },
+        { status: 400 }
+      );
+    }
+    const mode = advance_mode as AdvanceMode;
+    const waiverReason = typeof advance_waiver_reason === 'string' ? advance_waiver_reason.trim() : '';
+    if (mode === 'WAIVED' && !hasPermission(admin.role, 'bookings.waive_advance')) {
+      console.warn(`[Auth] Admin #${admin.id} (${admin.role}) denied bookings.waive_advance`);
+      return NextResponse.json({ success: false, error: 'Your role cannot waive the customer advance' }, { status: 403 });
+    }
+    if (mode === 'WAIVED' && waiverReason.length < MIN_WAIVER_REASON_LENGTH) {
+      return NextResponse.json(
+        { success: false, error: `A waiver needs a reason of at least ${MIN_WAIVER_REASON_LENGTH} characters.` },
+        { status: 400 }
+      );
+    }
+    const fareInput = Number(customer_total_fare || 0);
+    if (!(fareInput > 0)) {
+      return NextResponse.json({ success: false, error: 'customer_total_fare must be greater than 0' }, { status: 400 });
+    }
+    const advancePolicy = await getAdvanceCollectionPolicy();
+    const required = isAdvanceRequired(advancePolicy, trip_type || 'oneway', fareInput);
+    if (mode === 'FULL_CASH' && required) {
+      return NextResponse.json(
+        { success: false, error: 'This ride needs the advance online. Send a payment link, or waive it with a reason.' },
         { status: 400 }
       );
     }
@@ -82,14 +130,20 @@ export async function POST(req: NextRequest) {
     const customer = custRes.rows[0];
 
     // 2. Calculate dynamic commission, statutory GST, tech fee, advance token and driver payout
-    const fare = Number(customer_total_fare || 0);
+    const fare = fareInput;
     const taxSplit = await calculateRideSplitWithTaxes(fare);
 
     // 3. Generate unique booking code e.g. BC-1042
     const codeNum = Math.floor(1000 + Math.random() * 9000);
     const bookingCode = `BC-${codeNum}`;
 
-    const initialStatus = auto_broadcast ? 'AWAITING_DRIVER' : 'CONFIRMED_AWAITING_DRIVER';
+    // advance_paid stays 0 until Razorpay confirms the money; a link booking waits for it.
+    const viaLink = mode === 'PAYMENT_LINK';
+    const advanceDue = viaLink ? taxSplit.advanceTokenAmount : 0;
+    const balanceDue = Math.max(0, fare - advanceDue);
+    const readyStatus = auto_broadcast ? 'AWAITING_DRIVER' : 'CONFIRMED_AWAITING_DRIVER';
+    const initialStatus = viaLink ? 'AWAITING_ADVANCE' : readyStatus;
+    const advanceStatus = viaLink ? 'PENDING' : mode === 'WAIVED' ? 'WAIVED' : 'NOT_REQUIRED';
 
     // 4. Insert booking with revenue protection & tax fields
     const bookRes = await query(
@@ -98,8 +152,9 @@ export async function POST(req: NextRequest) {
         pickup_address, drop_address, pickup_date, pickup_time, wp_vehicle_code,
         distance_km, customer_total_fare, driver_payout_amount, commission_amount,
         gst_amount, tech_fee_amount, advance_paid, balance_cash_due_from_customer,
-        booking_status, payment_status, created_at, updated_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, 'PENDING', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        booking_status, payment_status, payment_mode, advance_due_amount, advance_status,
+        advance_waived_by, advance_waiver_reason, created_at, updated_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, 0, $17, $18, 'PENDING', $19, $20, $21, $22, $23, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
       RETURNING *`,
       [
         bookingCode,
@@ -118,13 +173,35 @@ export async function POST(req: NextRequest) {
         taxSplit.totalCompanyDuesZ,
         taxSplit.gstAmount,
         taxSplit.techFeeAmount,
-        taxSplit.advanceTokenAmount,
-        taxSplit.balanceCashDueFromCustomer,
+        balanceDue,
         initialStatus,
+        viaLink ? 'ADVANCE_ONLINE' : 'FULL_CASH',
+        advanceDue,
+        advanceStatus,
+        mode === 'WAIVED' ? admin.id : null,
+        mode === 'WAIVED' ? waiverReason : null,
       ]
     );
 
     const booking = bookRes.rows[0];
+
+    if (mode === 'WAIVED') {
+      console.info(`[Bookings] Advance waived on ${bookingCode} by admin #${admin.id} (advance was ${required ? 'required' : 'optional'}).`);
+    }
+
+    if (viaLink) {
+      // Drivers see this booking only after the payment webhook confirms the advance.
+      try {
+        const request = await requestAdvancePayment(Number(booking.id));
+        await sendWhatsAppText(cleanPhone, await advanceLinkMessage(bookingCode, request, balanceDue));
+        return NextResponse.json({ success: true, booking, payment_link_url: request.shortUrl, dispatch: null });
+      } catch (err: any) {
+        return NextResponse.json(
+          { success: false, error: `Booking ${bookingCode} saved but the payment link failed: ${err.message}`, booking_code: bookingCode },
+          { status: 502 }
+        );
+      }
+    }
 
     let dispatchResult = null;
     if (auto_broadcast) {

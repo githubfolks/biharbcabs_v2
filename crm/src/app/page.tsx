@@ -27,6 +27,8 @@ export default function DispatchBoard() {
     distance_km: 145,
     customer_total_fare: 2499,
     auto_broadcast: true,
+    advance_mode: 'PAYMENT_LINK',
+    advance_waiver_reason: '',
   });
 
   async function loadBookings() {
@@ -413,6 +415,29 @@ export default function DispatchBoard() {
                     <span>Broadcast ride to matching drivers immediately</span>
                   </label>
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700">Customer Advance</label>
+                <select
+                  value={newBooking.advance_mode}
+                  onChange={(e) => setNewBooking({ ...newBooking, advance_mode: e.target.value })}
+                  className="w-full mt-1 px-3 py-1.5 border rounded-md text-sm"
+                >
+                  <option value="PAYMENT_LINK">Send Razorpay payment link (drivers see the ride after payment)</option>
+                  <option value="FULL_CASH">Full cash to driver (only where advance is optional)</option>
+                  <option value="WAIVED">Waive advance (reason required, logged)</option>
+                </select>
+                {newBooking.advance_mode === 'WAIVED' && (
+                  <textarea
+                    required
+                    minLength={10}
+                    placeholder="Why is the advance waived?"
+                    value={newBooking.advance_waiver_reason}
+                    onChange={(e) => setNewBooking({ ...newBooking, advance_waiver_reason: e.target.value })}
+                    className="w-full mt-2 px-3 py-1.5 border rounded-md text-sm"
+                  />
+                )}
               </div>
 
               <div className="flex justify-end space-x-2 pt-4 border-t">

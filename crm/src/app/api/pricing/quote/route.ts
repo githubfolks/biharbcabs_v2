@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireAdmin } from '@/lib/auth';
 import { fetchLiveQuote, QuoteRequestParams } from '@/lib/tariff-bridge';
 
 export async function POST(req: NextRequest) {
+  const auth = await requireAdmin(req, 'pricing.quote');
+  if (auth instanceof NextResponse) return auth;
   try {
     const params: QuoteRequestParams = await req.json();
 
