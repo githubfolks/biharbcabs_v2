@@ -11,14 +11,17 @@ import { notifyOfferedDrivers } from './dispatch-notify';
 import { expireDriverReturns } from './return-trips';
 import { sendWhatsAppText, sendWhatsAppButtons } from './whatsapp';
 
-export interface CronExecutionResult {
+export interface FrequentCronResult {
   slaBreachesEscalated: number;
   wakeupChecksSent: number;
   documentsExpiredSuspended: number;
-  documentsExpiringWarned: number;
   unpaidDuesSuspended: number;
   returnWindowsReleased: number;
   driverReturnsExpired: number;
+}
+
+export interface DailyCronResult {
+  documentsExpiringWarned: number;
 }
 
 /**
@@ -89,13 +92,10 @@ export async function runDriverWakeupChecks(): Promise<number> {
 }
 
 /**
- * 3. Driver & Vehicle Document Expiry Compliance Guardrails
+ * 3A. Suspend drivers whose license or vehicle documents have expired.
+ * Safe to run often: a driver is only picked up while APPROVED_ACTIVE, and is suspended here.
  */
-export async function runDocumentExpiryGuardrails(): Promise<{
-  suspendedCount: number;
-  warningCount: number;
-}> {
-  // A. Auto-suspend drivers with expired documents
+export async function runExpiredDocumentSuspensions(): Promise<number> {
   const expiredSql = `
     SELECT DISTINCT d.id, d.full_name, d.phone, d.whatsapp_phone, v.registration_no
     FROM crm_drivers d
@@ -130,7 +130,15 @@ export async function runDocumentExpiryGuardrails(): Promise<{
     suspendedCount++;
   }
 
-  // B. Send warnings for documents expiring within 15 days
+  return suspendedCount;
+}
+
+/**
+ * 3B. Remind drivers whose documents expire within 15 days.
+ * Nothing records who was reminded, so every run messages every such driver again.
+ * Run it only from the daily schedule (/api/dispatch/cron/daily), never the frequent one.
+ */
+export async function runDocumentExpiryWarnings(): Promise<number> {
   const warningSql = `
     SELECT DISTINCT d.id, d.full_name, d.phone, d.whatsapp_phone, v.registration_no,
            LEAST(d.license_expiry, v.insurance_expiry, v.fitness_expiry, v.permit_expiry) AS earliest_expiry
@@ -154,7 +162,7 @@ export async function runDocumentExpiryGuardrails(): Promise<{
     }
   }
 
-  return { suspendedCount, warningCount };
+  return warningCount;
 }
 
 /**
@@ -238,9 +246,6 @@ export async function runUnpaidDuesGuardrails(): Promise<number> {
 }
 
 /**
- * Master Cron Runner executing all automated background checks.
- */
-/**
  * Return trips: rides whose returning-driver priority window ended go to regular drivers,
  * and driver return statuses past their time are closed.
  */
@@ -253,22 +258,30 @@ export async function runReturnTripTasks(): Promise<{ released: number; expired:
   return { released: released.length, expired };
 }
 
-export async function executeAllCronTasks(): Promise<CronExecutionResult> {
+/**
+ * Frequent jobs (every few minutes, POST /api/dispatch/cron). Each one changes a status or records
+ * a sent time, so repeating a run does not repeat its messages.
+ */
+export async function executeFrequentCronTasks(): Promise<FrequentCronResult> {
   // Runs before SLA escalation so a ride leaves its priority window before it can be escalated.
   const returnTrips = await runReturnTripTasks();
   const breached = await runSlaEscalation();
   const wakeups = await runDriverWakeupChecks();
-  const docs = await runDocumentExpiryGuardrails();
+  const suspended = await runExpiredDocumentSuspensions();
   const dues = await runUnpaidDuesGuardrails();
 
   return {
     slaBreachesEscalated: breached.length,
     wakeupChecksSent: wakeups,
-    documentsExpiredSuspended: docs.suspendedCount,
-    documentsExpiringWarned: docs.warningCount,
+    documentsExpiredSuspended: suspended,
     unpaidDuesSuspended: dues,
     returnWindowsReleased: returnTrips.released,
     driverReturnsExpired: returnTrips.expired,
   };
+}
+
+/** Daily jobs (once a day, POST /api/dispatch/cron/daily). */
+export async function executeDailyCronTasks(): Promise<DailyCronResult> {
+  return { documentsExpiringWarned: await runDocumentExpiryWarnings() };
 }
 

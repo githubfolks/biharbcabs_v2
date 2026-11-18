@@ -83,9 +83,42 @@ services:
       PORT: 3001
       # Meta App Secret for webhook signatures. Set it in the shell or a local .env file, never in git.
       META_APP_SECRET: ${META_APP_SECRET:-}
+      # Secret the scheduler must send to /api/dispatch/cron*. Until set, scheduled jobs are refused (503).
+      CRON_SECRET: ${CRON_SECRET:-}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  # Scheduler for the CRM's background jobs (n8n Community Edition). See n8n/README.md.
+  n8n:
+    image: n8nio/n8n:2.47.4
+    container_name: biharcabs_n8n
+    restart: unless-stopped
+    depends_on:
+      - crm
+    ports:
+      # Bound to localhost only: never expose the n8n editor publicly. On the VPS, reach it over an SSH tunnel.
+      - "127.0.0.1:5678:5678"
+    environment:
+      # n8n's own data lives in the native host Postgres, database "n8n", role "n8n".
+      DB_TYPE: postgresdb
+      DB_POSTGRESDB_HOST: host.docker.internal
+      DB_POSTGRESDB_PORT: 5432
+      DB_POSTGRESDB_DATABASE: n8n
+      DB_POSTGRESDB_USER: n8n
+      DB_POSTGRESDB_PASSWORD: ${N8N_DB_PASSWORD:?Set N8N_DB_PASSWORD in .env (see n8n/README.md)}
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY:?Set N8N_ENCRYPTION_KEY in .env (see n8n/README.md)}
+      GENERIC_TIMEZONE: Asia/Kolkata
+      TZ: Asia/Kolkata
+      N8N_DIAGNOSTICS_ENABLED: "false"
+      N8N_PERSONALIZATION_ENABLED: "false"
+      # Workflows cannot read container environment variables (DB password, encryption key).
+      N8N_BLOCK_ENV_ACCESS_IN_NODE: "true"
+    volumes:
+      - n8n_data:/home/node/.n8n
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
 volumes:
   db_data:
+  n8n_data:
 

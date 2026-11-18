@@ -84,7 +84,7 @@ DATABASE_URL=postgresql://localhost/biharcabs_crm_test npx tsx --test src/tests/
 When a driver drops a customer away from their base city, the CRM offers a **🔁 Returning home** button after **Complete Trip**. Tapping it marks the driver as returning, from the drop city to their base city, for the configured number of hours.
 
 - **Discount at booking.** When a returning driver with a matching vehicle is free for a route and pickup time, the customer sees that vehicle discounted. The discount is recalculated from current settings when the booking is created.
-- **Priority.** A discounted booking goes only to returning drivers for the priority window. After that, the scheduled job (`/api/dispatch/cron`) sends it to regular drivers.
+- **Priority.** A discounted booking goes only to returning drivers for the priority window. After that, the 5-minute scheduled job (`/api/dispatch/cron`) sends it to regular drivers.
 - **Who pays.** The company pays the discount up to its platform commission, with GST recalculated on what remains, and the returning driver pays the rest. If a regular driver takes the ride, the company pays it all and the driver earns the normal payout. Each booking records the discount, both shares, and `return_discount_funded_by`.
 - **When it ends.** A driver's return ends when they tap **🏠 Reached home**, accept a return ride, or the time runs out.
 
@@ -93,6 +93,18 @@ Configure it under **Settings → Return Trips**. It stays off until a discount 
 Apply `crm-design/08_return_trips.sql` before deploying this code. It is safe to run more than once, never overwrites saved settings, and records itself in `crm_schema_migrations`.
 
 The bot now asks customers for their pickup time, and drivers' ride alerts show it. Before this, bookings defaulted to the next day at 9:00 AM.
+
+## Scheduled Jobs
+
+n8n calls two endpoints on a schedule (setup in [`../n8n/README.md`](../n8n/README.md)):
+
+- **`POST /api/dispatch/cron`, every 5 minutes:** return-trip windows, SLA escalation, driver wake-up checks, expired-document suspension, unpaid-dues restriction. Each job changes a status or records a sent time, so repeated runs do not repeat messages.
+- **`POST /api/dispatch/cron/daily`, 09:00 IST:** reminders to drivers whose documents expire within 15 days. Nothing records who was reminded, so this must not run more than once a day.
+
+Both require `Authorization: Bearer <CRON_SECRET>`. Until `CRON_SECRET` is set, every call is refused with 503; a wrong or missing secret gets 401. Apply `crm-design/10_driver_wakeup_sent.sql` before deploying: without `crm_bookings.wakeup_sent_at`, the 5-minute job fails at the wake-up step. Tests use a disposable `_test` database with migrations 08 to 10:
+```bash
+DATABASE_URL=postgresql://localhost/biharcabs_crm_test npx tsx --test src/tests/cron.integration.ts
+```
 
 ## WhatsApp Webhook Security
 
