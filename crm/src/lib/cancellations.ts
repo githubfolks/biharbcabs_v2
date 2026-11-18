@@ -3,6 +3,7 @@ import { getSetting } from './settings';
 import { bookingPickupAt } from './dispatch-engine';
 import { closeLinkAtRazorpay } from './advance-payments';
 import { requestRefund } from './refunds';
+import { issuePendingCancellationDocuments, recordCancellationCharge } from './cancellation-charges';
 import { notify, notifyAdmins } from './wa-notify';
 import { sendWhatsAppText } from './whatsapp';
 import { CANCELLABLE_STATUSES } from './advance-rules';
@@ -124,6 +125,9 @@ export async function cancelBooking(input: {
       [input.by, input.adminId ?? null, input.fault, reason, decision.refund, decision.forfeit, b.id]
     );
 
+    // A kept advance is a taxable cancellation charge (per CA); its tax document follows once the rate is set.
+    if (decision.forfeit > 0) await recordCancellationCharge(client, Number(b.id), decision.forfeit);
+
     let refundId: number | null = null;
     let refundStatus = 'NONE';
     if (decision.refund > 0) {
@@ -144,6 +148,9 @@ export async function cancelBooking(input: {
   });
 
   const { b, decision } = outcome;
+  if (decision.forfeit > 0) {
+    await issuePendingCancellationDocuments().catch((err) => console.error('[Cancel] Cancellation charge document not issued:', err?.message));
+  }
   let refundStatus = outcome.refundStatus;
   if (outcome.refundId) refundStatus = await requestRefund(outcome.refundId);
   if (refundStatus === 'MANUAL' || refundStatus === 'FAILED') {

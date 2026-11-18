@@ -11,6 +11,7 @@ import { notify, notifyAdmins } from './wa-notify';
 import { MIN_WAIVER_REASON_LENGTH, WAIVABLE_STATUSES } from './advance-rules';
 import { applyDuesPayment } from './driver-dues';
 import { markRefundProcessed } from './refunds';
+import { financialYearCode, nextDocumentNumber } from './gst-documents';
 
 /**
  * Customer advance: which rides need it online, the Razorpay link for it, and the webhook that
@@ -174,8 +175,7 @@ async function handlePaid(client: PoolClient, event: any, after: AfterCommit): P
   // GST is due on an advance when it is received (18%: rate not determinable at receipt, per CA). The advance
   // includes it. A consecutive receipt voucher number is recorded for the receipt.
   const advanceGst = gstIncluded(amount, (await getRevenueProtectionPolicy()).advance_gst_pct);
-  const voucher = await client.query(`SELECT nextval('crm_receipt_voucher_seq') AS n`);
-  const voucherNumber = `RV${financialYearCode(new Date())}${String(voucher.rows[0].n).padStart(6, '0')}`;
+  const voucherNumber = await nextDocumentNumber(client, 'RV');
   await client.query(
     `UPDATE crm_payment_links
      SET status = 'PAID', provider_payment_id = $1, paid_at = CURRENT_TIMESTAMP, gst_amount = $3, receipt_voucher_number = $4, updated_at = CURRENT_TIMESTAMP
@@ -457,12 +457,8 @@ export async function waiveBookingAdvance(input: { bookingId: number; adminId: n
   return { bookingCode, dispatched };
 }
 
-/** Indian financial year (April–March) as "2627" for 2026-27, used in receipt voucher numbers. */
-export function financialYearCode(d: Date): string {
-  const ist = new Date(d.getTime() + 5.5 * 60 * 60 * 1000);
-  const start = ist.getUTCMonth() >= 3 ? ist.getUTCFullYear() : ist.getUTCFullYear() - 1;
-  return `${String(start % 100).padStart(2, '0')}${String((start + 1) % 100).padStart(2, '0')}`;
-}
+/** Financial-year code for document numbers; kept here for existing callers (see gst-documents.ts). */
+export { financialYearCode };
 
 function checkWaivable(b: any): void {
   if (b.advance_status === 'PAID_AFTER_CLOSE') {

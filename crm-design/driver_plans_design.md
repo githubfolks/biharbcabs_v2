@@ -23,7 +23,7 @@ With a plan, the driver **pays first**:
 | End of plan | A plan ends when its balance reaches ₹0. **No time limit** |
 | Unpaid dues | Must be cleared before buying a plan |
 | Suspension | The plan is paused: no rides while suspended. With no time limit, no balance is lost |
-| Refunds | None. Plans are non-refundable |
+| Refunds | None. Plans are non-refundable. (Per CA: a plan is sold with a tax invoice, so any future refund would need a Section 34 credit note, issued by 30 November after the financial year ends, not a refund voucher.) |
 | Price | GST included |
 | GST | **Confirmed by the CA:** 18% GST and a tax invoice **at purchase** (closed-loop service advance). The **balance is the price before GST** (₹1,180 paid = ₹1,000 balance + ₹180 GST). Each ride deducts commission + tech fee **before GST** (already paid at purchase) **plus the ride's 5% fare GST**, which BiharCabs owes under Sec 9(5) and the driver bears. The plan must never become a general-purpose wallet (that would bring RBI prepaid-instrument rules) |
 | Minimum plan price | The balance (price before GST) must cover the largest pre-GST share any ride the plan allows can need (share at the plan's fare limit). The admin screen refuses a lower price |

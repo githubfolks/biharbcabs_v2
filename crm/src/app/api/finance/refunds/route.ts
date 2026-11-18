@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth';
 import { RefundError, listOpenRefunds, requestRefund } from '@/lib/refunds';
+import { countPendingCancellationCharges } from '@/lib/cancellation-charges';
 
 export const dynamic = 'force-dynamic';
 
@@ -9,7 +10,12 @@ export async function GET(req: NextRequest) {
   const auth = await requireAdmin(req, 'ledger.view');
   if (auth instanceof NextResponse) return auth;
   try {
-    return NextResponse.json({ success: true, refunds: await listOpenRefunds() });
+    return NextResponse.json({
+      success: true,
+      refunds: await listOpenRefunds(),
+      // Kept late-cancellation advances whose tax document waits for the GST rate (cancellation_policy).
+      pendingCancellationCharges: await countPendingCancellationCharges(),
+    });
   } catch (err: any) {
     return NextResponse.json({ success: false, error: err.message }, { status: 500 });
   }

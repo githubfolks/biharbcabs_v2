@@ -313,3 +313,12 @@ Add **`refund.processed`** and **`refund.failed`** to the Razorpay webhook, and 
 ```bash
 DATABASE_URL=postgresql://localhost/biharcabs_crm_test npx tsx --test src/tests/cancellations.integration.ts
 ```
+
+## GST documents for refunds and cancellation charges (per CA)
+
+All are numbered consecutively from database sequences (`src/lib/gst-documents.ts`): `RV` receipt voucher, `RF` refund voucher, `CC` cancellation charge, each followed by the financial year and a serial (e.g. `RF2627000001`).
+
+- **Refunded advance:** the advance was covered by a receipt voucher, not a tax invoice, so a credit note isn't valid. When Razorpay reports the refund processed, a **refund voucher** (`RF…`) is issued on `crm_refunds`. It quotes the receipt voucher's number and date and records the GST it reverses. Credit notes (Section 34) apply only where a tax invoice was issued upfront, such as driver plans, which are non-refundable.
+- **Kept advance on a late cancellation:** a taxable cancellation charge. It is recorded in `crm_cancellation_charges` at once, linked to its receipt voucher. Its tax document (`CC…`, GST included in the kept amount) is issued **only once `cancellation_policy.cancellation_charge_gst_pct` is set**. It is empty until the CA confirms the rate, then the waiting documents are issued at the next cancellation or by the daily job. Finance → Refunds shows how many are waiting. An invalid rate stops these documents but not the other daily jobs.
+
+Apply `crm-design/19_refund_vouchers_cancellation_charges.sql` before deploying.
