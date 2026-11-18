@@ -5,14 +5,26 @@ sequenceDiagram
     actor Customer as Customer (WA)
     actor Admin as Admin Staff
 
+    Note over Driver,Customer: On assignment
+    CRM->>Customer: Trip OTP (only its hash is stored)
+
     Note over Driver,CRM: At Pickup Time
-    Driver->>CRM: Taps [ Start Trip ] (Logs Start Time & Opening Odometer for Roundtrip/Local)
-    CRM->>Customer: "Your trip with BiharCabs has started! Have a safe journey."
+    Driver->>CRM: Taps [ Start Trip ]
+    CRM->>Driver: "Ask the customer for their trip OTP"
+    Customer-->>Driver: Shares OTP in the cab
+    Driver->>CRM: Types OTP
+    alt Wrong OTP (limited attempts)
+        CRM->>Driver: "Wrong OTP, N attempts left" / locked → customer replies OTP for a new code
+    else Correct OTP
+        CRM->>CRM: TRIP_IN_PROGRESS, trip_started_at
+        CRM->>Customer: "Your trip with BiharCabs has started! Have a safe journey."
+    end
 
     Note over Driver,CRM: At Drop-Off / Trip Completion
-    Driver->>CRM: Taps [ Complete Trip ] + Enters Closing Km / Toll / Parking (if applicable)\n+ Confirms Payment Mode (Cash Collected vs Online to Company)
-    CRM->>CRM: Compute Final Bill:\nBase Fare + Extra Km/Hr + Toll/Parking - Advance Paid = Balance Due
-    CRM->>CRM: Compute Split:\n- Platform Commission (e.g. 12% or Fixed)\n- Driver Net Earnings\n- Update Driver Wallet Ledger
-    CRM->>Customer: Sends Automated WhatsApp Bill + Branded PDF Invoice:\n- Full Fare Breakdown & Payment Receipt\n- Razorpay/UPI Link (if paying online)\n- 1-Click Google Review Link
-    CRM->>Driver: Sends Trip Settlement Summary on WhatsApp:\n"Trip #BC-1042 Completed. Cash Collected: ₹2,500. BiharCabs Commission: ₹300. Current Wallet Balance: -₹300 [Pay Commission via UPI]"
+    Driver->>CRM: Taps [ Complete Trip ] (only possible after an OTP start)
+    CRM->>CRM: Cash collected by driver = Fare − Advance confirmed by Razorpay<br/>(extra km / toll entry not collected by the bot yet)
+    CRM->>CRM: Driver net = (Fare − BiharCabs share) − Cash collected<br/>= Advance − share on advance rides (owed to driver)<br/>= −share on full-cash rides (owed by driver)
+    CRM->>CRM: BiharCabs share = commission (Settings take-rate) + GST on it + tech fee<br/>Rolling reserve / streak bonus applied, wallet & ledger updated in one transaction
+    CRM->>Customer: Trip completed message with total and invoice number, then 1-tap rating buttons
+    CRM->>Driver: Settlement summary: fare, advance held by BiharCabs, cash collected,<br/>commission, "this trip: ₹X owed to you / to BiharCabs", wallet balance
 

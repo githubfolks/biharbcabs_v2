@@ -149,14 +149,15 @@ describe('per-IP limit', () => {
 
   it('with a trusted header, too many failures from one IP block it across emails', async () => {
     process.env.CLIENT_IP_HEADER = 'x-forwarded-for';
-    const ip = `198.51.100.${(seq % 200) + 1}`;
+    // Unique per run (documentation range), so earlier runs inside the window cannot affect this one.
+    const ip = `2001:db8::${RUN.slice(0, 4)}:${RUN.slice(4)}`;
     for (let i = 0; i < POLICY.max_failures_per_ip; i++) {
       // Different emails, each under its own limit; the proxy appends the real IP last.
       assert.strictEqual((await login(`spray-${RUN}-${i}@example.test`, 'wrong', { 'x-forwarded-for': `10.9.9.9, ${ip}` })).status, 401);
     }
     const victim = await adminUser();
     assert.strictEqual((await login(victim, PASSWORD, { 'x-forwarded-for': `1.1.1.1, ${ip}` })).status, 429, 'blocked IP');
-    assert.strictEqual((await login(victim, PASSWORD, { 'x-forwarded-for': '198.51.100.250' })).status, 200, 'other IPs unaffected');
+    assert.strictEqual((await login(victim, PASSWORD, { 'x-forwarded-for': `2001:db8::1:${RUN.slice(0, 4)}` })).status, 200, 'other IPs unaffected');
   });
 });
 
