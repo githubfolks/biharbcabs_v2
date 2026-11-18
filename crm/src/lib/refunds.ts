@@ -1,6 +1,7 @@
 import { PoolClient } from 'pg';
 import { query, withTransaction } from './db';
 import { createRefund } from './razorpay';
+import { nextDocumentNumber } from './gst-documents';
 
 /**
  * Advance refunds through Razorpay (see cancellations.ts for when a refund is due). A refund is claimed
@@ -64,10 +65,34 @@ export async function markRefundProcessed(client: PoolClient, refundId: number, 
   )).rows[0];
   if (!r) return false;
   const b = (await client.query(`SELECT customer_id, booking_code FROM crm_bookings WHERE id = $1`, [r.booking_id])).rows[0];
+
+  // Refund Voucher (per CA): the advance was covered by a Receipt Voucher, not a tax invoice, so the refund
+  // voucher quotes the receipt voucher's number and date, and records the GST it reverses.
+  const link = (await client.query(
+    `SELECT receipt_voucher_number, gst_amount, amount_paise, (paid_at AT TIME ZONE 'Asia/Kolkata')::date AS receipt_date
+     FROM crm_payment_links WHERE booking_id = $1 AND provider_payment_id = $2 ORDER BY id DESC LIMIT 1`,
+    [r.booking_id, r.provider_payment_id]
+  )).rows[0];
+  const voucherNumber = await nextDocumentNumber(client, 'RF');
+  const gstReversed = link?.gst_amount != null && Number(link.amount_paise) > 0
+    ? Math.round((Number(link.gst_amount) * r.amount_paise / Number(link.amount_paise)) * 100) / 100
+    : null;
+  await client.query(
+    `UPDATE crm_refunds
+     SET refund_voucher_number = $1, refund_voucher_date = (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata')::date,
+         receipt_voucher_number = $2, receipt_voucher_date = $3, gst_reversed = $4
+     WHERE id = $5`,
+    [voucherNumber, link?.receipt_voucher_number ?? null, link?.receipt_date ?? null, gstReversed, r.id]
+  );
+  if (!link?.receipt_voucher_number) {
+    console.error(`[Refund] Refund voucher ${voucherNumber} for ${b.booking_code} has no receipt voucher to quote; finance must link it by hand.`);
+  }
+
   await client.query(
     `INSERT INTO crm_payments_ledger (booking_id, customer_id, transaction_type, direction, payment_channel, amount, reference_id, notes)
      VALUES ($1, $2, 'CUSTOMER_ADVANCE_REFUND', 'DEBIT', 'RAZORPAY', $3, $4, $5)`,
-    [r.booking_id, b.customer_id, r.amount_paise / 100, providerRefundId, `Advance refund for cancelled booking ${b.booking_code}`]
+    [r.booking_id, b.customer_id, r.amount_paise / 100, providerRefundId,
+     `Advance refund for cancelled booking ${b.booking_code}; refund voucher ${voucherNumber} against receipt voucher ${link?.receipt_voucher_number ?? 'n/a'}; GST reversed ₹${gstReversed ?? 'n/a'}`]
   );
   return true;
 }

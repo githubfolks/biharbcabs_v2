@@ -15,6 +15,9 @@ import { query, getDbPool } from '../lib/db';
 import { createAdminSession, hashPassword, SESSION_COOKIE_NAME } from '../lib/auth';
 import { calculateRideSplitWithTaxes, broadcastRideToDrivers } from '../lib/dispatch-engine';
 import { decideRefund, getFreeCancellationHours } from '../lib/cancellations';
+import { issuePendingCancellationDocuments } from '../lib/cancellation-charges';
+import { executeDailyCronTasks } from '../lib/cron-service';
+import { updateSetting } from '../lib/settings';
 import { processIncomingWhatsAppMessage } from '../lib/whatsapp-bot';
 import { POST as razorpayWebhookPOST } from '../app/api/payments/razorpay/webhook/route';
 import * as cancelRoute from '../app/api/bookings/[id]/cancel/route';
@@ -98,9 +101,11 @@ async function booking(opts: { hours: number; advance?: number; status?: string;
   )).rows[0];
   if (advance > 0) {
     await query(
-      `INSERT INTO crm_payment_links (booking_id, provider_link_id, reference_id, amount_paise, short_url, status, provider_payment_id, expire_by, paid_at)
-       VALUES ($1, $2, $3, $4, 'https://rzp.io/i/x', 'PAID', $5, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
-      [b.id, `plink_${crypto.randomBytes(7).toString('hex')}`, `ref-${RUN}-${seq++}`, advance * 100, `pay_${crypto.randomBytes(7).toString('hex')}`]
+      `INSERT INTO crm_payment_links (booking_id, provider_link_id, reference_id, amount_paise, short_url, status, provider_payment_id, expire_by, paid_at,
+         receipt_voucher_number, gst_amount)
+       VALUES ($1, $2, $3, $4, 'https://rzp.io/i/x', 'PAID', $5, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP - INTERVAL '1 day', $6, $7)`,
+      [b.id, `plink_${crypto.randomBytes(7).toString('hex')}`, `ref-${RUN}-${seq++}`, advance * 100, `pay_${crypto.randomBytes(7).toString('hex')}`,
+       `RV2627T${RUN}${seq++}`.slice(0, 40), Math.round(advance * 18 / 118 * 100) / 100]
     );
   }
   return { ...b, cust };
@@ -323,5 +328,75 @@ describe('refund outcome', () => {
     const refund = await refundFor(b.id);
     assert.strictEqual(await webhook(refundEvent('refund.failed', refund)), 'refund_failed');
     assert.strictEqual((await refundFor(b.id)).status, 'FAILED');
+  });
+});
+
+describe('GST documents (per CA)', () => {
+  it('a processed refund gets a refund voucher quoting the receipt voucher number and date, with the GST reversed', async () => {
+    const b = await booking({ hours: 10, advance: 250 });
+    refundMode = 'processed';
+    await staffCancel(dispatcherToken, b.id, 'CUSTOMER');
+    refundMode = 'pending';
+    const refund = await refundFor(b.id);
+    const link = (await query(`SELECT receipt_voucher_number, gst_amount, (paid_at AT TIME ZONE 'Asia/Kolkata')::date AS d FROM crm_payment_links WHERE booking_id = $1`, [b.id])).rows[0];
+    assert.match(refund.refund_voucher_number, /^RF\d{4}\d{6}$/);
+    assert.ok(refund.refund_voucher_date);
+    assert.strictEqual(refund.receipt_voucher_number, link.receipt_voucher_number, 'quotes the receipt voucher serial');
+    assert.strictEqual(new Date(refund.receipt_voucher_date).toDateString(), new Date(link.d).toDateString(), 'and its date');
+    assert.strictEqual(Number(refund.gst_reversed), Number(link.gst_amount), 'full refund reverses all the GST paid on the advance');
+    assert.ok((await refundLedger(b.id))[0].notes.includes(refund.refund_voucher_number));
+  });
+
+  it('refund vouchers are numbered consecutively and issued once per refund', async () => {
+    refundMode = 'processed';
+    const b1 = await booking({ hours: 10, advance: 250 });
+    await staffCancel(dispatcherToken, b1.id, 'CUSTOMER');
+    const b2 = await booking({ hours: 10, advance: 250 });
+    await staffCancel(dispatcherToken, b2.id, 'CUSTOMER');
+    refundMode = 'pending';
+    const v1 = (await refundFor(b1.id)).refund_voucher_number;
+    const r2 = await refundFor(b2.id);
+    assert.ok(Number(r2.refund_voucher_number.slice(-6)) > Number(v1.slice(-6)));
+    // A repeated "processed" report does not issue a second voucher.
+    assert.strictEqual(await webhook(refundEvent('refund.processed', r2)), 'refund_already_processed');
+    assert.strictEqual((await refundFor(b2.id)).refund_voucher_number, r2.refund_voucher_number);
+  });
+
+  it('a kept late-cancellation advance is recorded as a cancellation charge; its tax document waits for the rate', async () => {
+    const original = (await query(`SELECT setting_value FROM crm_settings WHERE setting_key = 'cancellation_policy'`)).rows[0].setting_value;
+    try {
+      await updateSetting('cancellation_policy', { ...original, cancellation_charge_gst_pct: null });
+      const b = await booking({ hours: freeHours - 1, advance: 250 });
+      await staffCancel(dispatcherToken, b.id, 'CUSTOMER');
+      const charge = async () => (await query(`SELECT * FROM crm_cancellation_charges WHERE booking_id = $1`, [b.id])).rows[0];
+      const pending = await charge();
+      assert.strictEqual(pending.status, 'PENDING_RATE');
+      assert.strictEqual(Number(pending.amount), 250);
+      assert.ok(pending.receipt_voucher_number, 'linked to the receipt voucher that covered the advance');
+      assert.strictEqual(pending.invoice_number, null, 'no document at a guessed rate');
+      assert.strictEqual(await issuePendingCancellationDocuments(), 0);
+
+      // Once the CA confirms a rate, the waiting documents are issued (GST included in the kept amount).
+      await updateSetting('cancellation_policy', { ...original, cancellation_charge_gst_pct: 18 });
+      assert.ok((await issuePendingCancellationDocuments()) >= 1);
+      const issued = await charge();
+      assert.strictEqual(issued.status, 'ISSUED');
+      assert.match(issued.invoice_number, /^CC\d{4}\d{6}$/);
+      assert.strictEqual(Number(issued.taxable_value), 211.86);
+      assert.strictEqual(Number(issued.gst_amount), 38.14);
+      assert.strictEqual(Number(issued.taxable_value) + Number(issued.gst_amount), 250);
+      await issuePendingCancellationDocuments();
+      assert.strictEqual((await charge()).invoice_number, issued.invoice_number, 'never renumbered');
+
+      // An invalid rate stops issuing but not the rest of the daily jobs.
+      const b2 = await booking({ hours: freeHours - 1, advance: 250 });
+      await updateSetting('cancellation_policy', { ...original, cancellation_charge_gst_pct: 'abc' });
+      await staffCancel(dispatcherToken, b2.id, 'CUSTOMER');
+      await assert.rejects(() => issuePendingCancellationDocuments(), /invalid/);
+      const daily = await executeDailyCronTasks();
+      assert.strictEqual(daily.cancellationDocumentsIssued, 0);
+    } finally {
+      await updateSetting('cancellation_policy', original);
+    }
   });
 });

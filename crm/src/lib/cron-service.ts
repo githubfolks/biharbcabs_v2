@@ -1,5 +1,6 @@
 import { query } from './db';
 import { purgeOldLoginAttempts } from './login-security';
+import { issuePendingCancellationDocuments } from './cancellation-charges';
 import {
   getDriverWakeupCheckHours,
   getCompanyBillingInfo,
@@ -23,6 +24,7 @@ export interface FrequentCronResult {
 export interface DailyCronResult {
   documentsExpiringWarned: number;
   loginAttemptsPurged: number;
+  cancellationDocumentsIssued: number;
 }
 
 /**
@@ -285,6 +287,11 @@ export async function executeDailyCronTasks(): Promise<DailyCronResult> {
   return {
     documentsExpiringWarned: await runDocumentExpiryWarnings(),
     loginAttemptsPurged: await purgeOldLoginAttempts(),
+    // A bad rate setting must not stop the other daily jobs.
+    cancellationDocumentsIssued: await issuePendingCancellationDocuments().catch((err) => {
+      console.error('[Cron] Cancellation charge documents not issued:', err?.message);
+      return 0;
+    }),
   };
 }
 

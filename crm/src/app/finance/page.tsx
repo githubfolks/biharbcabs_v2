@@ -128,6 +128,7 @@ export default function FinancePage() {
   const [refunds, setRefunds] = useState<any[]>([]);
   const [refundsError, setRefundsError] = useState<string | null>(null);
   const [retrying, setRetrying] = useState<number | null>(null);
+  const [pendingCharges, setPendingCharges] = useState(0);
 
   async function loadRefunds() {
     try {
@@ -135,6 +136,7 @@ export default function FinancePage() {
       const data = await res.json();
       if (data.success) {
         setRefunds(data.refunds);
+        setPendingCharges(Number(data.pendingCancellationCharges || 0));
         setRefundsError(null);
       } else {
         setRefundsError(data.error || 'Could not load refunds');
@@ -395,6 +397,9 @@ export default function FinancePage() {
         <div className="px-4 py-3 border-b bg-slate-50">
           <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700">Refunds In Progress ({refunds.length})</h3>
           <p className="text-[11px] text-slate-500 mt-0.5">Advance refunds for cancelled bookings. PENDING is with Razorpay; FAILED can be retried; SUBMITTING means a request may have reached Razorpay — check the Razorpay dashboard before doing anything.</p>
+          {pendingCharges > 0 && (
+            <p className="text-[11px] text-amber-700 mt-1">{pendingCharges} kept late-cancellation advance(s) await the GST rate for their tax document (crm_settings → cancellation_policy.cancellation_charge_gst_pct, to be confirmed by the CA).</p>
+          )}
         </div>
         {refundsError ? (
           <div className="px-4 py-3 text-sm text-rose-600">{refundsError}</div>
