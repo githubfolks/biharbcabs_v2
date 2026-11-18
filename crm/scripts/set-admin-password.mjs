@@ -47,8 +47,13 @@ try {
     [email, hash, salt, process.env.CRM_ADMIN_NAME || 'Operations Super Admin', role]
   );
   const { rowCount } = await client.query('DELETE FROM crm_admin_sessions WHERE user_id = $1', [rows[0].id]);
+  // A reset also lifts a sign-in lockout (migration 13; skipped if not applied yet).
+  const { rows: lt } = await client.query(`SELECT to_regclass('crm_login_attempts') IS NOT NULL AS present`);
+  const cleared = lt[0].present
+    ? (await client.query(`DELETE FROM crm_login_attempts WHERE email = $1 AND outcome <> 'SUCCESS'`, [email])).rowCount
+    : 0;
   await client.query('COMMIT');
-  console.log(`${rows[0].created ? 'Created' : 'Reset password for'} ${email}; signed out ${rowCount} session(s).`);
+  console.log(`${rows[0].created ? 'Created' : 'Reset password for'} ${email}; signed out ${rowCount} session(s); cleared ${cleared} failed sign-in attempt(s).`);
   if (generated) console.log(`New password (shown once, store it safely): ${password}`);
 } catch (err) {
   await client.query('ROLLBACK');

@@ -183,3 +183,17 @@ DATABASE_URL=postgresql://localhost/biharcabs_crm_test npx tsx --test src/tests/
 ```
 
 **Commission setting:** bookings take commission from `revenue_protection_policy.platform_commission_pct` (Settings → "Platform Facilitation / Take-Rate"). The old `commission_model` and `driver_max_negative_balance_limit` settings were not used by any booking, dispatch or billing code, so their fields were removed from Settings. Credit limits are the tiered `dynamic_credit_limits`. The old rows remain in `crm_settings`, unused.
+
+## Sign-in attempt limits
+
+`POST /api/auth/login` records every attempt in `crm_login_attempts` (migration 13). Limits come from `login_security_policy` in `crm_settings` (defaults: 5 failures per email, 20 per IP, 15-minute window, 90 days of history). Invalid settings fall back to those defaults.
+
+- **Per email:** after the limit, attempts are refused with 429 and `Retry-After` until the oldest counted failure is out of the window, even with the right password. Only failures since the last successful sign-in count. Unknown emails are counted and answered exactly like wrong passwords, and take the same time to answer, so nothing reveals which accounts exist. Attempts for one email are serialised, so parallel guesses cannot exceed the limit.
+- **Per IP:** applies only when `CLIENT_IP_HEADER` names a header set by your reverse proxy. Otherwise any caller could forge `X-Forwarded-For`, so no IP is trusted.
+- **Deactivated accounts** are reported only after a correct password.
+- **Unlocking:** `scripts/set-admin-password.mjs` also clears that email's failed attempts; otherwise the lock lifts when the window passes.
+- **Housekeeping:** the daily job (`/api/dispatch/cron/daily`) deletes attempts older than `retention_days`.
+
+```bash
+DATABASE_URL=postgresql://localhost/biharcabs_crm_test npx tsx --test src/tests/login-limits.integration.ts
+```

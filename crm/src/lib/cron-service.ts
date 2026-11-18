@@ -1,4 +1,5 @@
 import { query } from './db';
+import { purgeOldLoginAttempts } from './login-security';
 import {
   getDriverWakeupCheckHours,
   getAdminContacts,
@@ -21,6 +22,7 @@ export interface FrequentCronResult {
 
 export interface DailyCronResult {
   documentsExpiringWarned: number;
+  loginAttemptsPurged: number;
 }
 
 /**
@@ -281,6 +283,9 @@ export async function executeFrequentCronTasks(): Promise<FrequentCronResult> {
 
 /** Daily jobs (once a day, POST /api/dispatch/cron/daily). */
 export async function executeDailyCronTasks(): Promise<DailyCronResult> {
-  return { documentsExpiringWarned: await runDocumentExpiryWarnings() };
+  return {
+    documentsExpiringWarned: await runDocumentExpiryWarnings(),
+    loginAttemptsPurged: await purgeOldLoginAttempts(),
+  };
 }
 

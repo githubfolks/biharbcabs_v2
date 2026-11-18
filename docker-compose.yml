@@ -85,6 +85,8 @@ services:
       META_APP_SECRET: ${META_APP_SECRET:-}
       # Secret the scheduler must send to /api/dispatch/cron*. Until set, scheduled jobs are refused (503).
       CRON_SECRET: ${CRON_SECRET:-}
+      # Header your reverse proxy sets to the real client IP (per-IP sign-in limit). Empty: per-email limit only.
+      CLIENT_IP_HEADER: ${CLIENT_IP_HEADER:-}
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
