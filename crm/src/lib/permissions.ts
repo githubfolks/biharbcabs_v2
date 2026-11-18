@@ -19,6 +19,7 @@ export const PERMISSIONS = {
   'bookings.create': OPS,
   'bookings.waive_advance': MONEY,
   'bookings.cancel': ALL,
+  'bookings.override_fare': SUPER,
   'refunds.manage': MONEY,
   'dispatch.manage': OPS,
   'drivers.view': ALL,

@@ -199,6 +199,7 @@ describe('every admin route checks the session and the role', () => {
     assert.strictEqual(allowed('ledger.settle'), 'SUPER_ADMIN,FINANCE_MANAGER');
     assert.strictEqual(allowed('payouts.record'), 'SUPER_ADMIN,FINANCE_MANAGER');
     assert.strictEqual(allowed('dues.record'), 'SUPER_ADMIN,FINANCE_MANAGER');
+    assert.strictEqual(allowed('bookings.override_fare'), 'SUPER_ADMIN');
     assert.strictEqual(allowed('incentives.award'), 'SUPER_ADMIN,FINANCE_MANAGER');
     assert.strictEqual(allowed('bookings.waive_advance'), 'SUPER_ADMIN,FINANCE_MANAGER');
     assert.strictEqual(allowed('dispatch.manage'), 'SUPER_ADMIN,DISPATCHER');
