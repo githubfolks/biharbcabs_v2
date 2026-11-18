@@ -61,6 +61,10 @@ before(async () => {
   )).rows[0].id);
   driverA = await driver(DRIVER_A);
   driverB = await driver(DRIVER_B);
+  // Eligible drivers have a verified cab of the booking's type (acceptance checks the dispatch rules).
+  for (const [id, reg] of [[driverA, 'BR01SECA'], [driverB, 'BR01SECB']] as const) {
+    await query(`INSERT INTO crm_driver_vehicles (driver_id, wp_vehicle_code, registration_no, model_name, is_verified) VALUES ($1, 'sedan', $2, 'Dzire', true)`, [id, reg]);
+  }
   customerId = Number((await query(`INSERT INTO crm_customers (phone, full_name) VALUES ($1, 'Customer') RETURNING id`, [CUSTOMER])).rows[0].id);
 });
 after(async () => { await getDbPool().end(); });

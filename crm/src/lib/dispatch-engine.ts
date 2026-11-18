@@ -54,141 +54,181 @@ export async function calculateRideSplitWithTaxes(customerTotalFare: number): Pr
   return splitFare(customerTotalFare, await getSplitRules());
 }
 
+/** Statuses in which a booking is still waiting for its driver. */
+export const ASSIGNABLE_STATUSES = ['AWAITING_DRIVER', 'ESCALATED_NO_DRIVER', 'CONFIRMED_AWAITING_DRIVER'];
+
+/** A ride BiharCabs has been paid for in full: drivers restricted for dues may take it (it pays their debt down). */
+export function isPrepaidBooking(b: { payment_status?: string; advance_paid?: any; customer_total_fare?: any }): boolean {
+  return b.payment_status === 'PAID_IN_FULL' || Number(b.advance_paid || 0) >= Number(b.customer_total_fare || 0);
+}
+
+/** What this ride does to the driver's wallet when settled, counted only when it adds to what they owe. */
+export function rideShortfall(b: { advance_paid?: any; commission_amount?: any }): number {
+  return Math.min(0, Number(b.advance_paid || 0) - Number(b.commission_amount || 0));
+}
+
+type Db = { query: (text: string, params?: any[]) => Promise<{ rows: any[] }> };
+
+interface EligibilityQuery {
+  vehicleCode: string;
+  isPrepaid: boolean;
+  /** This ride's shortfall (rideShortfall), added to the driver's projected wallet. */
+  rideShortfall: number;
+  /** The booking being dispatched: its own shortfall is not counted twice as an "open ride". */
+  bookingId?: number;
+}
+
+/**
+ * The one definition of the dispatch rules. Every rule is a column, so broadcast selection (all true)
+ * and single-driver checks (which failed) cannot drift apart:
+ *   status, available, rating, licence, a verified in-date vehicle of the cab type, and credit:
+ *   wallet + shortfall of the driver's other open rides + this ride's shortfall must stay within the
+ *   driver's tier credit limit (not applied to fully prepaid rides, which reduce what they owe).
+ * One row per driver (their best vehicle of the type).
+ */
+async function eligibilityRows(db: Db, q: EligibilityQuery, filter: { sql: string; params: any[] }): Promise<any[]> {
+  const ratingPolicy = await getDriverRatingPolicy();
+  const p = await getRevenueProtectionPolicy();
+  const params: any[] = [
+    q.vehicleCode,                            // $1
+    ratingPolicy.min_dispatch_rating,         // $2
+    q.isPrepaid,                              // $3
+    q.rideShortfall,                          // $4
+    q.bookingId ?? 0,                         // $5
+    p.elite_min_rating,                       // $6
+    p.elite_min_trips,                        // $7
+    p.dynamic_credit_limits.elite,            // $8
+    p.standard_min_rating,                    // $9
+    p.dynamic_credit_limits.standard,         // $10
+    p.dynamic_credit_limits.probation_or_new, // $11
+  ];
+  const offset = params.length;
+  const filterSql = filter.sql.replace(/\$(\d+)/g, (_, n) => `$${Number(n) + offset}`);
+  params.push(...filter.params);
+
+  const res = await db.query(
+    `WITH rules AS (
+       SELECT
+         d.id AS driver_id, d.full_name, d.phone, d.whatsapp_phone, d.base_city, d.wallet_balance, d.rating,
+         v.id AS vehicle_id, v.model_name, v.registration_no,
+         (CASE WHEN $3::boolean THEN d.onboarding_status IN ('APPROVED_ACTIVE', 'RESTRICTED_DIGITAL_ONLY')
+               ELSE d.onboarding_status = 'APPROVED_ACTIVE' END) AS status_ok,
+         d.is_available AS available_ok,
+         d.rating >= ($2::numeric) AS rating_ok,
+         (d.license_expiry IS NULL OR d.license_expiry >= CURRENT_DATE) AS licence_ok,
+         (v.id IS NOT NULL AND v.is_verified = true
+           AND (v.insurance_expiry IS NULL OR v.insurance_expiry >= CURRENT_DATE)
+           AND (v.fitness_expiry IS NULL OR v.fitness_expiry >= CURRENT_DATE)
+           AND (v.permit_expiry IS NULL OR v.permit_expiry >= CURRENT_DATE)) AS vehicle_ok,
+         (d.wallet_balance
+           + COALESCE((SELECT SUM(LEAST(0, ob.advance_paid - ob.commission_amount)) FROM crm_bookings ob
+                       WHERE ob.assigned_driver_id = d.id AND ob.id <> $5::bigint
+                         AND ob.booking_status IN ('DRIVER_ASSIGNED', 'TRIP_IN_PROGRESS')), 0)
+           + ($4::numeric)) AS projected_wallet,
+         (CASE WHEN d.rating >= ($6::numeric) AND d.total_trips_completed >= ($7::integer) THEN ($8::numeric)
+               WHEN d.rating >= ($9::numeric) THEN ($10::numeric)
+               ELSE ($11::numeric) END) AS credit_limit
+       FROM crm_drivers d
+       LEFT JOIN crm_driver_vehicles v ON v.driver_id = d.id AND LOWER(v.wp_vehicle_code) = LOWER($1)
+       WHERE ${filterSql}
+     ),
+     best AS (
+       SELECT DISTINCT ON (driver_id) *, ($3::boolean OR projected_wallet >= -credit_limit) AS credit_ok
+       FROM rules
+       ORDER BY driver_id, vehicle_ok DESC, vehicle_id
+     )
+     SELECT * FROM best`,
+    params
+  );
+  return res.rows;
+}
+
+const RULES: Array<[string, string]> = [
+  ['status_ok', 'account is not active for this ride'],
+  ['available_ok', 'driver is marked unavailable'],
+  ['rating_ok', 'rating is below the dispatch minimum'],
+  ['licence_ok', 'driving licence has expired'],
+  ['vehicle_ok', 'no verified cab of this type with valid insurance, fitness and permit'],
+  ['credit_ok', 'this ride would take them past their credit limit'],
+];
+
+export function failedRules(row: any): string[] {
+  return RULES.filter(([col]) => row[col] !== true).map(([, reason]) => reason);
+}
+
 /**
  * Find all active, verified, compliant drivers eligible for a booking.
- * Guardrails enforced:
- * 1. Base city matches origin city
- * 2. Documents are unexpired (DL, Insurance, Fitness, Permit)
- * 3. Cross-Ride & Prepaid Ride Absorption:
- *    - If isPrepaidRide is true: drivers in 'RESTRICTED_DIGITAL_ONLY' with negative balance
- *      are ELIGIBLE and PRIORITIZED so their debt is automatically absorbed from trip payout!
- *    - If isPrepaidRide is false: driver must be 'APPROVED_ACTIVE' and within their dynamic credit limit:
- *        - Elite (4.8★+, 25+ trips): Leeway up to ₹2,500 negative
- *        - Standard (4.2★+): Leeway up to ₹1,000 negative
- *        - Probation / New: Leeway capped at ₹300 negative
+ * - Base city matches origin city (or, for return trips, drivers returning from it).
+ * - Every rule in eligibilityRows passes.
+ * Prepaid rides put drivers with dues first, so the ride pays their debt down.
  */
 export async function findEligibleDrivers(
   originCity: string,
   vehicleCode: string,
   options?: {
     isPrepaidRide?: boolean;
+    /** This ride's shortfall for the credit check (see rideShortfall); 0 when not yet known. */
+    rideShortfall?: number;
+    /** The booking being dispatched, so it is not also counted among the driver's open rides. */
+    bookingId?: number;
     /** Only drivers returning from originCity to this city, whose return lasts until the pickup. */
     returnTrip?: { destinationCity: string; pickupAt: Date };
     /** Leave out drivers who already have an offer for this booking. */
     excludeOfferedForBooking?: number;
   }
 ): Promise<DispatchCandidate[]> {
-  const ratingPolicy = await getDriverRatingPolicy();
-  const revPolicy = await getRevenueProtectionPolicy();
   const isPrepaid = options?.isPrepaidRide ?? false;
-
-  let sql: string;
-  let params: any[];
-
-  if (isPrepaid) {
-    // For prepaid rides: Include drivers in digital-only restricted mode, prioritizing drivers with dues
-    sql = `
-      SELECT 
-        d.id AS driver_id,
-        d.full_name,
-        d.phone,
-        d.whatsapp_phone,
-        d.base_city,
-        d.wallet_balance,
-        d.rating,
-        v.id AS vehicle_id,
-        v.model_name,
-        v.registration_no
-      FROM crm_drivers d
-      JOIN crm_driver_vehicles v ON v.driver_id = d.id
-      WHERE LOWER(d.base_city) = LOWER($1)
-        AND d.onboarding_status IN ('APPROVED_ACTIVE', 'RESTRICTED_DIGITAL_ONLY')
-        AND d.is_available = true
-        AND d.rating >= ($2::numeric)
-        AND (d.license_expiry IS NULL OR d.license_expiry >= CURRENT_DATE)
-        AND LOWER(v.wp_vehicle_code) = LOWER($3)
-        AND v.is_verified = true
-        AND (v.insurance_expiry IS NULL OR v.insurance_expiry >= CURRENT_DATE)
-        AND (v.fitness_expiry IS NULL OR v.fitness_expiry >= CURRENT_DATE)
-        AND (v.permit_expiry IS NULL OR v.permit_expiry >= CURRENT_DATE)
-      ORDER BY (CASE WHEN d.wallet_balance < 0 THEN 0 ELSE 1 END) ASC, d.rating DESC, d.wallet_balance DESC;
-    `;
-    params = [originCity, ratingPolicy.min_dispatch_rating, vehicleCode];
-  } else {
-    // Standard cash ride: enforce dynamic credit limit and APPROVED_ACTIVE status
-    sql = `
-      SELECT 
-        d.id AS driver_id,
-        d.full_name,
-        d.phone,
-        d.whatsapp_phone,
-        d.base_city,
-        d.wallet_balance,
-        d.rating,
-        v.id AS vehicle_id,
-        v.model_name,
-        v.registration_no
-      FROM crm_drivers d
-      JOIN crm_driver_vehicles v ON v.driver_id = d.id
-      WHERE LOWER(d.base_city) = LOWER($1)
-        AND d.onboarding_status = 'APPROVED_ACTIVE'
-        AND d.is_available = true
-        AND d.rating >= ($2::numeric)
-        AND d.wallet_balance >= -(
-          CASE 
-            WHEN d.rating >= ($4::numeric) AND d.total_trips_completed >= ($5::integer) THEN ($6::numeric)
-            WHEN d.rating >= ($7::numeric) THEN ($8::numeric)
-            ELSE ($9::numeric)
-          END
-        )
-        AND (d.license_expiry IS NULL OR d.license_expiry >= CURRENT_DATE)
-        AND LOWER(v.wp_vehicle_code) = LOWER($3)
-        AND v.is_verified = true
-        AND (v.insurance_expiry IS NULL OR v.insurance_expiry >= CURRENT_DATE)
-        AND (v.fitness_expiry IS NULL OR v.fitness_expiry >= CURRENT_DATE)
-        AND (v.permit_expiry IS NULL OR v.permit_expiry >= CURRENT_DATE)
-      ORDER BY d.rating DESC, d.wallet_balance DESC;
-    `;
-    params = [
-      originCity,
-      ratingPolicy.min_dispatch_rating,
-      vehicleCode,
-      revPolicy.elite_min_rating,
-      revPolicy.elite_min_trips,
-      revPolicy.dynamic_credit_limits.elite,
-      revPolicy.standard_min_rating,
-      revPolicy.dynamic_credit_limits.standard,
-      revPolicy.dynamic_credit_limits.probation_or_new,
-    ];
-  }
-
-  // Returning drivers are matched on where they are now, not their base city.
-  if (options?.returnTrip) {
-    const destParam = params.length + 1;
-    const pickupParam = params.length + 2;
-    sql = sql.replace(
-      'WHERE LOWER(d.base_city) = LOWER($1)',
-      `WHERE EXISTS (
-         SELECT 1 FROM crm_driver_returns r
-         WHERE r.driver_id = d.id AND r.ended_at IS NULL
-           AND r.expires_at > CURRENT_TIMESTAMP AND r.expires_at >= $${pickupParam}
-           AND LOWER(r.from_city) = LOWER($1) AND LOWER(r.to_city) = LOWER($${destParam})
-       )`
-    );
-    params.push(options.returnTrip.destinationCity, options.returnTrip.pickupAt);
-  }
+  const filterParams: any[] = [originCity];
+  let filterSql = options?.returnTrip
+    ? `EXISTS (SELECT 1 FROM crm_driver_returns r
+               WHERE r.driver_id = d.id AND r.ended_at IS NULL
+                 AND r.expires_at > CURRENT_TIMESTAMP AND r.expires_at >= $3
+                 AND LOWER(r.from_city) = LOWER($1) AND LOWER(r.to_city) = LOWER($2))`
+    : `LOWER(d.base_city) = LOWER($1)`;
+  if (options?.returnTrip) filterParams.push(options.returnTrip.destinationCity, options.returnTrip.pickupAt);
   if (options?.excludeOfferedForBooking) {
-    const bookingParam = params.length + 1;
-    sql = sql.replace(
-      'AND d.is_available = true',
-      `AND d.is_available = true
-        AND NOT EXISTS (SELECT 1 FROM crm_dispatch_offers o WHERE o.driver_id = d.id AND o.booking_id = $${bookingParam})`
-    );
-    params.push(options.excludeOfferedForBooking);
+    filterParams.push(options.excludeOfferedForBooking);
+    filterSql += ` AND NOT EXISTS (SELECT 1 FROM crm_dispatch_offers o WHERE o.driver_id = d.id AND o.booking_id = $${filterParams.length})`;
   }
 
-  const res = await query(sql, params);
-  return res.rows;
+  const rows = await eligibilityRows(
+    { query },
+    { vehicleCode, isPrepaid, rideShortfall: options?.rideShortfall ?? 0, bookingId: options?.bookingId },
+    { sql: filterSql, params: filterParams }
+  );
+  return rows
+    .filter((r) => failedRules(r).length === 0)
+    .sort((a, b) =>
+      (isPrepaid ? Number(Number(a.wallet_balance) >= 0) - Number(Number(b.wallet_balance) >= 0) : 0) ||
+      Number(b.rating) - Number(a.rating) ||
+      Number(b.wallet_balance) - Number(a.wallet_balance)
+    )
+    .map((r) => ({
+      driver_id: r.driver_id, full_name: r.full_name, phone: r.phone, whatsapp_phone: r.whatsapp_phone, base_city: r.base_city,
+      wallet_balance: r.wallet_balance, rating: r.rating, vehicle_id: r.vehicle_id, model_name: r.model_name, registration_no: r.registration_no,
+    }));
+}
+
+/**
+ * Check one driver against the dispatch rules for a booking, at the moment of acceptance or a staff
+ * assignment. Call inside the transaction with the driver row locked, so the credit check sees the
+ * driver's other rides as they are. Base city is not checked: the driver was offered the ride, or
+ * staff chose them.
+ */
+export async function checkDriverEligibility(
+  db: Db,
+  driverId: number,
+  booking: { id: number; wp_vehicle_code: string; payment_status?: string; advance_paid?: any; customer_total_fare?: any; commission_amount?: any }
+): Promise<{ eligible: boolean; reasons: string[]; vehicleId: number | null }> {
+  const rows = await eligibilityRows(
+    db,
+    { vehicleCode: booking.wp_vehicle_code, isPrepaid: isPrepaidBooking(booking), rideShortfall: rideShortfall(booking), bookingId: Number(booking.id) },
+    { sql: 'd.id = $1', params: [driverId] }
+  );
+  const row = rows[0];
+  if (!row) return { eligible: false, reasons: ['driver not found'], vehicleId: null };
+  const reasons = failedRules(row);
+  return { eligible: reasons.length === 0, reasons, vehicleId: row.vehicle_ok ? Number(row.vehicle_id) : null };
 }
 
 /** Pickup moment of a stored booking, read as India time. */
@@ -250,7 +290,9 @@ export async function broadcastRideToDrivers(
     let slaDeadline = new Date(Date.now() + timeoutMins * 60 * 1000);
 
     // 2. Find eligible drivers (prepaid rides cross-absorb debt from digital-only restricted drivers)
-    const isPrepaid = booking.payment_status === 'PAID_IN_FULL' || Number(booking.advance_paid) >= Number(booking.customer_total_fare);
+    const isPrepaid = isPrepaidBooking(booking);
+    // The credit check counts this ride's shortfall (and each driver's other open rides).
+    const shortfall = rideShortfall(booking);
     const hasDiscount = Number(booking.return_discount_amount) > 0 && !booking.return_discount_funded_by;
 
     let candidates: DispatchCandidate[] = [];
@@ -262,6 +304,8 @@ export async function broadcastRideToDrivers(
       if (active && booking.destination_city) {
         candidates = await findEligibleDrivers(booking.origin_city, booking.wp_vehicle_code, {
           isPrepaidRide: isPrepaid,
+          rideShortfall: shortfall,
+          bookingId,
           returnTrip: { destinationCity: booking.destination_city, pickupAt: bookingPickupAt(booking) },
         });
       }
@@ -276,6 +320,8 @@ export async function broadcastRideToDrivers(
     if (!isReturnPriority) {
       candidates = await findEligibleDrivers(booking.origin_city, booking.wp_vehicle_code, {
         isPrepaidRide: isPrepaid,
+        rideShortfall: shortfall,
+        bookingId,
         excludeOfferedForBooking: options?.releaseReturnWindow ? bookingId : undefined,
       });
     }
@@ -354,7 +400,7 @@ export async function acceptRideOffer(
   driverId: number
 ): Promise<{
   success: boolean;
-  status: 'ASSIGNED' | 'ALREADY_ASSIGNED' | 'OFFER_EXPIRED' | 'NOT_FOUND' | 'NOT_OFFERED';
+  status: 'ASSIGNED' | 'ALREADY_ASSIGNED' | 'OFFER_EXPIRED' | 'NOT_FOUND' | 'NOT_OFFERED' | 'NOT_ELIGIBLE';
   booking?: BookingDetails;
   /** On ASSIGNED: the customer's trip-start OTP, to send to the customer only. */
   startOtp?: string;
@@ -432,15 +478,24 @@ export async function acceptRideOffer(
       };
     }
 
-    // Find driver's active vehicle
-    const vehicleRes = await client.query(
-      `SELECT id FROM crm_driver_vehicles 
-       WHERE driver_id = $1 AND LOWER(wp_vehicle_code) = LOWER($2) AND is_verified = true
-       ORDER BY id ASC LIMIT 1`,
-      [driverId, booking.wp_vehicle_code]
-    );
-
-    const vehicleId = vehicleRes.rows[0]?.id || null;
+    // Re-check the driver now, not just when the offer went out: they may have been suspended, gone past
+    // their credit limit with other rides, or had documents expire since. The driver row is locked so two
+    // rides accepted at once are both counted.
+    await client.query(`SELECT id FROM crm_drivers WHERE id = $1 FOR UPDATE`, [driverId]);
+    const eligibility = await checkDriverEligibility(client, driverId, booking);
+    if (!eligibility.eligible) {
+      await client.query(
+        `UPDATE crm_dispatch_offers SET offer_status = 'INELIGIBLE', responded_at = CURRENT_TIMESTAMP WHERE booking_id = $1 AND driver_id = $2 AND offer_status = 'PENDING'`,
+        [bookingId, driverId]
+      );
+      return {
+        success: false,
+        status: 'NOT_ELIGIBLE',
+        booking,
+        message: `You cannot take ride #${booking.booking_code} right now: ${eligibility.reasons.join('; ')}. Contact BiharCabs support if this is wrong.`,
+      };
+    }
+    const vehicleId = eligibility.vehicleId;
 
     // Decide who funds any return-trip discount before the booking is assigned.
     await settleReturnDiscountFunding(client, booking, driverId);

@@ -28,6 +28,7 @@ import { endDriverReturn, startDriverReturn } from './return-trips';
 import { notifyAssignment, notifyOfferedDrivers } from './dispatch-notify';
 import { notify, notifyAdmins } from './wa-notify';
 import { requestDuesPaymentLink } from './driver-dues';
+import { insertWithBookingCode } from './booking-code';
 import { formatPickup, parsePickupTime, PickupTime } from './pickup-time';
 import { recordCustomerRating } from './ratings';
 import { issueStartOtp, otpMessage, reissueOtpForCustomer, startTripWithOtp } from './trip-otp';
@@ -1004,8 +1005,8 @@ async function createCustomerBooking(
   const advanceDue = online ? split.advanceTokenAmount : 0;
   const balanceDue = Math.max(0, totalFare - advanceDue);
 
-  const bookingCode = `BC-${Math.floor(1000 + Math.random() * 9000)}`;
-  const bookRes = await query(
+  // A fresh, unguessable code; retried in the rare case it is already taken.
+  const bookRes = await insertWithBookingCode((bookingCode) => query(
     `INSERT INTO crm_bookings (
       booking_code, customer_id, trip_type, origin_city, destination_city,
       pickup_address, drop_address, pickup_date, pickup_time, wp_vehicle_code,
@@ -1045,7 +1046,8 @@ async function createCustomerBooking(
       split.rideGstAmount,
       split.platformCommission,
     ]
-  );
+  ));
+  const bookingCode: string = bookRes.rows[0].booking_code;
   const bookingId = Number(bookRes.rows[0].id);
   await resetConversation(fromPhone);
 

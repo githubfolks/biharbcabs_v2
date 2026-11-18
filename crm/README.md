@@ -257,3 +257,30 @@ Apply `crm-design/17_driver_dues_payments.sql` before deploying (payment links c
 ```bash
 DATABASE_URL=postgresql://localhost/biharcabs_crm_test npx tsx --test src/tests/dues-payments.integration.ts
 ```
+
+## Dispatch eligibility (one set of rules)
+
+`src/lib/dispatch-engine.ts` defines the dispatch rules once, as columns of one query:
+- **Status:** `APPROVED_ACTIVE`; on fully prepaid rides also `RESTRICTED_DIGITAL_ONLY`.
+- **Availability:** the driver is marked available.
+- **Rating:** at least `min_dispatch_rating`.
+- **Licence:** not expired.
+- **Vehicle:** a verified cab of the booking's type with valid insurance, fitness and permit.
+- **Credit:** wallet + the shortfall of the driver's other open rides (`DRIVER_ASSIGNED`/`TRIP_IN_PROGRESS`) + this ride's shortfall (BiharCabs' share minus the advance held) must stay within the driver's tier credit limit. Fully prepaid rides are exempt, because they reduce what the driver owes.
+
+These rules are applied at three points:
+- **Broadcast** (`findEligibleDrivers`) offers the ride only to drivers who pass every rule, with one offer per driver.
+- **Acceptance** (`acceptRideOffer`) checks the driver again with their row locked. A driver suspended, over the limit, or with expired documents since the offer is refused (`NOT_ELIGIBLE`, offer `INELIGIBLE`) and told why. Two rides accepted at once are both counted.
+- **Force-assign** applies the same rules (base city excepted: staff choose the driver) and records the verified cab.
+  - It only works on bookings waiting for a driver, or on `DRIVER_ASSIGNED` for a reassignment.
+  - Trips in progress or completed are refused.
+  - A reassignment issues a new trip OTP, closes pending offers and tells the previous driver.
+
+Tests (a consistency test checks that broadcast and the single-driver check always agree):
+```bash
+DATABASE_URL=postgresql://localhost/biharcabs_crm_test npx tsx --test src/tests/dispatch-eligibility.integration.ts
+```
+
+## Booking codes
+
+Customer-facing codes are `BC-` + 6 characters from an alphabet without look-alikes (no 0/O/1/I), drawn with `crypto`. That is about 1.07 billion values, and they can't be guessed or used to count bookings. Inserts retry with a new code on the rare collision (`src/lib/booking-code.ts`). The old 4-digit codes (9,000 values in a unique column) made inserts fail more often as bookings accumulated. Existing codes are unchanged.

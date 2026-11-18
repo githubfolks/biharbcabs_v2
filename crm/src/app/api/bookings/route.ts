@@ -8,6 +8,7 @@ import { MIN_WAIVER_REASON_LENGTH, advanceLinkMessage, isAdvanceRequired, reques
 import { sendWhatsAppText } from '@/lib/whatsapp';
 import { notify } from '@/lib/wa-notify';
 import { notifyOfferedDrivers } from '@/lib/dispatch-notify';
+import { insertWithBookingCode } from '@/lib/booking-code';
 
 export const dynamic = 'force-dynamic';
 
@@ -134,10 +135,6 @@ export async function POST(req: NextRequest) {
     const fare = fareInput;
     const taxSplit = await calculateRideSplitWithTaxes(fare);
 
-    // 3. Generate unique booking code e.g. BC-1042
-    const codeNum = Math.floor(1000 + Math.random() * 9000);
-    const bookingCode = `BC-${codeNum}`;
-
     // advance_paid stays 0 until Razorpay confirms the money; a link booking waits for it.
     const viaLink = mode === 'PAYMENT_LINK';
     const advanceDue = viaLink ? taxSplit.advanceTokenAmount : 0;
@@ -147,7 +144,8 @@ export async function POST(req: NextRequest) {
     const advanceStatus = viaLink ? 'PENDING' : mode === 'WAIVED' ? 'WAIVED' : 'NOT_REQUIRED';
 
     // 4. Insert booking with revenue protection & tax fields
-    const bookRes = await query(
+    // A fresh, unguessable code; retried in the rare case it is already taken.
+    const bookRes = await insertWithBookingCode((bookingCode) => query(
       `INSERT INTO crm_bookings (
         booking_code, customer_id, trip_type, origin_city, destination_city,
         pickup_address, drop_address, pickup_date, pickup_time, wp_vehicle_code,
@@ -184,7 +182,8 @@ export async function POST(req: NextRequest) {
         taxSplit.rideGstAmount,
         taxSplit.platformCommission,
       ]
-    );
+    ));
+    const bookingCode: string = bookRes.rows[0].booking_code;
 
     const booking = bookRes.rows[0];
 
