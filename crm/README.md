@@ -280,3 +280,7 @@ Tests (a consistency test checks that broadcast and the single-driver check alwa
 ```bash
 DATABASE_URL=postgresql://localhost/biharcabs_crm_test npx tsx --test src/tests/dispatch-eligibility.integration.ts
 ```
+
+## Booking codes
+
+Customer-facing codes are `BC-` + 6 characters from an alphabet without look-alikes (no 0/O/1/I), drawn with `crypto`. That is about 1.07 billion values, and they can't be guessed or used to count bookings. Inserts retry with a new code on the rare collision (`src/lib/booking-code.ts`). The old 4-digit codes (9,000 values in a unique column) made inserts fail more often as bookings accumulated. Existing codes are unchanged.
