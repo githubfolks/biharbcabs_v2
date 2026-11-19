@@ -1,6 +1,7 @@
 import { query, withTransaction } from './db';
 import { getCompanyBillingInfo, getRevenueProtectionPolicy, getSplitRules } from './settings';
 import { gstIncluded, round2 } from './fare-split';
+import { creditLimitFor } from './driver-dues';
 import { PoolClient } from 'pg';
 import PDFDocument from 'pdfkit';
 import fs from 'fs';
@@ -49,7 +50,7 @@ export async function completeTripAndSettle(
     // 1. Fetch booking with row lock
     const bookingRes = await client.query(
       `SELECT b.*, d.wallet_balance AS driver_wallet, d.full_name AS driver_name,
-              d.security_reserve_balance, d.total_trips_completed, d.streak_qualifying_trips, d.onboarding_status,
+              d.security_reserve_balance, d.total_trips_completed, d.streak_qualifying_trips, d.onboarding_status, d.rating AS driver_rating,
               c.full_name AS customer_name, c.phone AS customer_phone, c.email AS customer_email
        FROM crm_bookings b
        JOIN crm_drivers d ON d.id = b.assigned_driver_id
@@ -137,11 +138,13 @@ export async function completeTripAndSettle(
     const currentWallet = Number(b.driver_wallet);
     const newDriverWalletBalance = parseFloat((currentWallet + driverNetSettlement).toFixed(2));
 
-    // Auto-restore driver status if debt was successfully absorbed by this trip
+    // Lift a dues restriction once the driver is back within their tier credit limit: the same rule that
+    // restricted them (and that dues payments use).
     let newStatus = b.onboarding_status || 'APPROVED_ACTIVE';
+    const creditLimit = creditLimitFor({ rating: b.driver_rating, total_trips_completed: newTrips }, revPolicy);
     if (
       (newStatus === 'RESTRICTED_DIGITAL_ONLY' || newStatus === 'SUSPENDED_UNPAID_DUES') &&
-      newDriverWalletBalance >= -300
+      newDriverWalletBalance >= -creditLimit
     ) {
       newStatus = 'APPROVED_ACTIVE';
     }
@@ -394,7 +397,7 @@ export async function awardDriverIncentive(
 ): Promise<{ success: boolean; newWalletBalance: number; debtCleared: number }> {
   return withTransaction(async (client: PoolClient) => {
     const dRes = await client.query(
-      `SELECT wallet_balance, onboarding_status FROM crm_drivers WHERE id = $1 FOR UPDATE`,
+      `SELECT wallet_balance, onboarding_status, rating, total_trips_completed FROM crm_drivers WHERE id = $1 FOR UPDATE`,
       [driverId]
     );
 
@@ -409,16 +412,18 @@ export async function awardDriverIncentive(
     let newStatus = dRes.rows[0].onboarding_status;
     if (
       (newStatus === 'RESTRICTED_DIGITAL_ONLY' || newStatus === 'SUSPENDED_UNPAID_DUES') &&
-      newWalletBalance >= -300
+      newWalletBalance >= -creditLimitFor(dRes.rows[0], await getRevenueProtectionPolicy())
     ) {
       newStatus = 'APPROVED_ACTIVE';
     }
 
     await client.query(
       `UPDATE crm_drivers
-       SET wallet_balance = $1, onboarding_status = $2, updated_at = CURRENT_TIMESTAMP
+       SET wallet_balance = $1, onboarding_status = $2::varchar,
+           is_available = CASE WHEN $2::varchar <> $4::varchar THEN true ELSE is_available END,
+           updated_at = CURRENT_TIMESTAMP
        WHERE id = $3`,
-      [newWalletBalance, newStatus, driverId]
+      [newWalletBalance, newStatus, driverId, dRes.rows[0].onboarding_status]
     );
 
     await client.query(

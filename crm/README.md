@@ -372,3 +372,17 @@ Apply `crm-design/23_wakeup_confirmation.sql`. Tests:
 ```bash
 DATABASE_URL=postgresql://localhost/biharcabs_crm_test npx tsx --test src/tests/wakeup.integration.ts
 ```
+
+## Restoring drivers restricted for dues
+
+A driver is restricted (`RESTRICTED_DIGITAL_ONLY`, or `SUSPENDED_UNPAID_DUES` when soft mode is off) once their wallet is past `-` their **tier credit limit** (probation ₹300, standard ₹1,000, elite ₹2,500; `dynamic_credit_limits`).
+
+The same limit restores them, wherever their wallet improves:
+- trip settlement;
+- incentive payments;
+- dues payments (`creditLimitFor` in `src/lib/driver-dues.ts`).
+
+A restored driver is also made available again. Trip settlement and incentives used to restore at a hardcoded −₹300 whatever the tier. Tests:
+```bash
+DATABASE_URL=postgresql://localhost/biharcabs_crm_test npx tsx --test src/tests/restore-threshold.integration.ts
+```
