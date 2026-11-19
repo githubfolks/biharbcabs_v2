@@ -177,7 +177,7 @@ describe('BiharCabs Operational CRM Core Engine Tests', () => {
     assert.strictEqual(settlement.settlementType, 'RECEIVABLE_FROM_DRIVER');
     assert.strictEqual(settlement.driverNetSettlement, -300);
     assert.strictEqual(settlement.newDriverWalletBalance, -300);
-    assert.ok(settlement.invoiceNumber.startsWith('INV-BC-'));
+    assert.match(settlement.invoiceNumber, /^TI\d{4}\d{6}$/, 'consecutive ride invoice series, 12 characters');
 
     // Verify invoice was inserted
     const invRes = await query(`SELECT * FROM crm_invoices WHERE booking_id = $1`, [bookingId]);

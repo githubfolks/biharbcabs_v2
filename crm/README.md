@@ -86,7 +86,7 @@ Work through these in order. Each feature section below has the detail; this lis
 ### 1. Database (native PostgreSQL)
 - [ ] **Back up first:** `pg_dump -Fc biharcabs_crm > biharcabs_crm_$(date +%F).dump`
 - [ ] **See which migrations have run:** `SELECT version FROM crm_schema_migrations ORDER BY version;` (migrations 08 onwards record themselves).
-- [ ] **Apply the missing ones in order**, up to **25**: `psql -v ON_ERROR_STOP=1 -d biharcabs_crm -f crm-design/NN_name.sql`. Each one from 08 on is safe to run again.
+- [ ] **Apply the missing ones in order**, up to **26**: `psql -v ON_ERROR_STOP=1 -d biharcabs_crm -f crm-design/NN_name.sql`. Each one from 08 on is safe to run again.
 
 ### 2. Environment and code
 `docker-compose.yml` passes these to the `crm` container from the root `.env` (never in git). After changing `.env`, recreate the container.
@@ -108,7 +108,7 @@ Work through these in order. Each feature section below has the detail; this lis
 
 ### 4. Settings (`/settings` or `crm_settings`)
 - [ ] `admin_escalation_contacts`: at least one admin phone. Every admin alert (SLA, unconfirmed wake-ups, failed messages, OTP lockouts) goes here.
-- [ ] `cancellation_policy.cancellation_charge_gst_pct`: stays empty until the CA confirms the rate. Until then cancellation charge documents are not issued; nothing else is affected.
+- [ ] `cancellation_policy.cancellation_charge_gst_pct`: **5%** per the CA, set by migration 26 if it was empty. The cancellation charge documents waiting for it are issued by the next daily job.
 - [ ] Check the defaults the migrations set are what you want: `advance_collection_policy`, `revenue_protection_policy.streak_min_fare` (₹700), `driver_wakeup_unconfirmed_alert_minutes` (60), `driver_ride_gap_hours` (4).
 
 ### 5. Accounts and data
@@ -365,12 +365,20 @@ DATABASE_URL=postgresql://localhost/biharcabs_crm_test npx tsx --test src/tests/
 
 ## GST documents for refunds and cancellation charges (per CA)
 
-All are numbered consecutively from database sequences (`src/lib/gst-documents.ts`): `RV` receipt voucher, `RF` refund voucher, `CC` cancellation charge, each followed by the financial year and a serial (e.g. `RF2627000001`).
+Every GST document is numbered in its own consecutive series (`src/lib/gst-documents.ts`, per CA and Rule 46(b) of the CGST Rules):
+- **Series:** `TI` ride tax invoice, `RV` receipt voucher, `RF` refund voucher, `CC` cancellation charge.
+- **Format:** the series, the financial year, then a 6-digit serial, e.g. `TI2627000001`. That's 12 characters; the rule allows at most 16.
+- **Yearly restart:** each series starts again at **000001 on 1 April** (India time), so a year's first and last serials match the documents reported in GSTR-1 Table 13.
+- **No gaps:** numbers come from `crm_document_counters` (migration 26), one row per series per year. They're issued inside the transaction that saves the document, so a failed transaction gives its number back.
+- **Earlier ride invoices** keep their old `INV-…` numbers. A booking keeps its first `TI` number if its invoice is ever rewritten.
 
 - **Refunded advance:** the advance was covered by a receipt voucher, not a tax invoice, so a credit note isn't valid. When Razorpay reports the refund processed, a **refund voucher** (`RF…`) is issued on `crm_refunds`. It quotes the receipt voucher's number and date and records the GST it reverses. Credit notes (Section 34) apply only where a tax invoice was issued upfront, such as driver plans, which are non-refundable.
-- **Kept advance on a late cancellation:** a taxable cancellation charge. It is recorded in `crm_cancellation_charges` at once, linked to its receipt voucher. Its tax document (`CC…`, GST included in the kept amount) is issued **only once `cancellation_policy.cancellation_charge_gst_pct` is set**. It is empty until the CA confirms the rate, then the waiting documents are issued at the next cancellation or by the daily job. Finance → Refunds shows how many are waiting. An invalid rate stops these documents but not the other daily jobs.
+- **Kept advance on a late cancellation:** a taxable cancellation charge. It is recorded in `crm_cancellation_charges` at once, linked to its receipt voucher. Its tax document (`CC…`, GST included in the kept amount) is issued at `cancellation_policy.cancellation_charge_gst_pct`: **5%**, the rate of the ride itself (per CA, CBIC Circular No. 178/10/2022-GST). Without a rate, documents wait and are issued at the next cancellation or by the daily job once it is set. Finance → Refunds shows how many are waiting. An invalid rate stops these documents but not the other daily jobs.
 
-Apply `crm-design/19_refund_vouchers_cancellation_charges.sql` before deploying.
+Apply `crm-design/19_refund_vouchers_cancellation_charges.sql` and `crm-design/26_gst_document_numbering.sql` before deploying. Tests:
+```bash
+DATABASE_URL=postgresql://localhost/biharcabs_crm_test npx tsx --test src/tests/gst-numbering.integration.ts
+```
 
 ## Staff booking fares
 
