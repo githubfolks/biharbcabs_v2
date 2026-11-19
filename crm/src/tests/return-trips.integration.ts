@@ -4,14 +4,17 @@
  *   createdb biharcabs_crm_test   (schema copied from the CRM database, plus crm_settings)
  *   DATABASE_URL=postgresql://localhost/biharcabs_crm_test npx tsx --test src/tests/return-trips.integration.ts
  *
- * Refuses to run against any database whose name does not end in _test. Needs the WordPress quote
- * endpoint reachable with a rate card listing Patna to Darbhanga. WhatsApp sends are simulated when
- * no Meta token is configured, and are read back from crm_whatsapp_logs.
+ * Refuses to run against any database whose name does not end in _test. Can run again on the same
+ * database: its drivers, customer and booking codes are unique per run. Needs the WordPress quote
+ * endpoint at http://localhost:8081 with quotes enabled (rate card public_enabled) and Patna to
+ * Darbhanga listed for sedans at 150 km x ₹12; otherwise every test after the first fails at "got live
+ * fares". WhatsApp sends are simulated when no Meta token is configured, and are read back from
+ * crm_whatsapp_logs.
  */
 import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert';
 import { query, getDbPool } from '../lib/db';
-import { invalidateSettingsCache, updateSetting } from '../lib/settings';
+import { getAllSettings, invalidateSettingsCache, updateSetting } from '../lib/settings';
 import { processIncomingWhatsAppMessage, getConversation, resetConversation } from '../lib/whatsapp-bot';
 import { acceptRideOffer } from '../lib/dispatch-engine';
 import { runReturnTripTasks } from '../lib/cron-service';
@@ -20,11 +23,14 @@ import { completeTripAndSettle } from '../lib/billing';
 const dbName = new URL(process.env.DATABASE_URL || 'postgresql://x/none').pathname.slice(1);
 if (!dbName.endsWith('_test')) throw new Error(`Refusing to run: ${dbName} is not a _test database.`);
 
-const RETURNING = '910000000101'; // Darbhanga driver, finished a trip in Patna
-const REGULAR = '910000000102';   // Patna driver
-const CUSTOMER = '910000000201';
+// Unique per run, so the suite can run again on the same database.
+const RUN = String(Date.now()).slice(-6);
+const RETURNING = `9183${RUN}01`; // Darbhanga driver, finished a trip in Patna
+const REGULAR = `9183${RUN}02`;   // Patna driver
+const CUSTOMER = `9183${RUN}03`;
 const POLICY = { enabled: true, discount_type: 'PERCENT', discount_value: 10, exclusive_window_minutes: 10, return_status_hours: 6 };
 let returningId = 0, regularId = 0, customerId = 0;
+let originalWpApi: any, originalPolicy: any;
 
 async function setPolicy(value: any) {
   await updateSetting('return_trip_policy', value);
@@ -55,14 +61,23 @@ async function finishBooking() {
 }
 
 before(async () => {
+  const settings = await getAllSettings(true);
+  originalWpApi = settings.biharcabs_wp_api;
+  originalPolicy = settings.return_trip_policy;
+  // A returning driver left by an earlier run would also get the priority offer; end those returns.
+  await query(
+    `UPDATE crm_driver_returns SET ended_at = CURRENT_TIMESTAMP, end_reason = 'EXPIRED'
+     WHERE ended_at IS NULL AND driver_id IN (SELECT id FROM crm_drivers WHERE full_name = 'Returning Driver')`
+  );
   await query(`UPDATE crm_settings SET setting_value = jsonb_set(setting_value, '{base_url}', '"http://localhost:8081"') WHERE setting_key = 'biharcabs_wp_api'`);
+  invalidateSettingsCache();
   const driver = async (phone: string, name: string, city: string) => {
     const d = await query(
       `INSERT INTO crm_drivers (phone, whatsapp_phone, full_name, base_city, onboarding_status, is_available, rating, wallet_balance)
        VALUES ($1, $1, $2, $3, 'APPROVED_ACTIVE', true, 4.9, 0) RETURNING id`,
       [phone, name, city]
     );
-    await query(`INSERT INTO crm_driver_vehicles (driver_id, wp_vehicle_code, registration_no, model_name, is_verified) VALUES ($1, 'sedan', $2, 'Dzire', true)`, [d.rows[0].id, `BR01TEST${phone.slice(-3)}`]);
+    await query(`INSERT INTO crm_driver_vehicles (driver_id, wp_vehicle_code, registration_no, model_name, is_verified) VALUES ($1, 'sedan', $2, 'Dzire', true)`, [d.rows[0].id, `BR01T${phone.slice(-8)}`]);
     return Number(d.rows[0].id);
   };
   returningId = await driver(RETURNING, 'Returning Driver', 'Darbhanga');
@@ -72,6 +87,8 @@ before(async () => {
 });
 
 after(async () => {
+  if (originalWpApi !== undefined) await updateSetting('biharcabs_wp_api', originalWpApi);
+  if (originalPolicy !== undefined) await updateSetting('return_trip_policy', originalPolicy);
   await getDbPool().end();
 });
 
@@ -79,13 +96,13 @@ describe('return trips, end to end', () => {
   it('driver can mark returning only for their own completed trip away from home', async () => {
     const trip = await query(
       `INSERT INTO crm_bookings (booking_code, customer_id, assigned_driver_id, trip_type, origin_city, destination_city, pickup_address, pickup_date, pickup_time, wp_vehicle_code, booking_status)
-       VALUES ('BC-T001', $1, $2, 'oneway', 'Darbhanga', 'Patna', 'Darbhanga station', CURRENT_DATE, '08:00', 'sedan', 'COMPLETED_SETTLED') RETURNING id`,
+       VALUES ('BC-T${RUN}1', $1, $2, 'oneway', 'Darbhanga', 'Patna', 'Darbhanga station', CURRENT_DATE, '08:00', 'sedan', 'COMPLETED_SETTLED') RETURNING id`,
       [customerId, returningId]
     );
     const tripId = trip.rows[0].id;
 
     await processIncomingWhatsAppMessage({ fromPhone: REGULAR, buttonId: `return_back_${tripId}` });
-    assert.strictEqual((await query(`SELECT count(*)::int n FROM crm_driver_returns`)).rows[0].n, 0, 'another driver cannot use this trip');
+    assert.strictEqual((await query(`SELECT count(*)::int n FROM crm_driver_returns WHERE source_booking_id = $1`, [tripId])).rows[0].n, 0, 'another driver cannot use this trip');
 
     await processIncomingWhatsAppMessage({ fromPhone: RETURNING, buttonId: `return_back_${tripId}` });
     const r = (await query(`SELECT * FROM crm_driver_returns WHERE driver_id = $1 AND ended_at IS NULL`, [returningId])).rows[0];
@@ -149,7 +166,7 @@ describe('return trips, end to end', () => {
   it('nobody returning accepts in time: regular driver gets it and the company absorbs the discount', async () => {
     const trip = await query(
       `INSERT INTO crm_bookings (booking_code, customer_id, assigned_driver_id, trip_type, origin_city, destination_city, pickup_address, pickup_date, pickup_time, wp_vehicle_code, booking_status)
-       VALUES ('BC-T002', $1, $2, 'oneway', 'Darbhanga', 'Patna', 'Darbhanga station', CURRENT_DATE, '08:00', 'sedan', 'COMPLETED_SETTLED') RETURNING id`,
+       VALUES ('BC-T${RUN}2', $1, $2, 'oneway', 'Darbhanga', 'Patna', 'Darbhanga station', CURRENT_DATE, '08:00', 'sedan', 'COMPLETED_SETTLED') RETURNING id`,
       [customerId, returningId]
     );
     await processIncomingWhatsAppMessage({ fromPhone: RETURNING, buttonId: `return_back_${trip.rows[0].id}` });
@@ -197,7 +214,7 @@ describe('return trips, end to end', () => {
   it('a pickup after the return status ends gets no discount', async () => {
     const trip = await query(
       `INSERT INTO crm_bookings (booking_code, customer_id, assigned_driver_id, trip_type, origin_city, destination_city, pickup_address, pickup_date, pickup_time, wp_vehicle_code, booking_status)
-       VALUES ('BC-T003', $1, $2, 'oneway', 'Darbhanga', 'Patna', 'Darbhanga station', CURRENT_DATE, '08:00', 'sedan', 'COMPLETED_SETTLED') RETURNING id`,
+       VALUES ('BC-T${RUN}3', $1, $2, 'oneway', 'Darbhanga', 'Patna', 'Darbhanga station', CURRENT_DATE, '08:00', 'sedan', 'COMPLETED_SETTLED') RETURNING id`,
       [customerId, returningId]
     );
     await processIncomingWhatsAppMessage({ fromPhone: RETURNING, buttonId: `return_back_${trip.rows[0].id}` });
@@ -212,7 +229,7 @@ describe('return trips, end to end', () => {
     const since = await logMark();
     const trip = await query(
       `INSERT INTO crm_bookings (booking_code, customer_id, assigned_driver_id, trip_type, origin_city, destination_city, pickup_address, pickup_date, pickup_time, wp_vehicle_code, booking_status)
-       VALUES ('BC-T004', $1, $2, 'oneway', 'Darbhanga', 'Patna', 'Darbhanga station', CURRENT_DATE, '08:00', 'sedan', 'COMPLETED_SETTLED') RETURNING id`,
+       VALUES ('BC-T${RUN}4', $1, $2, 'oneway', 'Darbhanga', 'Patna', 'Darbhanga station', CURRENT_DATE, '08:00', 'sedan', 'COMPLETED_SETTLED') RETURNING id`,
       [customerId, returningId]
     );
     await processIncomingWhatsAppMessage({ fromPhone: RETURNING, buttonId: `return_back_${trip.rows[0].id}` });
