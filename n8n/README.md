@@ -6,8 +6,11 @@ time and keeps a run history.
 
 | Workflow | Schedule | Calls | Does |
 |---|---|---|---|
-| `crm-frequent-jobs.json` | every 5 minutes | `POST http://crm:3001/api/dispatch/cron` | return-trip windows, SLA escalation, driver wake-up checks, expired-document suspension, unpaid-dues restriction |
-| `crm-daily-jobs.json` | daily 09:00 IST | `POST http://crm:3001/api/dispatch/cron/daily` | document-expiry reminders (expiring within 15 days) |
+| `crm-frequent-jobs.json` | every 5 minutes | `POST http://crm:3001/api/dispatch/cron` | return-trip windows, SLA escalation, driver wake-up checks and alerts for unconfirmed ones, expired-document suspension, unpaid-dues restriction, payment links whose expiry webhook never arrived, the failed-message summary |
+| `crm-daily-jobs.json` | daily 09:00 IST | `POST http://crm:3001/api/dispatch/cron/daily` | document-expiry reminders (expiring within 15 days), purging old sign-in attempts, cancellation charge documents |
+
+The job list is defined in the CRM (`executeFrequentCronTasks` and `executeDailyCronTasks` in
+`crm/src/lib/cron-service.ts`); the workflows only call the endpoints, so adding a job needs no n8n change.
 
 Expiry reminders are daily only: nothing records who was reminded, so the frequent job would
 otherwise message the same drivers every 5 minutes.
