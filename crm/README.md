@@ -86,7 +86,7 @@ Work through these in order. Each feature section below has the detail; this lis
 ### 1. Database (native PostgreSQL)
 - [ ] **Back up first:** `pg_dump -Fc biharcabs_crm > biharcabs_crm_$(date +%F).dump`
 - [ ] **See which migrations have run:** `SELECT version FROM crm_schema_migrations ORDER BY version;` (migrations 08 onwards record themselves).
-- [ ] **Apply the missing ones in order**, up to **26**: `psql -v ON_ERROR_STOP=1 -d biharcabs_crm -f crm-design/NN_name.sql`. Each one from 08 on is safe to run again.
+- [ ] **Apply the missing ones in order**, up to **27**: `psql -v ON_ERROR_STOP=1 -d biharcabs_crm -f crm-design/NN_name.sql`. Each one from 08 on is safe to run again.
 
 ### 2. Environment and code
 `docker-compose.yml` passes these to the `crm` container from the root `.env` (never in git). After changing `.env`, recreate the container.
@@ -107,6 +107,8 @@ Work through these in order. Each feature section below has the detail; this lis
 - [ ] **n8n:** both workflows active (every 5 minutes, and daily at 09:00 IST).
 
 ### 4. Settings (`/settings` or `crm_settings`)
+- [ ] `company_billing_info.gstin`: BiharCabs' GSTIN. Invoice PDFs are refused without it, and its first two digits must match `state_code` (10, Bihar).
+- [ ] `place_of_supply_cities`: every city rides start from, with its GST state code. Migration 27 lists Patna, Darbhanga, Gaya and Muzaffarpur; invoices for other cities wait on the Finance page until finance chooses the state.
 - [ ] `admin_escalation_contacts`: at least one admin phone. Every admin alert (SLA, unconfirmed wake-ups, failed messages, OTP lockouts) goes here.
 - [ ] `cancellation_policy.cancellation_charge_gst_pct`: **5%** per the CA, set by migration 26 if it was empty. The cancellation charge documents waiting for it are issued by the next daily job.
 - [ ] Check the defaults the migrations set are what you want: `advance_collection_policy`, `revenue_protection_policy.streak_min_fare` (₹700), `driver_wakeup_unconfirmed_alert_minutes` (60), `driver_ride_gap_hours` (4).
@@ -473,4 +475,26 @@ A driver can't hold two rides whose pickups are less than `driver_ride_gap_hours
 Apply `crm-design/25_driver_ride_gap.sql`. Tests:
 ```bash
 DATABASE_URL=postgresql://localhost/biharcabs_crm_test npx tsx --test src/tests/ride-gap.integration.ts
+```
+
+## Place of supply and CGST/SGST/IGST (per CA)
+
+A ride invoice shows its 5% GST split by place of supply (Rule 46, CGST Rules), not as one "tax" figure:
+- **Within BiharCabs' state:** 2.5% CGST + 2.5% SGST.
+- **Otherwise:** 5% IGST.
+
+The rules are in `src/lib/place-of-supply.ts`.
+
+- **Place of supply** (Section 12(9), IGST Act):
+  - **Registered customer:** the state in their GSTIN (its first two digits).
+  - **Anyone else:** the state where the passenger is picked up, looked up in the `place_of_supply_cities` setting (city in lowercase → GST state code).
+- **BiharCabs' state:** from its GSTIN once set, otherwise `company_billing_info.state_code` (10, Bihar). If they disagree, invoices wait rather than guess.
+- **Nothing is guessed.** A pickup city not in the list, or a malformed customer GSTIN, still lets the trip settle and the invoice be numbered. The invoice then waits under **Finance → Invoices Waiting for Place of Supply**, where finance chooses the state (`invoices.manage`: super admin and finance). They can also tick **Remember** to add the city for later rides. A city already listed is never changed, and an invoice's place of supply is never changed once set.
+- **State codes** come from the GST e-invoice portal's master list (`src/lib/gst-states.ts`).
+- **The invoice PDF** shows the place of supply, the SAC code and the CGST/SGST or IGST lines. It is refused while BiharCabs' GSTIN or the place of supply is missing.
+- **Existing invoices** are filled in by migration 27, by the same rules.
+
+Apply `crm-design/27_gst_place_of_supply.sql`. Tests:
+```bash
+DATABASE_URL=postgresql://localhost/biharcabs_crm_test npx tsx --test src/tests/place-of-supply.integration.ts
 ```
