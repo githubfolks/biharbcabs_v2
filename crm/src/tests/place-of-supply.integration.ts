@@ -9,18 +9,16 @@
 import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert';
 import crypto from 'crypto';
-import fs from 'fs';
-import os from 'os';
-import path from 'path';
 import { query, getDbPool } from '../lib/db';
 import { hashPassword } from '../lib/auth';
 import { getAllSettings, updateSetting } from '../lib/settings';
 import { stateCodeFromGstin } from '../lib/gst-states';
 import {
-  listInvoicesAwaitingPlaceOfSupply, resolvePlaceOfSupply, setInvoicePlaceOfSupply, splitGst, supplierStateCode,
+  listDocumentsAwaitingPlaceOfSupply, resolvePlaceOfSupply, setDocumentPlaceOfSupply, splitGst, supplierStateCode,
 } from '../lib/place-of-supply';
+import { gstDocumentPdf, taxLines } from '../lib/gst-pdf';
 import { calculateRideSplitWithTaxes } from '../lib/dispatch-engine';
-import { completeTripAndSettle, generateInvoicePdf, invoiceTaxLines } from '../lib/billing';
+import { completeTripAndSettle } from '../lib/billing';
 
 const dbName = new URL(process.env.DATABASE_URL || 'postgresql://x/none').pathname.slice(1);
 if (!dbName.endsWith('_test')) throw new Error(`Refusing to run: ${dbName} is not a _test database.`);
@@ -140,7 +138,7 @@ describe('ride invoices at settlement', () => {
     assert.match(inv.invoice_number, /^TI\d{10}$/);
     assert.strictEqual(inv.place_of_supply_code, null);
     assert.strictEqual(inv.cgst_amount, null);
-    assert.ok((await listInvoicesAwaitingPlaceOfSupply()).some((w) => Number(w.id) === Number(inv.id)));
+    assert.ok((await listDocumentsAwaitingPlaceOfSupply()).some((w) => w.kind === 'TI' && w.id === Number(inv.id)));
   });
 });
 
@@ -148,14 +146,14 @@ describe('staff choose the place of supply', () => {
   it('sets the split, records who, and can remember the city for later rides', async () => {
     const city = `Siliguri${RUN}`;
     const inv = await settledInvoice(city);
-    const r = await setInvoicePlaceOfSupply({ invoiceId: Number(inv.id), stateCode: '19', rememberCity: true, adminId });
+    const r = await setDocumentPlaceOfSupply({ kind: 'TI', id: Number(inv.id), stateCode: '19', rememberCity: true, adminId });
     assert.strictEqual(r.split.supplyType, 'INTER_STATE');
     assert.strictEqual(r.cityRemembered, true);
     const after = (await query(`SELECT * FROM crm_invoices WHERE id = $1`, [inv.id])).rows[0];
     assert.strictEqual(after.place_of_supply_basis, 'STAFF');
     assert.strictEqual(Number(after.place_of_supply_set_by), adminId);
     assert.strictEqual(Number(after.igst_amount), Number(after.tax_amount));
-    assert.ok(!(await listInvoicesAwaitingPlaceOfSupply()).some((w) => Number(w.id) === Number(inv.id)));
+    assert.ok(!(await listDocumentsAwaitingPlaceOfSupply()).some((w) => w.kind === 'TI' && w.id === Number(inv.id)));
 
     const next = await settledInvoice(city);
     assert.strictEqual(next.place_of_supply_code, '19', 'the next ride from that city is worked out');
@@ -164,46 +162,45 @@ describe('staff choose the place of supply', () => {
 
   it('a set place of supply is never changed, and a listed city is never overwritten', async () => {
     const inv = await settledInvoice(UNLISTED_CITY);
-    await setInvoicePlaceOfSupply({ invoiceId: Number(inv.id), stateCode: '10', rememberCity: false, adminId });
-    await assert.rejects(setInvoicePlaceOfSupply({ invoiceId: Number(inv.id), stateCode: '19', rememberCity: false, adminId }), (e: any) => e.status === 409);
+    await setDocumentPlaceOfSupply({ kind: 'TI', id: Number(inv.id), stateCode: '10', rememberCity: false, adminId });
+    await assert.rejects(setDocumentPlaceOfSupply({ kind: 'TI', id: Number(inv.id), stateCode: '19', rememberCity: false, adminId }), (e: any) => e.status === 409);
     const done = await settledInvoice('Patna');
     await query(`UPDATE crm_invoices SET place_of_supply_code = NULL WHERE id = $1`, [done.id]);
-    const r = await setInvoicePlaceOfSupply({ invoiceId: Number(done.id), stateCode: '19', rememberCity: true, adminId });
+    const r = await setDocumentPlaceOfSupply({ kind: 'TI', id: Number(done.id), stateCode: '19', rememberCity: true, adminId });
     assert.strictEqual(r.cityRemembered, false);
     assert.strictEqual((await getAllSettings(true)).place_of_supply_cities.patna, '10', 'Patna stays Bihar');
   });
 
   it('an unknown state, a bad id or a missing invoice is refused', async () => {
     const inv = await settledInvoice(UNLISTED_CITY);
-    await assert.rejects(setInvoicePlaceOfSupply({ invoiceId: Number(inv.id), stateCode: '28', rememberCity: false, adminId }), (e: any) => e.status === 400);
-    await assert.rejects(setInvoicePlaceOfSupply({ invoiceId: -1, stateCode: '10', rememberCity: false, adminId }), (e: any) => e.status === 400);
-    await assert.rejects(setInvoicePlaceOfSupply({ invoiceId: 2_000_000_000, stateCode: '10', rememberCity: false, adminId }), (e: any) => e.status === 404);
+    await assert.rejects(setDocumentPlaceOfSupply({ kind: 'TI', id: Number(inv.id), stateCode: '28', rememberCity: false, adminId }), (e: any) => e.status === 400);
+    await assert.rejects(setDocumentPlaceOfSupply({ kind: 'TI', id: -1, stateCode: '10', rememberCity: false, adminId }), (e: any) => e.status === 400);
+    await assert.rejects(setDocumentPlaceOfSupply({ kind: 'TI', id: 2_000_000_000, stateCode: '10', rememberCity: false, adminId }), (e: any) => e.status === 404);
   });
 });
 
 describe('invoice PDF', () => {
   it('shows CGST + SGST at 2.5% each within Bihar, IGST at 5% otherwise', () => {
-    assert.deepStrictEqual(invoiceTaxLines({ supplier_state_code: '10', place_of_supply_code: '10', cgst_amount: 50, sgst_amount: 50, igst_amount: 0 }, 5),
+    assert.deepStrictEqual(taxLines({ supplier_state_code: '10', place_of_supply_code: '10', cgst_amount: 50, sgst_amount: 50, igst_amount: 0 }, 5),
       [{ label: 'CGST @ 2.5%', amount: 50 }, { label: 'SGST @ 2.5%', amount: 50 }]);
-    assert.deepStrictEqual(invoiceTaxLines({ supplier_state_code: '10', place_of_supply_code: '19', cgst_amount: 0, sgst_amount: 0, igst_amount: 100 }, 5),
+    assert.deepStrictEqual(taxLines({ supplier_state_code: '10', place_of_supply_code: '19', cgst_amount: 0, sgst_amount: 0, igst_amount: 100 }, 5),
       [{ label: 'IGST @ 5%', amount: 100 }]);
-    assert.throws(() => invoiceTaxLines({ supplier_state_code: null, place_of_supply_code: null }, 5), /place of supply is not set/);
+    assert.throws(() => taxLines({ supplier_state_code: null, place_of_supply_code: null }, 5), /place of supply is not set/);
   });
 
   it('is refused without BiharCabs\' GSTIN or a place of supply, and produced once both are set', async () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'bc-invoice-'));
     try {
       const ready = await settledInvoice('Patna');
       await updateSetting('company_billing_info', { ...originalCompany, gstin: '' });
-      await assert.rejects(generateInvoicePdf(ready.invoice_number, dir), /GSTIN is not set/);
+      await assert.rejects(gstDocumentPdf('TI', Number(ready.id)), /GSTIN is not set/);
       await updateSetting('company_billing_info', { ...originalCompany, gstin: GSTIN_BIHAR });
       const waiting = await settledInvoice(UNLISTED_CITY);
-      await assert.rejects(generateInvoicePdf(waiting.invoice_number, dir), /place of supply is not set/);
-      const file = await generateInvoicePdf(ready.invoice_number, dir);
-      assert.ok(fs.statSync(file).size > 1000, 'a PDF was written');
+      await assert.rejects(gstDocumentPdf('TI', Number(waiting.id)), /place of supply is not set/);
+      const pdf = await gstDocumentPdf('TI', Number(ready.id));
+      assert.strictEqual(pdf.buffer.subarray(0, 5).toString(), '%PDF-');
+      assert.ok(pdf.buffer.length > 1000, 'a PDF was produced');
     } finally {
       await updateSetting('company_billing_info', originalCompany);
-      fs.rmSync(dir, { recursive: true, force: true });
     }
   });
 });

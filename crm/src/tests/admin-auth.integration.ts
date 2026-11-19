@@ -34,8 +34,9 @@ import * as settings from '../app/api/settings/route';
 import * as messages from '../app/api/whatsapp/messages/route';
 import * as notificationFailures from '../app/api/notifications/failures/route';
 import * as notificationResolve from '../app/api/notifications/failures/[id]/resolve/route';
-import * as invoicesAwaitingPos from '../app/api/finance/invoices/place-of-supply/route';
-import * as invoicePos from '../app/api/finance/invoices/[id]/place-of-supply/route';
+import * as documentsAwaitingPos from '../app/api/finance/gst-documents/place-of-supply/route';
+import * as documentPos from '../app/api/finance/gst-documents/[kind]/[id]/place-of-supply/route';
+import * as documentPdf from '../app/api/finance/gst-documents/[kind]/[id]/pdf/route';
 
 const dbName = new URL(process.env.DATABASE_URL || 'postgresql://x/none').pathname.slice(1);
 if (!dbName.endsWith('_test')) throw new Error(`Refusing to run: ${dbName} is not a _test database.`);
@@ -84,8 +85,9 @@ const PROTECTED: ProtectedRoute[] = [
   { name: 'POST /api/whatsapp/messages', method: 'POST', handler: messages.POST, permission: 'inbox.use', body: {} },
   { name: 'GET /api/notifications/failures', method: 'GET', handler: notificationFailures.GET, permission: 'bookings.view' },
   { name: 'POST /api/notifications/failures/[id]/resolve', method: 'POST', handler: notificationResolve.POST, permission: 'notifications.resolve', body: {}, ctx: NONE },
-  { name: 'GET /api/finance/invoices/place-of-supply', method: 'GET', handler: invoicesAwaitingPos.GET, permission: 'ledger.view' },
-  { name: 'POST /api/finance/invoices/[id]/place-of-supply', method: 'POST', handler: invoicePos.POST, permission: 'invoices.manage', body: { stateCode: 'xx' }, ctx: NONE },
+  { name: 'GET /api/finance/gst-documents/place-of-supply', method: 'GET', handler: documentsAwaitingPos.GET, permission: 'ledger.view' },
+  { name: 'POST /api/finance/gst-documents/[kind]/[id]/place-of-supply', method: 'POST', handler: documentPos.POST, permission: 'gst_documents.manage', body: { stateCode: 'xx' }, ctx: { params: { kind: 'TI', id: '-1' } } },
+  { name: 'GET /api/finance/gst-documents/[kind]/[id]/pdf', method: 'GET', handler: documentPdf.GET, permission: 'ledger.view', ctx: { params: { kind: 'TI', id: '-1' } } },
 ];
 
 function request(method: string, cookie?: string, body?: any) {
@@ -214,7 +216,7 @@ describe('every admin route checks the session and the role', () => {
     assert.strictEqual(allowed('inbox.use'), 'SUPER_ADMIN,DISPATCHER');
     assert.strictEqual(allowed('bookings.view'), 'SUPER_ADMIN,DISPATCHER,FINANCE_MANAGER');
     assert.strictEqual(allowed('notifications.resolve'), 'SUPER_ADMIN,DISPATCHER,FINANCE_MANAGER');
-    assert.strictEqual(allowed('invoices.manage'), 'SUPER_ADMIN,FINANCE_MANAGER');
+    assert.strictEqual(allowed('gst_documents.manage'), 'SUPER_ADMIN,FINANCE_MANAGER');
   });
 
   it('a dispatcher cannot waive the advance; validation still applies for the super admin', async () => {
