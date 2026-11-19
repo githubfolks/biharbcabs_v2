@@ -4,6 +4,7 @@ import { issuePendingCancellationDocuments } from './cancellation-charges';
 import { reconcileStalePaymentLinks } from './advance-payments';
 import {
   getDriverWakeupCheckHours,
+  getWakeupUnconfirmedAlertMinutes,
   getCompanyBillingInfo,
   getRevenueProtectionPolicy,
 } from './settings';
@@ -16,6 +17,7 @@ import { sendWhatsAppText, sendWhatsAppButtons } from './whatsapp';
 export interface FrequentCronResult {
   slaBreachesEscalated: number;
   wakeupChecksSent: number;
+  unconfirmedWakeupAlerts: number;
   documentsExpiredSuspended: number;
   unpaidDuesSuspended: number;
   returnWindowsReleased: number;
@@ -57,10 +59,10 @@ export async function runDriverWakeupChecks(): Promise<number> {
     JOIN crm_drivers d ON d.id = b.assigned_driver_id
     WHERE b.booking_status = 'DRIVER_ASSIGNED'
       AND b.wakeup_sent_at IS NULL
-      AND (
-        (b.pickup_date = CURRENT_DATE AND b.pickup_time <= (CURRENT_TIME + ($1 || ' hours')::interval))
-        OR (b.pickup_date < CURRENT_DATE)
-      )
+      -- Pickup times are India local; compare full timestamps (no midnight wrap, no dependence on the
+      -- database time zone) and skip pickups already past.
+      AND ((b.pickup_date + b.pickup_time) AT TIME ZONE 'Asia/Kolkata') <= CURRENT_TIMESTAMP + ($1 * INTERVAL '1 hour')
+      AND ((b.pickup_date + b.pickup_time) AT TIME ZONE 'Asia/Kolkata') > CURRENT_TIMESTAMP
     LIMIT 50;
   `;
 
@@ -92,6 +94,37 @@ export async function runDriverWakeupChecks(): Promise<number> {
   }
 
   return sentCount;
+}
+
+/** Time a driver has to answer the wake-up check before an unconfirmed alert can go out. */
+const WAKEUP_ANSWER_MINUTES = 15;
+
+/**
+ * 2B. Unconfirmed wake-up: the assigned driver has not tapped "I am ready" and pickup is within
+ * driver_wakeup_unconfirmed_alert_minutes (60). Admins are alerted once per booking (claimed atomically),
+ * so they can call the driver or reassign the ride.
+ */
+export async function runUnconfirmedWakeupAlerts(): Promise<number> {
+  const minutes = await getWakeupUnconfirmedAlertMinutes();
+  const claimed = await query(
+    `UPDATE crm_bookings b SET wakeup_alerted_at = CURRENT_TIMESTAMP
+     FROM crm_drivers d
+     WHERE d.id = b.assigned_driver_id
+       AND b.booking_status = 'DRIVER_ASSIGNED'
+       AND b.wakeup_sent_at IS NOT NULL AND b.wakeup_confirmed_at IS NULL AND b.wakeup_alerted_at IS NULL
+       AND b.wakeup_sent_at <= CURRENT_TIMESTAMP - ($2 * INTERVAL '1 minute')
+       AND ((b.pickup_date + b.pickup_time) AT TIME ZONE 'Asia/Kolkata') <= CURRENT_TIMESTAMP + ($1 * INTERVAL '1 minute')
+     RETURNING b.booking_code, b.pickup_address,
+               to_char(b.pickup_date, 'DD Mon') AS pickup_day, to_char(b.pickup_time, 'HH24:MI') AS pickup_hm,
+               d.full_name AS driver_name, d.phone AS driver_phone`,
+    [minutes, WAKEUP_ANSWER_MINUTES]
+  );
+  for (const b of claimed.rows) {
+    await notifyAdmins(
+      `⏰ Driver ${b.driver_name} (${b.driver_phone}) has NOT confirmed trip #${b.booking_code}: pickup ${b.pickup_day} at ${b.pickup_hm}, ${b.pickup_address}. Call the driver, or reassign the ride from the CRM.`
+    );
+  }
+  return claimed.rows.length;
 }
 
 /**
@@ -272,6 +305,7 @@ export async function executeFrequentCronTasks(): Promise<FrequentCronResult> {
   const returnTrips = await runReturnTripTasks();
   const breached = await runSlaEscalation();
   const wakeups = await runDriverWakeupChecks();
+  const unconfirmed = await runUnconfirmedWakeupAlerts();
   const suspended = await runExpiredDocumentSuspensions();
   const dues = await runUnpaidDuesGuardrails();
   // Payment links whose Razorpay expiry webhook never arrived; a Razorpay problem must not stop the other jobs.
@@ -283,6 +317,7 @@ export async function executeFrequentCronTasks(): Promise<FrequentCronResult> {
   return {
     slaBreachesEscalated: breached.length,
     wakeupChecksSent: wakeups,
+    unconfirmedWakeupAlerts: unconfirmed,
     documentsExpiredSuspended: suspended,
     unpaidDuesSuspended: dues,
     returnWindowsReleased: returnTrips.released,

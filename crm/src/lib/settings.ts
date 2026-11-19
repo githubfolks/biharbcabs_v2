@@ -141,6 +141,20 @@ export async function getDriverWakeupCheckHours(): Promise<number> {
   return setting.value;
 }
 
+/**
+ * Minutes before pickup at which admins are alerted about an assigned driver who has not confirmed the
+ * wake-up check (60, owner decision). An invalid setting falls back to 60 and is logged: a missed safety
+ * alert is the worse failure.
+ */
+export async function getWakeupUnconfirmedAlertMinutes(): Promise<number> {
+  const raw = Number((await getSetting<{ value: number }>('driver_wakeup_unconfirmed_alert_minutes', { value: 60 })).value);
+  if (!Number.isInteger(raw) || raw < 5 || raw > 600) {
+    console.error('[Settings] driver_wakeup_unconfirmed_alert_minutes is invalid; using 60.');
+    return 60;
+  }
+  return raw;
+}
+
 export async function getMetaWhatsAppConfig(): Promise<MetaWhatsAppConfig> {
   return getSetting<MetaWhatsAppConfig>('meta_whatsapp_config');
 }

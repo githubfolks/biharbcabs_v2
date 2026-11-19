@@ -459,7 +459,25 @@ export async function processIncomingWhatsAppMessage(params: {
 
   // C. Driver Wake-Up Check (T-2h)
   if (buttonId?.startsWith('wakeup_ready_') || lowerText === 'ready') {
-    await sendWhatsAppText(fromPhone, '✅ Awesome! Your readiness is logged. Please ensure vehicle AC & fuel are ready for customer pickup on time.');
+    // Record the confirmation on the driver's own assigned trip: the one tapped, or for a typed "ready" the
+    // next upcoming one. Admins are alerted about assigned trips that stay unconfirmed close to pickup.
+    const tapped = buttonId?.startsWith('wakeup_ready_') ? parseInt(buttonId.replace('wakeup_ready_', ''), 10) : null;
+    const confirmed = await query(
+      `UPDATE crm_bookings SET wakeup_confirmed_at = COALESCE(wakeup_confirmed_at, CURRENT_TIMESTAMP), updated_at = CURRENT_TIMESTAMP
+       WHERE id = (
+         SELECT b.id FROM crm_bookings b JOIN crm_drivers d ON d.id = b.assigned_driver_id
+         WHERE b.booking_status = 'DRIVER_ASSIGNED' AND (d.phone = $1 OR d.whatsapp_phone = $1)
+           AND ($2::bigint IS NULL OR b.id = $2)
+         ORDER BY b.pickup_date, b.pickup_time LIMIT 1
+       )
+       RETURNING booking_code`,
+      [fromPhone.replace(/\D/g, ''), Number.isInteger(tapped) ? tapped : null]
+    );
+    if (!confirmed.rows[0]) {
+      await sendWhatsAppText(fromPhone, 'We could not find an upcoming trip assigned to you. If this is wrong, please call BiharCabs support.');
+      return;
+    }
+    await sendWhatsAppText(fromPhone, `✅ Thanks, you are confirmed for trip #${confirmed.rows[0].booking_code}. Please make sure the cab is fuelled and clean, and reach the pickup on time.`);
     return;
   }
 
