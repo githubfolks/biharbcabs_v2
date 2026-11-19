@@ -348,3 +348,16 @@ Apply `crm-design/21_streak_bonus_min_fare.sql`; counters start at 0 for every d
 ```bash
 DATABASE_URL=postgresql://localhost/biharcabs_crm_test npx tsx --test src/tests/streak-bonus.integration.ts
 ```
+
+## Payment links whose expiry webhook never arrived
+
+A booking waiting for its advance used to close only on Razorpay's `payment_link.expired` webhook. If that webhook was lost, the booking stayed `AWAITING_ADVANCE` forever. The frequent job (every 5 minutes) now checks links still `CREATED` more than 10 minutes after `expire_by` (`reconcileStalePaymentLinks` in `src/lib/advance-payments.ts`, `GET /v1/payment_links/{id}`):
+
+- **Expired or cancelled at Razorpay:** the link is closed exactly as the webhook would close it. An advance booking becomes `ADVANCE_EXPIRED` and the customer is told; a dues link just closes. A late webhook then changes nothing.
+- **Paid at Razorpay, but no confirmation received:** nothing is credited, because only the signed webhook confirms money. Admins are alerted once (`reconcile_alerted_at`), and the link isn't checked again.
+- **Still open at Razorpay, or Razorpay unreachable:** left for the next run. A Razorpay failure doesn't stop the other jobs.
+
+Apply `crm-design/22_reconcile_payment_links.sql`. Tests:
+```bash
+DATABASE_URL=postgresql://localhost/biharcabs_crm_test npx tsx --test src/tests/reconcile-links.integration.ts
+```
