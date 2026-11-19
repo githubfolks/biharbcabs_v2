@@ -125,7 +125,7 @@ describe('BiharCabs Operational CRM Core Engine Tests', () => {
     const vehicleId = vehicleRes.rows[0].id;
 
     // Verify driver is found by eligible driver search
-    const eligible = await findEligibleDrivers('Patna', 'sedan');
+    const eligible = await findEligibleDrivers('Patna', 'sedan', { pickupAt: new Date() });
     const matched = eligible.find((d) => d.driver_id === driverId);
     assert.ok(matched, 'Newly onboarded driver is matched for Patna Sedan');
 
@@ -599,7 +599,7 @@ describe('BiharCabs Operational CRM Core Engine Tests', () => {
     const eId = eRes.rows[0].id;
     await query(`INSERT INTO crm_driver_vehicles (driver_id, wp_vehicle_code, registration_no, model_name, is_verified) VALUES ($1, 'sedan', $2, 'Dzire', true)`, [eId, `BR-01-E-${ts.toString().slice(-4)}`]);
 
-    const candidates = await findEligibleDrivers('Patna', 'sedan');
+    const candidates = await findEligibleDrivers('Patna', 'sedan', { pickupAt: new Date() });
     const candidateIds = candidates.map((c) => c.driver_id);
 
     // Probation driver (-350) should be excluded
@@ -647,11 +647,11 @@ describe('BiharCabs Operational CRM Core Engine Tests', () => {
     assert.strictEqual(checkRes.rows[0].is_available, true, 'Driver remains available for prepaid rides');
 
     // 3. Test Cash Ride Exclusion: Driver cannot receive standard cash rides
-    const cashCandidates = await findEligibleDrivers('Patna', 'sedan', { isPrepaidRide: false });
+    const cashCandidates = await findEligibleDrivers('Patna', 'sedan', { isPrepaidRide: false, pickupAt: new Date() });
     assert.strictEqual(cashCandidates.some((c) => c.driver_id === driverId), false, 'Excluded from cash rides');
 
     // 4. Test Prepaid Ride Inclusion: Driver IS eligible for prepaid bookings to absorb debt!
-    const prepaidCandidates = await findEligibleDrivers('Patna', 'sedan', { isPrepaidRide: true });
+    const prepaidCandidates = await findEligibleDrivers('Patna', 'sedan', { isPrepaidRide: true, pickupAt: new Date() });
     assert.strictEqual(prepaidCandidates.some((c) => c.driver_id === driverId), true, 'Eligible for prepaid rides');
 
     // 5. Test Cross-Ride Debt Absorption: Customer books prepaid ride (₹1500 advance paid online)

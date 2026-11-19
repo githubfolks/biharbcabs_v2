@@ -155,6 +155,17 @@ export async function getWakeupUnconfirmedAlertMinutes(): Promise<number> {
   return raw;
 }
 
+/** Minimum hours between the pickups of two rides one driver holds (migration 25). */
+export async function getDriverRideGapHours(): Promise<number> {
+  const raw = Number((await getSetting<{ value: number }>('driver_ride_gap_hours', { value: 4 })).value);
+  if (!Number.isFinite(raw) || raw <= 0 || raw > 24) {
+    // A wrong setting must not let a driver be double-booked.
+    console.error('[Settings] driver_ride_gap_hours is invalid; using 4.');
+    return 4;
+  }
+  return raw;
+}
+
 export async function getMetaWhatsAppConfig(): Promise<MetaWhatsAppConfig> {
   return getSetting<MetaWhatsAppConfig>('meta_whatsapp_config');
 }

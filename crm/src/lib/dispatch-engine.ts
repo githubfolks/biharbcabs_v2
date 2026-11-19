@@ -3,6 +3,7 @@ import {
   getDispatchSlaTimeoutMinutes,
   getAdminContacts,
   getDriverRatingPolicy,
+  getDriverRideGapHours,
   getRevenueProtectionPolicy,
   getReturnTripPolicy,
   getSplitRules,
@@ -76,6 +77,8 @@ interface EligibilityQuery {
   rideShortfall: number;
   /** The booking being dispatched: its own shortfall is not counted twice as an "open ride". */
   bookingId?: number;
+  /** This ride's pickup, checked against the pickups of rides the driver already holds. */
+  pickupAt: Date;
 }
 
 /**
@@ -83,12 +86,17 @@ interface EligibilityQuery {
  * and single-driver checks (which failed) cannot drift apart:
  *   status, available, rating, licence, a verified in-date vehicle of the cab type, and credit:
  *   wallet + shortfall of the driver's other open rides + this ride's shortfall must stay within the
- *   driver's tier credit limit (not applied to fully prepaid rides, which reduce what they owe).
+ *   driver's tier credit limit (not applied to fully prepaid rides, which reduce what they owe), and
+ *   schedule: no other ride they hold (assigned or in progress) with a pickup less than
+ *   driver_ride_gap_hours before or after this one (bookings have no end time, so a fixed gap).
  * One row per driver (their best vehicle of the type).
  */
 async function eligibilityRows(db: Db, q: EligibilityQuery, filter: { sql: string; params: any[] }): Promise<any[]> {
   const ratingPolicy = await getDriverRatingPolicy();
   const p = await getRevenueProtectionPolicy();
+  if (!(q.pickupAt instanceof Date) || Number.isNaN(q.pickupAt.getTime())) {
+    throw new Error('Dispatch rules need the ride\'s pickup time');
+  }
   const params: any[] = [
     q.vehicleCode,                            // $1
     ratingPolicy.min_dispatch_rating,         // $2
@@ -101,6 +109,8 @@ async function eligibilityRows(db: Db, q: EligibilityQuery, filter: { sql: strin
     p.standard_min_rating,                    // $9
     p.dynamic_credit_limits.standard,         // $10
     p.dynamic_credit_limits.probation_or_new, // $11
+    q.pickupAt,                               // $12
+    await getDriverRideGapHours(),            // $13
   ];
   const offset = params.length;
   const filterSql = filter.sql.replace(/\$(\d+)/g, (_, n) => `$${Number(n) + offset}`);
@@ -127,13 +137,21 @@ async function eligibilityRows(db: Db, q: EligibilityQuery, filter: { sql: strin
            + ($4::numeric)) AS projected_wallet,
          (CASE WHEN d.rating >= ($6::numeric) AND d.total_trips_completed >= ($7::integer) THEN ($8::numeric)
                WHEN d.rating >= ($9::numeric) THEN ($10::numeric)
-               ELSE ($11::numeric) END) AS credit_limit
+               ELSE ($11::numeric) END) AS credit_limit,
+         (SELECT sb.booking_code FROM crm_bookings sb
+          WHERE sb.assigned_driver_id = d.id AND sb.id <> $5::bigint
+            AND sb.booking_status IN ('DRIVER_ASSIGNED', 'TRIP_IN_PROGRESS')
+            AND ABS(EXTRACT(EPOCH FROM (((sb.pickup_date + sb.pickup_time) AT TIME ZONE 'Asia/Kolkata') - $12::timestamptz)))
+                < ($13::numeric) * 3600
+          ORDER BY sb.pickup_date, sb.pickup_time LIMIT 1) AS clashing_booking_code,
+         ($13::numeric) AS ride_gap_hours
        FROM crm_drivers d
        LEFT JOIN crm_driver_vehicles v ON v.driver_id = d.id AND LOWER(v.wp_vehicle_code) = LOWER($1)
        WHERE ${filterSql}
      ),
      best AS (
-       SELECT DISTINCT ON (driver_id) *, ($3::boolean OR projected_wallet >= -credit_limit) AS credit_ok
+       SELECT DISTINCT ON (driver_id) *, ($3::boolean OR projected_wallet >= -credit_limit) AS credit_ok,
+              (clashing_booking_code IS NULL) AS schedule_ok
        FROM rules
        ORDER BY driver_id, vehicle_ok DESC, vehicle_id
      )
@@ -150,10 +168,15 @@ const RULES: Array<[string, string]> = [
   ['licence_ok', 'driving licence has expired'],
   ['vehicle_ok', 'no verified cab of this type with valid insurance, fitness and permit'],
   ['credit_ok', 'this ride would take them past their credit limit'],
+  ['schedule_ok', 'already has a ride with a pickup too close to this one'],
 ];
 
 export function failedRules(row: any): string[] {
-  return RULES.filter(([col]) => row[col] !== true).map(([, reason]) => reason);
+  return RULES.filter(([col]) => row[col] !== true).map(([col, reason]) =>
+    col === 'schedule_ok' && row.clashing_booking_code
+      ? `already has ride #${row.clashing_booking_code} with a pickup less than ${Number(row.ride_gap_hours)} hours from this one`
+      : reason
+  );
 }
 
 /**
@@ -165,7 +188,7 @@ export function failedRules(row: any): string[] {
 export async function findEligibleDrivers(
   originCity: string,
   vehicleCode: string,
-  options?: {
+  options: {
     isPrepaidRide?: boolean;
     /** This ride's shortfall for the credit check (see rideShortfall); 0 when not yet known. */
     rideShortfall?: number;
@@ -175,8 +198,13 @@ export async function findEligibleDrivers(
     returnTrip?: { destinationCity: string; pickupAt: Date };
     /** Leave out drivers who already have an offer for this booking. */
     excludeOfferedForBooking?: number;
-  }
+  } & (
+    /** This ride's pickup, for the gap between a driver's rides (a return trip's pickup counts). */
+    { pickupAt: Date } | { returnTrip: { destinationCity: string; pickupAt: Date }; pickupAt?: Date }
+  )
 ): Promise<DispatchCandidate[]> {
+  const pickupAt = options.pickupAt ?? options.returnTrip?.pickupAt;
+  if (!pickupAt) throw new Error('findEligibleDrivers needs the ride\'s pickup time');
   const isPrepaid = options?.isPrepaidRide ?? false;
   const filterParams: any[] = [originCity];
   let filterSql = options?.returnTrip
@@ -193,7 +221,7 @@ export async function findEligibleDrivers(
 
   const rows = await eligibilityRows(
     { query },
-    { vehicleCode, isPrepaid, rideShortfall: options?.rideShortfall ?? 0, bookingId: options?.bookingId },
+    { vehicleCode, isPrepaid, rideShortfall: options?.rideShortfall ?? 0, bookingId: options?.bookingId, pickupAt },
     { sql: filterSql, params: filterParams }
   );
   return rows
@@ -218,11 +246,14 @@ export async function findEligibleDrivers(
 export async function checkDriverEligibility(
   db: Db,
   driverId: number,
-  booking: { id: number; wp_vehicle_code: string; payment_status?: string; advance_paid?: any; customer_total_fare?: any; commission_amount?: any }
+  booking: { id: number; wp_vehicle_code: string; pickup_date: any; pickup_time: any; payment_status?: string; advance_paid?: any; customer_total_fare?: any; commission_amount?: any }
 ): Promise<{ eligible: boolean; reasons: string[]; vehicleId: number | null }> {
   const rows = await eligibilityRows(
     db,
-    { vehicleCode: booking.wp_vehicle_code, isPrepaid: isPrepaidBooking(booking), rideShortfall: rideShortfall(booking), bookingId: Number(booking.id) },
+    {
+      vehicleCode: booking.wp_vehicle_code, isPrepaid: isPrepaidBooking(booking), rideShortfall: rideShortfall(booking),
+      bookingId: Number(booking.id), pickupAt: bookingPickupAt(booking),
+    },
     { sql: 'd.id = $1', params: [driverId] }
   );
   const row = rows[0];
@@ -327,6 +358,7 @@ export async function broadcastRideToDrivers(
         isPrepaidRide: isPrepaid,
         rideShortfall: shortfall,
         bookingId,
+        pickupAt: bookingPickupAt(booking),
         excludeOfferedForBooking: options?.releaseReturnWindow ? bookingId : undefined,
       });
     }
