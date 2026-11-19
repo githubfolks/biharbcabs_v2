@@ -35,6 +35,7 @@ export const PERMISSIONS = {
   'settings.change': SUPER,
   'inbox.use': OPS,
   'pricing.quote': ALL,
+  'notifications.resolve': ALL,
 } as const satisfies Record<string, readonly Role[]>;
 
 export type Permission = keyof typeof PERMISSIONS;

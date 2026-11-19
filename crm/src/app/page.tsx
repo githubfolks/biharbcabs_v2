@@ -6,6 +6,7 @@ import {
   PlusCircle, Phone, MapPin, DollarSign, Calendar
 } from 'lucide-react';
 import { hasPermission } from '@/lib/permissions';
+import FailedMessagesPanel from '@/components/FailedMessagesPanel';
 import { CANCELLABLE_STATUSES, MIN_WAIVER_REASON_LENGTH, WAIVABLE_STATUSES } from '@/lib/advance-rules';
 
 export default function DispatchBoard() {
@@ -263,6 +264,8 @@ export default function DispatchBoard() {
           <div className="text-xs text-emerald-600 mt-1">Invoiced & ledger reconciled</div>
         </div>
       </div>
+
+      {role && hasPermission(role, 'bookings.view') && <FailedMessagesPanel canResolve={hasPermission(role, 'notifications.resolve')} />}
 
       {/* Filter Tabs */}
       <div className="border-b border-slate-200 flex space-x-2">

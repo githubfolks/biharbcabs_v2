@@ -98,7 +98,7 @@ The bot now asks customers for their pickup time, and drivers' ride alerts show 
 
 n8n calls two endpoints on a schedule (setup in [`../n8n/README.md`](../n8n/README.md)):
 
-- **`POST /api/dispatch/cron`, every 5 minutes:** return-trip windows, SLA escalation, driver wake-up checks, expired-document suspension, unpaid-dues restriction. Each job changes a status or records a sent time, so repeated runs do not repeat messages.
+- **`POST /api/dispatch/cron`, every 5 minutes:** return-trip windows, SLA escalation, driver wake-up checks, expired-document suspension, unpaid-dues restriction, the failed-message summary. Each job changes a status or records a sent time, so repeated runs do not repeat messages.
 - **`POST /api/dispatch/cron/daily`, 09:00 IST:** reminders to drivers whose documents expire within 15 days. Nothing records who was reminded, so this must not run more than once a day.
 
 Both require `Authorization: Bearer <CRON_SECRET>`. Until `CRON_SECRET` is set, every call is refused with 503; a wrong or missing secret gets 401. Apply `crm-design/10_driver_wakeup_sent.sql` before deploying: without `crm_bookings.wakeup_sent_at`, the 5-minute job fails at the wake-up step. Tests use a disposable `_test` database with migrations 08 to 10:
@@ -385,4 +385,19 @@ The same limit restores them, wherever their wallet improves:
 A restored driver is also made available again. Trip settlement and incentives used to restore at a hardcoded −₹300 whatever the tier. Tests:
 ```bash
 DATABASE_URL=postgresql://localhost/biharcabs_crm_test npx tsx --test src/tests/restore-threshold.integration.ts
+```
+
+## Failed WhatsApp messages
+
+Every message BiharCabs starts goes through `notify()` (`src/lib/wa-notify.ts`). A send that fails, or raises an error, is recorded in `crm_notification_failures`, on both the template and the free-form path. That includes a template with no approved name configured, which used to reach only the server console. The caller still gets the same result or error as before.
+
+- **What is kept:** which message it was, the phone, the booking code where the template has one, and the error.
+- **What is not kept:** the message contents. Some carry the customer's trip OTP, so there is **no automatic resend**. A customer can reply `OTP` for a new code.
+- **Admin summary:** the 5-minute job sends **one** admin alert listing what didn't arrive: up to 5 lines, plus a count of the rest. Each failure is reported once (`alerted_at`). Failed admin alerts are never reported, since the summary is itself an admin alert and could loop. Failures already handled aren't reported either.
+- **Dispatch board:** a **Failed messages** list shows while anything is open. Staff call the person, then press **Mark handled**, which records `resolved_by`. Any role can view it (`bookings.view`) and mark failures handled (`notifications.resolve`).
+- **API:** `GET /api/notifications/failures` lists the newest 100 open failures with the open count; `POST /api/notifications/failures/[id]/resolve` marks one handled (409 if already handled).
+
+Apply `crm-design/24_notification_failures.sql`. Tests:
+```bash
+DATABASE_URL=postgresql://localhost/biharcabs_crm_test npx tsx --test src/tests/notification-failures.integration.ts
 ```
