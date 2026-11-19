@@ -290,6 +290,14 @@ async function handleClosed(client: PoolClient, event: any, newLinkStatus: 'EXPI
   );
   const link = linkRes.rows[0];
   if (!link) return { status: 'unknown_link_ignored' };
+  return closeLink(client, link, newLinkStatus, after);
+}
+
+/**
+ * Close an unpaid link (already locked by the caller): an advance link expires its booking and tells the
+ * customer; a dues link just closes. Used by the expiry/cancel webhook and by the reconciliation job.
+ */
+async function closeLink(client: PoolClient, link: any, newLinkStatus: 'EXPIRED' | 'CANCELLED', after: AfterCommit): Promise<WebhookOutcome> {
   if (link.status !== 'CREATED') return { status: 'link_already_closed' };
 
   await client.query(
@@ -482,4 +490,78 @@ export async function advanceLinkMessage(bookingCode: string, request: AdvanceRe
     `Balance payable to the driver at drop: ₹${balanceDue.toLocaleString('en-IN')}` +
     (company?.phone ? `\nHelp: ${company.phone}` : '')
   );
+}
+
+// ---------------------------------------------------------------------------------------------
+// Reconciliation: links whose expiry webhook never arrived
+// ---------------------------------------------------------------------------------------------
+
+/** How long after expire_by Razorpay's expiry webhook is given before the link is checked directly. */
+const RECONCILE_GRACE_MINUTES = 10;
+const RECONCILE_BATCH = 50;
+
+export interface ReconcileResult {
+  checked: number;
+  closed: number;
+  paidAlerts: number;
+}
+
+/**
+ * For links still CREATED more than RECONCILE_GRACE_MINUTES past expire_by, ask Razorpay for the link's
+ * status (GET /v1/payment_links/{id}):
+ * - expired / cancelled: close it exactly as the webhook would (booking ADVANCE_EXPIRED, customer told).
+ * - paid / partially_paid: never confirmed from this alone (only the signed webhook confirms money);
+ *   admins are alerted once to check it in Razorpay.
+ * - still created, or Razorpay unreachable: left for the next run.
+ */
+export async function reconcileStalePaymentLinks(): Promise<ReconcileResult> {
+  const stale = (await query(
+    `SELECT id, provider_link_id FROM crm_payment_links
+     WHERE status = 'CREATED' AND expire_by < CURRENT_TIMESTAMP - make_interval(mins => $1)
+       AND reconcile_alerted_at IS NULL -- already flagged to admins as paid: staff take it from there
+     ORDER BY expire_by LIMIT $2`,
+    [RECONCILE_GRACE_MINUTES, RECONCILE_BATCH]
+  )).rows;
+  const result: ReconcileResult = { checked: 0, closed: 0, paidAlerts: 0 };
+
+  for (const row of stale) {
+    let status: string;
+    try {
+      status = await fetchPaymentLinkStatus(row.provider_link_id);
+    } catch (err: any) {
+      console.error(`[Reconcile] Could not check link ${row.provider_link_id}:`, err?.message);
+      continue;
+    }
+    result.checked++;
+
+    if (status === 'expired' || status === 'cancelled') {
+      const after: AfterCommit = {};
+      const outcome = await withTransaction(async (client) => {
+        const link = (await client.query(`SELECT * FROM crm_payment_links WHERE id = $1 FOR UPDATE`, [row.id])).rows[0];
+        return closeLink(client, link, status === 'expired' ? 'EXPIRED' : 'CANCELLED', after);
+      });
+      if (outcome.status !== 'link_already_closed') {
+        result.closed++;
+        console.info(`[Reconcile] Closed link ${row.provider_link_id} (${status} at Razorpay, no webhook received): ${outcome.status}`);
+      }
+      await runAfterCommit(after);
+      continue;
+    }
+
+    if (status === 'paid' || status === 'partially_paid') {
+      const claimed = await query(
+        `UPDATE crm_payment_links SET reconcile_alerted_at = CURRENT_TIMESTAMP
+         WHERE id = $1 AND status = 'CREATED' AND reconcile_alerted_at IS NULL
+         RETURNING booking_id, driver_id, purpose, amount_paise`,
+        [row.id]
+      );
+      const l = claimed.rows[0];
+      if (l) {
+        result.paidAlerts++;
+        const who = l.purpose === 'DRIVER_DUES' ? `driver #${l.driver_id}'s dues` : `booking #${l.booking_id}`;
+        await notifyAdmins(`⚠️ Razorpay shows payment link ${row.provider_link_id} (${who}, ₹${(l.amount_paise / 100).toFixed(2)}) as ${status}, but no payment confirmation was received. Nothing was credited. Check the payment and the webhook in Razorpay.`);
+      }
+    }
+  }
+  return result;
 }

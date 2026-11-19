@@ -1,6 +1,7 @@
 import { query } from './db';
 import { purgeOldLoginAttempts } from './login-security';
 import { issuePendingCancellationDocuments } from './cancellation-charges';
+import { reconcileStalePaymentLinks } from './advance-payments';
 import {
   getDriverWakeupCheckHours,
   getCompanyBillingInfo,
@@ -19,6 +20,8 @@ export interface FrequentCronResult {
   unpaidDuesSuspended: number;
   returnWindowsReleased: number;
   driverReturnsExpired: number;
+  paymentLinksClosed: number;
+  paymentLinkPaidAlerts: number;
 }
 
 export interface DailyCronResult {
@@ -271,6 +274,11 @@ export async function executeFrequentCronTasks(): Promise<FrequentCronResult> {
   const wakeups = await runDriverWakeupChecks();
   const suspended = await runExpiredDocumentSuspensions();
   const dues = await runUnpaidDuesGuardrails();
+  // Payment links whose Razorpay expiry webhook never arrived; a Razorpay problem must not stop the other jobs.
+  const links = await reconcileStalePaymentLinks().catch((err) => {
+    console.error('[Cron] Payment link reconciliation failed:', err?.message);
+    return { checked: 0, closed: 0, paidAlerts: 0 };
+  });
 
   return {
     slaBreachesEscalated: breached.length,
@@ -279,6 +287,8 @@ export async function executeFrequentCronTasks(): Promise<FrequentCronResult> {
     unpaidDuesSuspended: dues,
     returnWindowsReleased: returnTrips.released,
     driverReturnsExpired: returnTrips.expired,
+    paymentLinksClosed: links.closed,
+    paymentLinkPaidAlerts: links.paidAlerts,
   };
 }
 
