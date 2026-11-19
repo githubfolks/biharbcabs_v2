@@ -41,12 +41,12 @@ async function postWebhook(body: string, signature: string | null) {
   const res = await webhookPOST(new NextRequest('http://localhost:3001/api/whatsapp/webhook', { method: 'POST', body, headers }));
   return { status: res.status, json: await res.json() };
 }
-async function booking(status: string, assigned: number | null) {
+async function booking(status: string, assigned: number | null, pickupDaysAhead = 0) {
   const r = await query(
     `INSERT INTO crm_bookings (booking_code, customer_id, assigned_driver_id, trip_type, origin_city, destination_city, pickup_address, pickup_date, pickup_time,
        wp_vehicle_code, customer_total_fare, driver_payout_amount, commission_amount, booking_status)
-     VALUES ($1, $2, $3, 'oneway', 'Patna', 'Gaya', 'Patna Jn', CURRENT_DATE, '10:00', 'sedan', 2000, 1900, 100, $4) RETURNING id`,
-    [`BC-S${seq++}${Date.now() % 10000}`, customerId, assigned, status]
+     VALUES ($1, $2, $3, 'oneway', 'Patna', 'Gaya', 'Patna Jn', CURRENT_DATE + $5::int, '10:00', 'sedan', 2000, 1900, 100, $4) RETURNING id`,
+    [`BC-S${seq++}${Date.now() % 10000}`, customerId, assigned, status, pickupDaysAhead]
   );
   return Number(r.rows[0].id);
 }
@@ -133,7 +133,8 @@ describe('accepting rides', () => {
   });
 
   it('two offered drivers race: the first wins, the second is told it is taken', async () => {
-    const id = await booking('AWAITING_DRIVER', null);
+    // A week out: earlier tests leave driver A holding a ride today at 10:00, which the ride-gap rule would block.
+    const id = await booking('AWAITING_DRIVER', null, 7);
     await offer(id, driverA);
     await offer(id, driverB);
     const [a, b] = await Promise.all([acceptRideOffer(id, driverA), acceptRideOffer(id, driverB)]);

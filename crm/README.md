@@ -401,3 +401,18 @@ Apply `crm-design/24_notification_failures.sql`. Tests:
 ```bash
 DATABASE_URL=postgresql://localhost/biharcabs_crm_test npx tsx --test src/tests/notification-failures.integration.ts
 ```
+
+## Minimum gap between a driver's rides
+
+A driver can't hold two rides whose pickups are less than `driver_ride_gap_hours` (**4**) apart, before or after. "Holding" means a ride that is `DRIVER_ASSIGNED` or `TRIP_IN_PROGRESS`. Bookings store a pickup time but no end time, so the rule is a fixed gap rather than an estimated trip end.
+
+- **Where it applies:** the rule is part of the one set of dispatch rules (`schedule_ok` in `eligibilityRows`, `src/lib/dispatch-engine.ts`), so it applies at broadcast, when a driver accepts, and when staff assign.
+- **No staff override:** staff free the driver first by reassigning the other ride.
+- **Refusals name the clashing booking,** for example "already has ride #BC-… with a pickup less than 4 hours from this one".
+- **Pickup comparison:** pickups are compared as full India-time timestamps, so the gap works across midnight. Exactly 4 hours apart is allowed. A ride being reassigned isn't counted against itself.
+- **Invalid setting:** anything that isn't more than 0 and at most 24 hours falls back to 4, so a wrong setting can't let a driver be double-booked.
+
+Apply `crm-design/25_driver_ride_gap.sql`. Tests:
+```bash
+DATABASE_URL=postgresql://localhost/biharcabs_crm_test npx tsx --test src/tests/ride-gap.integration.ts
+```

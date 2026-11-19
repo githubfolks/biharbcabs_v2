@@ -12,7 +12,7 @@ import { NextRequest } from 'next/server';
 import { query, getDbPool } from '../lib/db';
 import { createAdminSession, hashPassword, SESSION_COOKIE_NAME } from '../lib/auth';
 import { getRevenueProtectionPolicy } from '../lib/settings';
-import { acceptRideOffer, calculateRideSplitWithTaxes, checkDriverEligibility, findEligibleDrivers, rideShortfall } from '../lib/dispatch-engine';
+import { acceptRideOffer, bookingPickupAt, calculateRideSplitWithTaxes, checkDriverEligibility, findEligibleDrivers, rideShortfall } from '../lib/dispatch-engine';
 import * as dispatchRoute from '../app/api/bookings/[id]/dispatch/route';
 
 const dbName = new URL(process.env.DATABASE_URL || 'postgresql://x/none').pathname.slice(1);
@@ -98,7 +98,7 @@ describe('one set of rules', () => {
       await driver(c, {}, null),
     ];
     const b = await booking(c, { advance_paid: 2500, payment_status: 'PAID_IN_FULL' });
-    assert.deepStrictEqual(ids(await findEligibleDrivers(c, 'sedan', { isPrepaidRide: true, bookingId: b.id })), [ok.id]);
+    assert.deepStrictEqual(ids(await findEligibleDrivers(c, 'sedan', { isPrepaidRide: true, bookingId: b.id, pickupAt: bookingPickupAt(b) })), [ok.id]);
     for (const f of failing) {
       const check = await checkDriverEligibility({ query }, f.id, b);
       assert.strictEqual(check.eligible, false, `driver ${f.id} should fail`);
@@ -111,7 +111,7 @@ describe('one set of rules', () => {
     const c = city();
     const d = await driver(c);
     await query(`INSERT INTO crm_driver_vehicles (driver_id, wp_vehicle_code, registration_no, model_name, is_verified) VALUES ($1, 'sedan', $2, 'Amaze', true)`, [d.id, `BR01X${RUN}${seq++}`]);
-    assert.deepStrictEqual(ids(await findEligibleDrivers(c, 'sedan')), [d.id]);
+    assert.deepStrictEqual(ids(await findEligibleDrivers(c, 'sedan', { pickupAt: new Date() })), [d.id]);
   });
 
   it('broadcast selection and the single-driver check always agree', async () => {
@@ -123,7 +123,7 @@ describe('one set of rules', () => {
     ];
     for (const over of [{}, { advance_paid: 250, payment_mode: 'ADVANCE_ONLINE' }, { advance_paid: 2500, payment_status: 'PAID_IN_FULL' }]) {
       const b = await booking(c, over);
-      const broadcast = ids(await findEligibleDrivers(c, 'sedan', { isPrepaidRide: Number(b.advance_paid) >= 2500, rideShortfall: rideShortfall(b), bookingId: b.id }));
+      const broadcast = ids(await findEligibleDrivers(c, 'sedan', { isPrepaidRide: Number(b.advance_paid) >= 2500, rideShortfall: rideShortfall(b), bookingId: b.id, pickupAt: bookingPickupAt(b) }));
       const single: number[] = [];
       for (const d of drivers) if ((await checkDriverEligibility({ query }, d.id, b)).eligible) single.push(d.id);
       assert.deepStrictEqual(broadcast, single.sort(), JSON.stringify(over));
@@ -136,10 +136,10 @@ describe('#9 credit check counts this ride and the driver\'s other open rides', 
     const c = city();
     const d = await driver(c, { wallet_balance: -(probationLimit - share2500 + 1) }); // just over once this ride's share is added
     const cash = await booking(c);
-    assert.deepStrictEqual(ids(await findEligibleDrivers(c, 'sedan', { rideShortfall: rideShortfall(cash), bookingId: cash.id })), [], 'cash ride would breach the limit');
+    assert.deepStrictEqual(ids(await findEligibleDrivers(c, 'sedan', { rideShortfall: rideShortfall(cash), bookingId: cash.id, pickupAt: bookingPickupAt(cash) })), [], 'cash ride would breach the limit');
     const adv = await booking(c, { advance_paid: 250, payment_mode: 'ADVANCE_ONLINE' });
     assert.ok(Number(adv.advance_paid) >= share2500, 'the advance covers BiharCabs share');
-    assert.deepStrictEqual(ids(await findEligibleDrivers(c, 'sedan', { rideShortfall: rideShortfall(adv), bookingId: adv.id })), [d.id]);
+    assert.deepStrictEqual(ids(await findEligibleDrivers(c, 'sedan', { rideShortfall: rideShortfall(adv), bookingId: adv.id, pickupAt: bookingPickupAt(adv) })), [d.id]);
   });
 
   it('rides the driver already holds count toward the limit', async () => {
@@ -156,7 +156,7 @@ describe('#9 credit check counts this ride and the driver\'s other open rides', 
     const c = city();
     const d = await driver(c, { onboarding_status: 'RESTRICTED_DIGITAL_ONLY', wallet_balance: -900 });
     const prepaid = await booking(c, { advance_paid: 2500, payment_status: 'PAID_IN_FULL' });
-    assert.deepStrictEqual(ids(await findEligibleDrivers(c, 'sedan', { isPrepaidRide: true, bookingId: prepaid.id })), [d.id]);
+    assert.deepStrictEqual(ids(await findEligibleDrivers(c, 'sedan', { isPrepaidRide: true, bookingId: prepaid.id, pickupAt: bookingPickupAt(prepaid) })), [d.id]);
     const cash = await booking(c);
     assert.strictEqual((await checkDriverEligibility({ query }, d.id, cash)).eligible, false);
   });
