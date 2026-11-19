@@ -87,6 +87,11 @@ services:
       CRON_SECRET: ${CRON_SECRET:-}
       # Header your reverse proxy sets to the real client IP (per-IP sign-in limit). Empty: per-email limit only.
       CLIENT_IP_HEADER: ${CLIENT_IP_HEADER:-}
+      # Razorpay keys and webhook secret, never in git. Until set, advance payment links and refunds fail,
+      # and payment webhooks are refused (503).
+      RAZORPAY_KEY_ID: ${RAZORPAY_KEY_ID:-}
+      RAZORPAY_KEY_SECRET: ${RAZORPAY_KEY_SECRET:-}
+      RAZORPAY_WEBHOOK_SECRET: ${RAZORPAY_WEBHOOK_SECRET:-}
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
