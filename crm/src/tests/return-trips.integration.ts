@@ -5,14 +5,15 @@
  *   DATABASE_URL=postgresql://localhost/biharcabs_crm_test npx tsx --test src/tests/return-trips.integration.ts
  *
  * Refuses to run against any database whose name does not end in _test. Can run again on the same
- * database: its drivers, customer and booking codes are unique per run. Needs the WordPress quote
- * endpoint at http://localhost:8081 with quotes enabled (rate card public_enabled) and Patna to
- * Darbhanga listed for sedans at 150 km x ₹12; otherwise every test after the first fails at "got live
- * fares". WhatsApp sends are simulated when no Meta token is configured, and are read back from
- * crm_whatsapp_logs.
+ * database: its drivers, customer and booking codes are unique per run. The suite serves its own rate
+ * card (a stand-in for the WordPress quote endpoint, see rateCard below) so it does not depend on a
+ * local WordPress being up and configured. WhatsApp sends are simulated when no Meta token is
+ * configured, and are read back from crm_whatsapp_logs.
  */
 import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert';
+import http from 'http';
+import type { AddressInfo } from 'net';
 import { query, getDbPool } from '../lib/db';
 import { getAllSettings, invalidateSettingsCache, updateSetting } from '../lib/settings';
 import { processIncomingWhatsAppMessage, getConversation, resetConversation } from '../lib/whatsapp-bot';
@@ -30,7 +31,64 @@ const REGULAR = `9183${RUN}02`;   // Patna driver
 const CUSTOMER = `9183${RUN}03`;
 const POLICY = { enabled: true, discount_type: 'PERCENT', discount_value: 10, exclusive_window_minutes: 10, return_status_hours: 6 };
 let returningId = 0, regularId = 0, customerId = 0;
-let originalWpApi: any, originalPolicy: any;
+let originalWpApi: any, originalPolicy: any, originalAdvancePolicy: any;
+/**
+ * This suite is about return trips, not payments (advance-payments.integration.ts covers those): the
+ * advance is made optional, and the customer chooses full cash to the driver, so the ride goes to drivers
+ * as soon as it is booked, as a real cash booking does.
+ */
+const ADVANCE_OPTIONAL = { required_trip_types: [], required_above_fare: null, payment_window_minutes: 30 };
+
+/**
+ * Test-only stand-in for the WordPress quote endpoint (POST /wp-json/biharcabs/v1/quote). Responses
+ * follow class-rest.php quote() and fail() in the biharcabs-growth-engine plugin; vehicle details and
+ * the toll note are the plugin's rate-card defaults (class-rate-card.php); fares are priced per km as
+ * BCGE_Calculator::per_km does, with no minimum km or driver allowance. One listed route.
+ */
+const RATE_CARD = {
+  toll_tax_text: 'Toll and parking extra',
+  route: { origin: 'Patna', destination: 'Darbhanga', km: 150 },
+  vehicles: {
+    sedan: { name: 'Sedan', models: 'Swift / Dzire / Etios', seats: 4, bags: 2, rate_per_km: 12 },
+    ertiga: { name: 'Ertiga SUV', models: 'Ertiga', seats: 6, bags: 4, rate_per_km: 15 },
+  },
+};
+const quoteRequests: any[] = [];
+function rateCard(body: any): { status: number; json: any } {
+  const fail = (code: string, message: string, status = 200) => ({ status, json: { success: false, code, message, quotes: [] } });
+  const origin = String(body?.origin_city || '');
+  const destination = String(body?.destination_city || '');
+  if (!origin || !/^\d{4}-\d{2}-\d{2}$/.test(String(body?.pickup_date || '')) || !['oneway', 'roundtrip', 'airport', 'local'].includes(body?.trip_type)) {
+    return fail('INVALID_REQUEST', 'Required fields: origin_city, trip_type, pickup_date.', 400);
+  }
+  const key = (p: string) => p.split(',')[0].trim().toLowerCase();
+  const r = RATE_CARD.route;
+  const listed = [key(r.origin), key(r.destination)].sort().join('|') === [key(origin), key(destination)].sort().join('|');
+  if (body.trip_type !== 'oneway' || !listed) return fail('NO_TARIFF', 'Please contact us for a custom quote.');
+  const quotes = Object.entries(RATE_CARD.vehicles).map(([code, v]) => {
+    const base = Math.round(r.km * v.rate_per_km);
+    return {
+      vehicle_code: code, vehicle_name: v.name, vehicle_models: v.models, seating_capacity: v.seats, luggage_bags: v.bags,
+      toll_tax_text: RATE_CARD.toll_tax_text, total_fare: base, base_fare: base, driver_allowance: 0, rate_per_km: v.rate_per_km, min_km: 0,
+    };
+  });
+  return { status: 200, json: { success: true, route: { origin, destination, distance_km: r.km, duration_text: '', is_fixed_tariff: false }, quotes } };
+}
+const rateCardServer = http.createServer((req, res) => {
+  let raw = '';
+  req.on('data', (chunk) => (raw += chunk));
+  req.on('end', () => {
+    let out = { status: 404, json: { code: 'rest_no_route', message: 'No route was found matching the URL and request method.' } as any };
+    if (req.method === 'POST' && req.url === '/wp-json/biharcabs/v1/quote') {
+      let body: any = {};
+      try { body = JSON.parse(raw || '{}'); } catch { /* answered as an invalid request below */ }
+      quoteRequests.push(body);
+      out = rateCard(body);
+    }
+    res.writeHead(out.status, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(out.json));
+  });
+});
 
 async function setPolicy(value: any) {
   await updateSetting('return_trip_policy', value);
@@ -57,6 +115,7 @@ async function book(text: string) {
 async function finishBooking() {
   await processIncomingWhatsAppMessage({ fromPhone: CUSTOMER, buttonId: 'sel_veh_sedan' });
   await processIncomingWhatsAppMessage({ fromPhone: CUSTOMER, text: 'Gandhi Maidan, Patna' });
+  await processIncomingWhatsAppMessage({ fromPhone: CUSTOMER, buttonId: 'pay_mode_cash' });
   return lastBooking();
 }
 
@@ -64,12 +123,16 @@ before(async () => {
   const settings = await getAllSettings(true);
   originalWpApi = settings.biharcabs_wp_api;
   originalPolicy = settings.return_trip_policy;
+  originalAdvancePolicy = settings.advance_collection_policy;
+  await updateSetting('advance_collection_policy', ADVANCE_OPTIONAL);
   // A returning driver left by an earlier run would also get the priority offer; end those returns.
   await query(
     `UPDATE crm_driver_returns SET ended_at = CURRENT_TIMESTAMP, end_reason = 'EXPIRED'
      WHERE ended_at IS NULL AND driver_id IN (SELECT id FROM crm_drivers WHERE full_name = 'Returning Driver')`
   );
-  await query(`UPDATE crm_settings SET setting_value = jsonb_set(setting_value, '{base_url}', '"http://localhost:8081"') WHERE setting_key = 'biharcabs_wp_api'`);
+  await new Promise<void>((resolve) => rateCardServer.listen(0, '127.0.0.1', resolve));
+  const { port } = rateCardServer.address() as AddressInfo;
+  await updateSetting('biharcabs_wp_api', { ...originalWpApi, base_url: `http://127.0.0.1:${port}`, quote_endpoint: '/wp-json/biharcabs/v1/quote' });
   invalidateSettingsCache();
   const driver = async (phone: string, name: string, city: string) => {
     const d = await query(
@@ -87,8 +150,10 @@ before(async () => {
 });
 
 after(async () => {
+  await new Promise((resolve) => rateCardServer.close(resolve));
   if (originalWpApi !== undefined) await updateSetting('biharcabs_wp_api', originalWpApi);
   if (originalPolicy !== undefined) await updateSetting('return_trip_policy', originalPolicy);
+  if (originalAdvancePolicy !== undefined) await updateSetting('advance_collection_policy', originalAdvancePolicy);
   await getDbPool().end();
 });
 
@@ -117,6 +182,9 @@ describe('return trips, end to end', () => {
     const since = await logMark();
     const conv = await book('now');
     assert.strictEqual(conv.state, 'AWAITING_VEHICLE_CHOICE', 'got live fares');
+    const sent = quoteRequests[quoteRequests.length - 1];
+    assert.deepStrictEqual([sent.origin_city, sent.destination_city, sent.trip_type], ['Patna', 'Darbhanga', 'oneway'], 'the CRM asks the rate card for this route');
+    assert.match(sent.pickup_date, /^\d{4}-\d{2}-\d{2}$/, 'with the pickup date the quote endpoint requires');
     const offer = conv.context_data.return_offers?.sedan;
     assert.ok(offer, 'sedan has a return-trip offer');
     assert.strictEqual(offer.original_fare, 1800); // 150 km x 12
@@ -143,7 +211,8 @@ describe('return trips, end to end', () => {
     assert.strictEqual(offers[0].is_return_priority, true);
 
     const alert = (await messagesTo(RETURNING, since)).join(' ');
-    assert.match(alert, /Return trip home: this ride is yours alone for (9|10) min/);
+    // Free-form inside the driver's 24-hour window, the approved template outside it (dispatch-notify.ts).
+    assert.match(alert, /(Return trip home: this ride is yours alone|return trip: yours alone) for (9|10) min/);
     assert.doesNotMatch(alert, /09:00 AM/, 'alert shows the real pickup time');
     assert.strictEqual((await messagesTo(REGULAR, since)).length, 0, 'regular driver not alerted during the window');
   });
@@ -188,7 +257,7 @@ describe('return trips, end to end', () => {
     assert.strictEqual(regular.is_return_priority, false);
     assert.strictEqual(Number(regular.offered_driver_fare), fullDriverPayout, 'regular driver is offered the undiscounted payout');
     assert.strictEqual(offers.filter((o) => Number(o.driver_id) === returningId).length, 1, 'returning driver not offered twice');
-    assert.ok((await messagesTo(REGULAR, since)).some((m) => m.includes('New Ride Alert')), 'regular driver alerted');
+    assert.ok((await messagesTo(REGULAR, since)).some((m) => m.includes(`#${b.booking_code}`)), 'regular driver alerted about this ride');
 
     const res = await acceptRideOffer(Number(b.id), regularId);
     assert.strictEqual(res.status, 'ASSIGNED');
