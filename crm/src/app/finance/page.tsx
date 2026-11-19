@@ -129,6 +129,7 @@ export default function FinancePage() {
   const [refundsError, setRefundsError] = useState<string | null>(null);
   const [retrying, setRetrying] = useState<number | null>(null);
   const [pendingCharges, setPendingCharges] = useState(0);
+  const [excessGst, setExcessGst] = useState<any[]>([]);
 
   async function loadRefunds() {
     try {
@@ -137,6 +138,7 @@ export default function FinancePage() {
       if (data.success) {
         setRefunds(data.refunds);
         setPendingCharges(Number(data.pendingCancellationCharges || 0));
+        setExcessGst(data.excessGst || []);
         setRefundsError(null);
       } else {
         setRefundsError(data.error || 'Could not load refunds');
@@ -392,13 +394,50 @@ export default function FinancePage() {
         )}
       </div>
 
+      {/* GST paid at 18% on kept advances above the 5% due on the cancellation charge: reclaimed with Form GST RFD-01 */}
+      {!refundsError && excessGst.length > 0 && (
+        <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
+          <div className="px-4 py-3 border-b bg-slate-50">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700">Excess GST to Reclaim (Form GST RFD-01)</h3>
+            <p className="text-[11px] text-slate-500 mt-0.5">GST paid at 18% when an advance was received, above the 5% due once it was kept as a cancellation charge. Per the CA this cannot be adjusted in GSTR-3B; claim it as "Refund of excess payment of tax" (Section 54, CGST Act).</p>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
+              <thead className="bg-slate-50 text-slate-600 text-xs font-semibold uppercase">
+                <tr>
+                  <th className="px-4 py-2">Month</th>
+                  <th className="px-4 py-2 text-right">Charges</th>
+                  <th className="px-4 py-2 text-right">GST paid at receipt</th>
+                  <th className="px-4 py-2 text-right">GST due (5%)</th>
+                  <th className="px-4 py-2 text-right">Excess to reclaim</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {excessGst.map((m) => (
+                  <tr key={m.month}>
+                    <td className="px-4 py-2">{m.month}</td>
+                    <td className="px-4 py-2 text-right">{m.charges}{m.unknown > 0 && <span className="text-amber-700"> ({m.unknown} unknown)</span>}</td>
+                    <td className="px-4 py-2 text-right">₹{m.advanceGstPaid.toFixed(2)}</td>
+                    <td className="px-4 py-2 text-right">₹{m.gstDue.toFixed(2)}</td>
+                    <td className="px-4 py-2 text-right font-semibold">₹{m.excessGst.toFixed(2)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {excessGst.some((m) => m.unknown > 0) && (
+            <p className="px-4 py-2 text-[11px] text-amber-700">"Unknown": the advance's receipt voucher has no GST recorded, so its excess is not counted. Check those bookings with the CA.</p>
+          )}
+        </div>
+      )}
+
       {/* Refunds that are not processed yet */}
       <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
         <div className="px-4 py-3 border-b bg-slate-50">
           <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700">Refunds In Progress ({refunds.length})</h3>
           <p className="text-[11px] text-slate-500 mt-0.5">Advance refunds for cancelled bookings. PENDING is with Razorpay; FAILED can be retried; SUBMITTING means a request may have reached Razorpay — check the Razorpay dashboard before doing anything.</p>
           {pendingCharges > 0 && (
-            <p className="text-[11px] text-amber-700 mt-1">{pendingCharges} kept late-cancellation advance(s) await the GST rate for their tax document (crm_settings → cancellation_policy.cancellation_charge_gst_pct, to be confirmed by the CA).</p>
+            <p className="text-[11px] text-amber-700 mt-1">{pendingCharges} kept late-cancellation advance(s) await their tax document: it is issued by the next daily job once cancellation_policy.cancellation_charge_gst_pct is set.</p>
           )}
         </div>
         {refundsError ? (

@@ -46,6 +46,25 @@ ON CONFLICT (series, financial_year) DO UPDATE
 SET last_number = GREATEST(crm_document_counters.last_number, EXCLUDED.last_number),
     updated_at = CURRENT_TIMESTAMP;
 
+-- Excess GST on a kept advance. GST was paid at 18% when the advance was received (rate not determinable
+-- at receipt); the cancellation charge it becomes is taxed at 5%. Per CA, the difference cannot be
+-- adjusted in GSTR-3B: it is reclaimed with Form GST RFD-01 ("Refund of excess payment of tax",
+-- Section 54 of the CGST Act). Each charge records the GST paid at receipt on the kept amount and the
+-- excess, so finance can claim it. Both stay NULL when the GST paid at receipt is not recorded.
+ALTER TABLE crm_cancellation_charges
+    ADD COLUMN IF NOT EXISTS advance_gst_paid NUMERIC(12, 2),
+    ADD COLUMN IF NOT EXISTS excess_gst NUMERIC(12, 2);
+
+-- Charges already issued: the GST paid at receipt, in proportion to the part of the advance kept.
+UPDATE crm_cancellation_charges c
+SET advance_gst_paid = ROUND(l.gst_amount * (c.amount * 100) / l.amount_paise, 2),
+    excess_gst = ROUND(l.gst_amount * (c.amount * 100) / l.amount_paise, 2) - c.gst_amount,
+    updated_at = CURRENT_TIMESTAMP
+FROM crm_payment_links l
+WHERE c.status = 'ISSUED' AND c.advance_gst_paid IS NULL AND c.gst_amount IS NOT NULL
+  AND l.receipt_voucher_number = c.receipt_voucher_number
+  AND l.gst_amount IS NOT NULL AND l.amount_paise > 0;
+
 -- 5% on a kept advance, only where no rate has been configured.
 UPDATE crm_settings
 SET setting_value = jsonb_set(setting_value, '{cancellation_charge_gst_pct}', '5'::jsonb),

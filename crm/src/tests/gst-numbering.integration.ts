@@ -11,7 +11,7 @@ import assert from 'node:assert';
 import crypto from 'crypto';
 import { query, getDbPool, withTransaction } from '../lib/db';
 import { financialYearCode, nextDocumentNumber, DOCUMENT_SERIES } from '../lib/gst-documents';
-import { getCancellationChargeGstPct } from '../lib/cancellation-charges';
+import { excessGstByMonth, getCancellationChargeGstPct, issuePendingCancellationDocuments } from '../lib/cancellation-charges';
 import { calculateRideSplitWithTaxes } from '../lib/dispatch-engine';
 import { completeTripAndSettle } from '../lib/billing';
 
@@ -121,5 +121,64 @@ describe('ride invoices', () => {
 describe('cancellation charge rate', () => {
   it('migration 26 sets the kept-advance cancellation charge to 5% (per CA)', async () => {
     assert.strictEqual(await getCancellationChargeGstPct(), 5);
+  });
+});
+
+describe('excess GST on kept advances (Form GST RFD-01, per CA)', () => {
+  /** A cancelled booking whose advance of `advance` rupees was paid with 18% GST recorded at receipt (or none). */
+  async function keptAdvance(advance: number, gstAtReceipt: number | null) {
+    const cu = await query(`INSERT INTO crm_customers (phone, full_name) VALUES ($1, 'Excess Customer') RETURNING id`, [`9161${String(Date.now()).slice(-6)}${seq++}`]);
+    const b = await query(
+      `INSERT INTO crm_bookings (booking_code, customer_id, trip_type, origin_city, pickup_address, pickup_date, pickup_time, wp_vehicle_code,
+         customer_total_fare, driver_payout_amount, commission_amount, booking_status)
+       VALUES ($1, $2, 'oneway', 'Patna', 'Main Road', CURRENT_DATE, '10:00', 'sedan', 2000, 1800, 200, 'CANCELLED') RETURNING id`,
+      [`BC-X${RUN}${seq++}`, cu.rows[0].id]
+    );
+    const rv = gstAtReceipt === null ? null : `RVTEST${RUN}${seq++}`;
+    if (rv) {
+      await query(
+        `INSERT INTO crm_payment_links (booking_id, provider_link_id, reference_id, amount_paise, short_url, status, expire_by, gst_amount, receipt_voucher_number, paid_at)
+         VALUES ($1, $2, $2, $3, 'https://rzp.io/test', 'PAID', CURRENT_TIMESTAMP, $4, $5, CURRENT_TIMESTAMP)`,
+        [b.rows[0].id, `plink_x${RUN}${seq++}`, advance * 100, gstAtReceipt, rv]
+      );
+    }
+    const c = await query(
+      `INSERT INTO crm_cancellation_charges (booking_id, amount, receipt_voucher_number, receipt_voucher_date) VALUES ($1, $2, $3, CURRENT_DATE) RETURNING id`,
+      [b.rows[0].id, advance, rv]
+    );
+    return Number(c.rows[0].id);
+  }
+  const charge = async (id: number) => (await query(`SELECT * FROM crm_cancellation_charges WHERE id = $1`, [id])).rows[0];
+  const thisMonth = async () => {
+    const m = new Date(Date.now() + 5.5 * 3600e3).toISOString().slice(0, 7);
+    return (await excessGstByMonth()).find((x) => x.month === m) || { charges: 0, excessGst: 0, unknown: 0 };
+  };
+
+  it('records the 18% paid at receipt, the 5% due, and the excess to reclaim', async () => {
+    const before = await thisMonth();
+    const id = await keptAdvance(500, 76.27); // ₹500 advance: 18% GST included = ₹76.27
+    await issuePendingCancellationDocuments();
+    const c = await charge(id);
+    assert.strictEqual(c.status, 'ISSUED');
+    assert.strictEqual(Number(c.gst_pct), 5);
+    assert.strictEqual(Number(c.gst_amount), 23.81, '5% included in ₹500');
+    assert.strictEqual(Number(c.advance_gst_paid), 76.27);
+    assert.strictEqual(Number(c.excess_gst), 52.46, '76.27 - 23.81');
+    const after = await thisMonth();
+    assert.strictEqual(after.charges - before.charges, 1);
+    assert.strictEqual(Math.round((after.excessGst - before.excessGst) * 100) / 100, 52.46, 'shows in the monthly RFD-01 summary');
+  });
+
+  it('when the GST paid at receipt is not recorded, no excess is guessed and the charge is counted as unknown', async () => {
+    const before = await thisMonth();
+    const id = await keptAdvance(500, null);
+    await issuePendingCancellationDocuments();
+    const c = await charge(id);
+    assert.strictEqual(c.status, 'ISSUED', 'the tax document is still issued');
+    assert.strictEqual(c.advance_gst_paid, null);
+    assert.strictEqual(c.excess_gst, null);
+    const after = await thisMonth();
+    assert.strictEqual(after.unknown - before.unknown, 1);
+    assert.strictEqual(after.excessGst, before.excessGst, 'nothing added to the claim');
   });
 });
