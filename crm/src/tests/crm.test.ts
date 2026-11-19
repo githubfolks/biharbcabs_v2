@@ -209,30 +209,41 @@ describe('BiharCabs Operational CRM Core Engine Tests', () => {
     assert.strictEqual(verifyPassword(plainPass, hash, salt), true);
     assert.strictEqual(verifyPassword('WrongPass', hash, salt), false);
 
-    // B. Test initial seeded admin
-    const adminRes = await query(`SELECT * FROM crm_admin_users WHERE email = 'admin@biharcabs.com'`);
-    assert.strictEqual(adminRes.rows.length, 1);
+    // B. A throwaway admin with a test-only password. There is no seeded admin to rely on (its published
+    //    password was removed in 6f3a725), and a real account's password is never used in tests.
+    const run = `${Date.now()}${Math.random().toString(36).slice(2, 6)}`;
+    const testPass = `test-only-${run}`;
+    const creds = hashPassword(testPass);
+    const adminRes = await query(
+      `INSERT INTO crm_admin_users (email, password_hash, salt, full_name, role, is_active)
+       VALUES ($1, $2, $3, 'CRM Test Admin', 'SUPER_ADMIN', true) RETURNING *`,
+      [`crm-test-${run}@example.test`, creds.hash, creds.salt]
+    );
     const admin = adminRes.rows[0];
-    // Never assert a real account's password: the seeded default was published and has been removed.
-    const sample = hashPassword('test-only-password');
-    assert.strictEqual(verifyPassword('test-only-password', sample.hash, sample.salt), true);
-    assert.strictEqual(verifyPassword('wrong-password', sample.hash, sample.salt), false);
+    assert.strictEqual(verifyPassword(testPass, admin.password_hash, admin.salt), true, 'the stored hash verifies');
+    assert.strictEqual(verifyPassword('wrong-password', admin.password_hash, admin.salt), false);
 
-    // C. Create session
-    const { token, expiresAt } = await createAdminSession(admin.id, 'TestAgent/1.0', '127.0.0.1');
-    assert.ok(token);
-    assert.ok(expiresAt > new Date());
+    try {
+      // C. Create session
+      const { token, expiresAt } = await createAdminSession(admin.id, 'TestAgent/1.0', '127.0.0.1');
+      assert.ok(token);
+      assert.ok(expiresAt > new Date());
 
-    // D. Validate session
-    const validUser = await validateSession(token);
-    assert.ok(validUser);
-    assert.strictEqual(validUser.email, 'admin@biharcabs.com');
-    assert.strictEqual(validUser.role, 'SUPER_ADMIN');
+      // D. Validate session
+      const validUser = await validateSession(token);
+      assert.ok(validUser);
+      assert.strictEqual(validUser.email, admin.email);
+      assert.strictEqual(validUser.role, 'SUPER_ADMIN');
 
-    // E. Revoke session
-    await revokeSession(token);
-    const revokedUser = await validateSession(token);
-    assert.strictEqual(revokedUser, null);
+      // E. Revoke session
+      await revokeSession(token);
+      const revokedUser = await validateSession(token);
+      assert.strictEqual(revokedUser, null);
+    } finally {
+      // The test admin can never be used to sign in afterwards.
+      await query(`DELETE FROM crm_admin_sessions WHERE user_id = $1`, [admin.id]);
+      await query(`UPDATE crm_admin_users SET is_active = false WHERE id = $1`, [admin.id]);
+    }
   });
 
   it('7. WhatsApp Services: Pre-filled website parser & customer booking state machine', async () => {
