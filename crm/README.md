@@ -74,10 +74,59 @@ Return-trip pricing and pickup-time parsing have pure tests with no database:
 npx tsx --test src/tests/return-trip-pricing.test.ts
 ```
 
-The end-to-end return-trip test needs a disposable database whose name ends in `_test`, with the CRM schema, `crm_settings` and migration 08. It also needs the WordPress quote endpoint, with a rate card listing Patna to Darbhanga:
+The end-to-end return-trip test needs a disposable database whose name ends in `_test`, with the CRM schema, `crm_settings` and the migrations. It serves its own rate card, so it does not need WordPress:
 ```bash
 DATABASE_URL=postgresql://localhost/biharcabs_crm_test npx tsx --test src/tests/return-trips.integration.ts
 ```
+
+## Deployment checklist (VPS)
+
+Work through these in order. Each feature section below has the detail; this list is what a deployment needs.
+
+### 1. Database (native PostgreSQL)
+- [ ] **Back up first:** `pg_dump -Fc biharcabs_crm > biharcabs_crm_$(date +%F).dump`
+- [ ] **See which migrations have run:** `SELECT version FROM crm_schema_migrations ORDER BY version;` (migrations 08 onwards record themselves).
+- [ ] **Apply the missing ones in order**, up to **25**: `psql -v ON_ERROR_STOP=1 -d biharcabs_crm -f crm-design/NN_name.sql`. Each one from 08 on is safe to run again.
+
+### 2. Environment and code
+`docker-compose.yml` passes these to the `crm` container from the root `.env` (never in git). After changing `.env`, recreate the container.
+- [ ] `CRON_SECRET`: without it, both scheduled job endpoints refuse every call (503). Put the same value in n8n's **BiharCabs CRM cron secret** credential ([`../n8n/README.md`](../n8n/README.md)).
+- [ ] `META_APP_SECRET`: verifies WhatsApp webhooks; without it every webhook event is rejected.
+- [ ] `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET`: without the keys, advance payment links and refunds fail; without the webhook secret, payment webhooks are refused (503).
+- [ ] `CLIENT_IP_HEADER` (optional): the header your reverse proxy sets with the client IP (e.g. `x-real-ip`). Without it, sign-in limits apply per email only, not per IP.
+- [ ] **Database connection:** `DATABASE_URL` and `PG*` are set in `docker-compose.yml` itself (host PostgreSQL via `host.docker.internal`). Check the user and database match the VPS.
+- [ ] `WP_API_BASE_URL` is only a fallback when the `biharcabs_wp_api` setting has no `base_url`.
+- [ ] **Deploy the code:** `git pull`, then `docker compose up -d --build crm`.
+
+### 3. External services
+- [ ] **Razorpay webhook** to `https://<crm host>/api/payments/razorpay/webhook`, secret = `RAZORPAY_WEBHOOK_SECRET`, events: `payment_link.paid`, `payment_link.expired`, `payment_link.cancelled`, `refund.processed`, `refund.failed`.
+- [ ] **Meta WhatsApp webhook** to `https://<crm host>/api/whatsapp/webhook`, with the verify token from the `meta_whatsapp_config` setting.
+- [ ] **WhatsApp templates:** submit the 13 templates in [`crm-design/whatsapp_templates.md`](../crm-design/whatsapp_templates.md) to Meta, then put the approved names in the `whatsapp_templates` setting. Until a template is approved, that message fails outside the 24-hour window (it shows under **Failed messages** on the dispatch board).
+- [ ] **Rotate the Meta access token** if any deployed CRM ran code from before 3e3e0e9: until then a request with any cookie value could read the settings, token included. Save the new one in `meta_whatsapp_config`.
+- [ ] **WordPress rate card:** fare quotes must be switched on (`public_enabled`). It ships switched off, and then the WhatsApp bot cannot price rides and staff bookings cannot use the rate card.
+- [ ] **n8n:** both workflows active (every 5 minutes, and daily at 09:00 IST).
+
+### 4. Settings (`/settings` or `crm_settings`)
+- [ ] `admin_escalation_contacts`: at least one admin phone. Every admin alert (SLA, unconfirmed wake-ups, failed messages, OTP lockouts) goes here.
+- [ ] `cancellation_policy.cancellation_charge_gst_pct`: stays empty until the CA confirms the rate. Until then cancellation charge documents are not issued; nothing else is affected.
+- [ ] Check the defaults the migrations set are what you want: `advance_collection_policy`, `revenue_protection_policy.streak_min_fare` (₹700), `driver_wakeup_unconfirmed_alert_minutes` (60), `driver_ride_gap_hours` (4).
+
+### 5. Accounts and data
+- [ ] **Old seeded admin:** if any CRM still has `admin@biharcabs.com` with the password once published in this repository, reset it: `CRM_ADMIN_EMAIL=admin@biharcabs.com node scripts/set-admin-password.mjs` (from `crm`).
+- [ ] **Advances never verified:** bookings marked `advance_status = 'LEGACY_UNVERIFIED'` by migration 11 carry an advance nobody confirmed. Check each before it is settled.
+- [ ] **Double-booked rides:** `psql -d biharcabs_crm -f crm/scripts/check-double-booked-rides.sql` lists drivers holding rides less than 4 hours apart. Reassign one ride of each pair.
+
+### 6. Tell drivers
+- [ ] **GST:** drivers now bear the 5% ride GST, and pay 18% GST on commission plus the tech fee (₹10 becomes ₹11.80). See [GST](#gst-per-biharcabs-ca).
+- [ ] **Streak bonus:** only rides of at least ₹700 count, and every driver's streak starts again from 0.
+- [ ] **Rides:** a driver can no longer hold two rides whose pickups are less than 4 hours apart.
+
+### 7. After deploying
+- [ ] Sign in, and check the dispatch board loads.
+- [ ] Run the frequent job once: `curl -X POST -H "Authorization: Bearer $CRON_SECRET" https://<crm host>/api/dispatch/cron`. It should return `success: true` with a count per job (`cronResults`); then check n8n's Executions list shows it succeeding.
+- [ ] Send a WhatsApp message to the business number and check it appears in the staff inbox.
+
+---
 
 ## Return Trips: Priority & Discount
 
@@ -98,8 +147,8 @@ The bot now asks customers for their pickup time, and drivers' ride alerts show 
 
 n8n calls two endpoints on a schedule (setup in [`../n8n/README.md`](../n8n/README.md)):
 
-- **`POST /api/dispatch/cron`, every 5 minutes:** return-trip windows, SLA escalation, driver wake-up checks, expired-document suspension, unpaid-dues restriction, the failed-message summary. Each job changes a status or records a sent time, so repeated runs do not repeat messages.
-- **`POST /api/dispatch/cron/daily`, 09:00 IST:** reminders to drivers whose documents expire within 15 days. Nothing records who was reminded, so this must not run more than once a day.
+- **`POST /api/dispatch/cron`, every 5 minutes:** return-trip windows, SLA escalation, driver wake-up checks and alerts for unconfirmed ones, expired-document suspension, unpaid-dues restriction, payment links whose expiry webhook never arrived, the failed-message summary. Each job changes a status or records a sent time, so repeated runs do not repeat messages.
+- **`POST /api/dispatch/cron/daily`, 09:00 IST:** reminders to drivers whose documents expire within 15 days, purging old sign-in attempts, and cancellation charge documents. Nothing records who was reminded, so this must not run more than once a day.
 
 Both require `Authorization: Bearer <CRON_SECRET>`. Until `CRON_SECRET` is set, every call is refused with 503; a wrong or missing secret gets 401. Apply `crm-design/10_driver_wakeup_sent.sql` before deploying: without `crm_bookings.wakeup_sent_at`, the 5-minute job fails at the wake-up step. Tests use a disposable `_test` database with migrations 08 to 10:
 ```bash
