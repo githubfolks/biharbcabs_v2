@@ -5,6 +5,7 @@ import {
   DollarSign, Wallet, FileText, CheckCircle, RefreshCw, ArrowUpRight, 
   ArrowDownLeft, ShieldCheck, Landmark, Gift, AlertCircle, Percent 
 } from 'lucide-react';
+import PlaceOfSupplyPanel from '@/components/PlaceOfSupplyPanel';
 
 export default function FinancePage() {
   const [ledger, setLedger] = useState<any[]>([]);
@@ -393,6 +394,8 @@ export default function FinancePage() {
           </div>
         )}
       </div>
+
+      <PlaceOfSupplyPanel />
 
       {/* GST paid at 18% on kept advances above the 5% due on the cancellation charge: reclaimed with Form GST RFD-01 */}
       {!refundsError && excessGst.length > 0 && (
