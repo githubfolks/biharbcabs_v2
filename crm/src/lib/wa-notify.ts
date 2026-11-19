@@ -53,7 +53,48 @@ export interface NotifyResult extends SendMessageResult {
   channel: 'FREEFORM' | 'TEMPLATE';
 }
 
+/** The booking code in a message's params, where the template has one (for following up a failure). */
+export function bookingCodeIn(key: TemplateKey, params: unknown[]): string | null {
+  const i = (TEMPLATE_DEFS[key].params as readonly string[]).indexOf('booking code');
+  if (i < 0) return null;
+  const m = String(params[i] ?? '').match(/BC-[A-Za-z0-9]+/);
+  return m ? m[0] : null;
+}
+
+/**
+ * Record a message that did not go out, for the admin summary and the dispatch board. Only what the
+ * message was, who it was for and the booking code are kept, never the params: some carry the trip OTP.
+ * Never throws, so recording a failure cannot change what the caller sees.
+ */
+async function recordFailure(phone: string, key: TemplateKey, params: unknown[], channel: NotifyResult['channel'] | null, error: unknown) {
+  try {
+    await query(
+      `INSERT INTO crm_notification_failures (template_key, channel, phone, booking_code, error) VALUES ($1, $2, $3, $4, $5)`,
+      [key, channel, clean(phone).slice(0, 20) || '-', bookingCodeIn(key, params), String(error || 'Unknown error').slice(0, 500)]
+    );
+  } catch (err: any) {
+    console.error(`[WhatsApp] Could not record failed ${key} to ${clean(phone)}:`, err?.message);
+  }
+}
+
+/**
+ * Send a business-initiated message. A failure (or an error raised while sending) is recorded in
+ * crm_notification_failures; the caller still gets the same result or error as before.
+ */
 export async function notify(phone: string, key: TemplateKey, opts: NotifyOptions): Promise<NotifyResult> {
+  const attempt: { channel: NotifyResult['channel'] | null } = { channel: null };
+  let result: NotifyResult;
+  try {
+    result = await send(phone, key, opts, attempt);
+  } catch (err: any) {
+    await recordFailure(phone, key, opts.params, attempt.channel, err?.message || err);
+    throw err;
+  }
+  if (!result.success) await recordFailure(phone, key, opts.params, result.channel, result.error);
+  return result;
+}
+
+async function send(phone: string, key: TemplateKey, opts: NotifyOptions, attempt: { channel: NotifyResult['channel'] | null }): Promise<NotifyResult> {
   const def: TemplateDef = TEMPLATE_DEFS[key];
   if (opts.params.length !== def.params.length) {
     throw new Error(`notify(${key}): expected ${def.params.length} params, got ${opts.params.length}`);
@@ -61,8 +102,10 @@ export async function notify(phone: string, key: TemplateKey, opts: NotifyOption
   if (def.buttons?.length && !opts.ref) throw new Error(`notify(${key}): a ref is required for its buttons`);
 
   if (opts.freeform && (await isServiceWindowOpen(phone))) {
+    attempt.channel = 'FREEFORM';
     return { ...(await opts.freeform()), channel: 'FREEFORM' };
   }
+  attempt.channel = 'TEMPLATE';
 
   const names = await getWhatsAppTemplates();
   const name = names[key];

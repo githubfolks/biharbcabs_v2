@@ -16,6 +16,8 @@ export interface TemplateButton {
 }
 
 export interface TemplateDef {
+  /** What the message is, for staff (failed-message list and alerts). Not sent to Meta. */
+  title: string;
   category: 'UTILITY';
   body: string;
   /** What each {{n}} holds, in order (for the Meta submission and for checking callers). */
@@ -25,6 +27,7 @@ export interface TemplateDef {
 
 export const TEMPLATE_DEFS = {
   driver_ride_alert: {
+    title: 'Ride offer (driver)',
     category: 'UTILITY',
     body: 'New BiharCabs ride {{1}}: {{2}}, pickup {{3}}, cab {{4}}. Collect cash at drop: {{5}}. Your earnings: {{6}}. The first driver to accept gets the ride.',
     params: ['booking code', 'route', 'pickup date and time', 'cab type', 'cash to collect', 'driver earnings'],
@@ -34,49 +37,58 @@ export const TEMPLATE_DEFS = {
     ],
   },
   driver_trip_assigned: {
+    title: 'Ride assigned (driver)',
     category: 'UTILITY',
     body: 'BiharCabs has assigned you ride {{1}}: pickup at {{2}} on {{3}}. Customer: {{4}}. Collect cash at drop: {{5}}. At pickup, tap Start Trip and enter the customer\'s OTP.',
     params: ['booking code', 'pickup address', 'pickup date and time', 'customer name and phone', 'cash to collect'],
     buttons: [{ label: 'Start Trip', action: 'start_trip_{ref}' }],
   },
   driver_wakeup: {
+    title: 'Wake-up check (driver)',
     category: 'UTILITY',
     body: 'Reminder: BiharCabs pickup {{1}} on {{2}} at {{3}}. Please confirm you will be on time.',
     params: ['booking code', 'pickup date and time', 'pickup address'],
     buttons: [{ label: 'I am ready', action: 'wakeup_ready_{ref}' }],
   },
   driver_dues_reminder: {
+    title: 'Dues reminder (driver)',
     category: 'UTILITY',
     body: 'Your BiharCabs dues are {{1}}, above your credit limit of {{2}}. {{3}} Tap below to pay.',
     params: ['amount due', 'credit limit', 'what happens to rides until paid'],
     buttons: [{ label: 'Pay dues', action: 'pay_dues_{ref}' }],
   },
   driver_account_notice: {
+    title: 'Account notice (driver)',
     category: 'UTILITY',
     body: 'BiharCabs account update: {{1}}',
     params: ['notice (documents expiring or expired, account status)'],
   },
   driver_payout_sent: {
+    title: 'Payout receipt (driver)',
     category: 'UTILITY',
     body: 'BiharCabs paid you {{1}} by {{2}} (reference {{3}}). Amount still owed to you: {{4}}.',
     params: ['amount paid', 'payment method', 'reference', 'amount still owed'],
   },
   customer_driver_assigned: {
+    title: 'Driver details and trip OTP (customer)',
     category: 'UTILITY',
     body: 'Your BiharCabs booking {{1}} is confirmed. Driver: {{2}}, phone {{3}}, cab {{4}}. Pickup at {{5}} on {{6}}. Pay the driver {{7}} at drop. Your trip OTP is {{8}}: share it with the driver only when you are in the cab.',
     params: ['booking code', 'driver name', 'driver phone', 'cab type', 'pickup address', 'pickup date and time', 'cash payable to driver', 'trip OTP'],
   },
   customer_trip_otp: {
+    title: 'Trip OTP (customer)',
     category: 'UTILITY',
     body: 'Your trip OTP for BiharCabs booking {{1}} is {{2}}. Share it with the driver only when you are in the cab.',
     params: ['booking code', 'trip OTP'],
   },
   customer_trip_started: {
+    title: 'Trip started (customer)',
     category: 'UTILITY',
     body: 'Your BiharCabs trip {{1}} has started. Have a safe journey.',
     params: ['booking code'],
   },
   customer_trip_completed: {
+    title: 'Trip completed and invoice (customer)',
     category: 'UTILITY',
     body: 'Thank you for riding with BiharCabs. Trip {{1}} is complete. Total: {{2}}. Invoice: {{3}}. How was your driver?',
     params: ['booking code', 'total amount', 'invoice number'],
@@ -87,16 +99,19 @@ export const TEMPLATE_DEFS = {
     ],
   },
   customer_payment_link: {
+    title: 'Advance payment link (customer)',
     category: 'UTILITY',
     body: 'Pay the {{1}} advance to confirm BiharCabs booking {{2}}: {{3}} . The link is valid for {{4}} minutes. Balance payable to the driver at drop: {{5}}.',
     params: ['advance amount', 'booking code', 'payment link', 'minutes valid', 'balance payable to driver'],
   },
   customer_booking_update: {
+    title: 'Booking update (customer)',
     category: 'UTILITY',
     body: 'BiharCabs booking {{1}}: {{2}}',
     params: ['booking code', 'update (advance received, not confirmed, confirmed without advance)'],
   },
   admin_alert: {
+    title: 'Admin alert',
     category: 'UTILITY',
     body: 'BiharCabs operations alert: {{1}}',
     params: ['alert'],

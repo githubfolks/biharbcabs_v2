@@ -2,6 +2,7 @@ import { query } from './db';
 import { purgeOldLoginAttempts } from './login-security';
 import { issuePendingCancellationDocuments } from './cancellation-charges';
 import { reconcileStalePaymentLinks } from './advance-payments';
+import { runFailedMessageDigest } from './notification-failures';
 import {
   getDriverWakeupCheckHours,
   getWakeupUnconfirmedAlertMinutes,
@@ -24,6 +25,7 @@ export interface FrequentCronResult {
   driverReturnsExpired: number;
   paymentLinksClosed: number;
   paymentLinkPaidAlerts: number;
+  failedMessagesReported: number;
 }
 
 export interface DailyCronResult {
@@ -313,6 +315,11 @@ export async function executeFrequentCronTasks(): Promise<FrequentCronResult> {
     console.error('[Cron] Payment link reconciliation failed:', err?.message);
     return { checked: 0, closed: 0, paidAlerts: 0 };
   });
+  // Last, so it reports messages that failed in the jobs above.
+  const failedMessages = await runFailedMessageDigest().catch((err) => {
+    console.error('[Cron] Failed-message summary failed:', err?.message);
+    return 0;
+  });
 
   return {
     slaBreachesEscalated: breached.length,
@@ -324,6 +331,7 @@ export async function executeFrequentCronTasks(): Promise<FrequentCronResult> {
     driverReturnsExpired: returnTrips.expired,
     paymentLinksClosed: links.closed,
     paymentLinkPaidAlerts: links.paidAlerts,
+    failedMessagesReported: failedMessages,
   };
 }
 
