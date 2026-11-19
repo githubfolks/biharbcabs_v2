@@ -361,3 +361,14 @@ Apply `crm-design/22_reconcile_payment_links.sql`. Tests:
 ```bash
 DATABASE_URL=postgresql://localhost/biharcabs_crm_test npx tsx --test src/tests/reconcile-links.integration.ts
 ```
+
+## Driver wake-up check and follow-up
+
+- **Reminder:** `driver_wakeup_check_hours_before` (2) hours before pickup, the assigned driver gets the wake-up check. Pickup times are India local and compared as full timestamps, so there's no midnight wrap and no dependence on the database time zone. No reminder is sent for a pickup already past.
+- **Confirmation:** "I am ready" (button, template button, or typing `ready`) records `wakeup_confirmed_at` on the driver's own assigned trip: the one tapped, or the next upcoming one.
+- **Follow-up:** if an assigned driver hasn't confirmed by `driver_wakeup_unconfirmed_alert_minutes` (**60**) before pickup, admins are alerted **once** (`wakeup_alerted_at`) with the driver's name and phone, so they can call or reassign. The alert waits at least 15 minutes after the reminder went out, so a late-assigned driver has a chance to answer. An invalid setting falls back to 60.
+
+Apply `crm-design/23_wakeup_confirmation.sql`. Tests:
+```bash
+DATABASE_URL=postgresql://localhost/biharcabs_crm_test npx tsx --test src/tests/wakeup.integration.ts
+```
