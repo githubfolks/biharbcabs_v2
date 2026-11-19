@@ -1,6 +1,7 @@
 import { query, withTransaction } from './db';
 import { getCompanyBillingInfo, getRevenueProtectionPolicy, getSplitRules } from './settings';
 import { gstIncluded, round2 } from './fare-split';
+import { nextDocumentNumber } from './gst-documents';
 import { creditLimitFor } from './driver-dues';
 import { PoolClient } from 'pg';
 import PDFDocument from 'pdfkit';
@@ -232,8 +233,10 @@ export async function completeTripAndSettle(
       );
     }
 
-    // 5. Generate Tax Invoice
-    const invoiceNumber = `INV-${b.booking_code}-${Date.now().toString().slice(-4)}`;
+    // 5. Generate Tax Invoice: the next number in the consecutive ride series (TI). A booking that already
+    // has an invoice keeps its number, so a number is never replaced or skipped.
+    const existingInvoice = (await client.query(`SELECT invoice_number FROM crm_invoices WHERE booking_id = $1 FOR UPDATE`, [input.bookingId])).rows[0];
+    const invoiceNumber: string = existingInvoice?.invoice_number ?? (await nextDocumentNumber(client, 'TI'));
     const lineItems = [
       { description: `Cab Fare (${b.origin_city} to ${b.destination_city || 'Local'})`, amount: baseFare },
     ];

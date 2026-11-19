@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth';
 import { RefundError, listOpenRefunds, requestRefund } from '@/lib/refunds';
-import { countPendingCancellationCharges } from '@/lib/cancellation-charges';
+import { countPendingCancellationCharges, excessGstByMonth } from '@/lib/cancellation-charges';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,6 +15,8 @@ export async function GET(req: NextRequest) {
       refunds: await listOpenRefunds(),
       // Kept late-cancellation advances whose tax document waits for the GST rate (cancellation_policy).
       pendingCancellationCharges: await countPendingCancellationCharges(),
+      // GST paid at 18% on kept advances above the 5% due, per month: reclaimed with Form GST RFD-01.
+      excessGst: await excessGstByMonth(),
     });
   } catch (err: any) {
     return NextResponse.json({ success: false, error: err.message }, { status: 500 });
