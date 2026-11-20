@@ -6,6 +6,11 @@ import { validateOnboardingDocs } from '@/lib/driver-onboarding';
 
 export const dynamic = 'force-dynamic';
 
+/** Matches text anywhere, with LIKE's own wildcard characters (% _ and the backslash) taken literally. */
+function likePattern(text: string) {
+  return `%${text.replace(/[\\%_]/g, (c) => '\\' + c)}%`;
+}
+
 class VehicleTakenError extends Error {
   constructor(regNo: string) {
     super(`Vehicle ${regNo} is already on file for another driver, or was removed, so it cannot be added here`);
@@ -19,6 +24,7 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const city = searchParams.get('city');
     const status = searchParams.get('status');
+    const search = (searchParams.get('q') || '').trim().slice(0, 50);
 
     let sql = `
       SELECT 
@@ -54,6 +60,26 @@ export async function GET(req: NextRequest) {
       where.push(`d.onboarding_status = $${params.length}`);
     }
 
+    // Search: name or licence number contains the text; phone or registration number contains its
+    // letters and digits, ignoring spaces and dashes (so "BR01PK" finds "BR-01-PK-9821").
+    if (search) {
+      params.push(likePattern(search));
+      const textParam = `$${params.length}`;
+      const conditions = [`d.full_name ILIKE ${textParam}`, `d.license_number ILIKE ${textParam}`];
+      const alnum = search.replace(/[^A-Za-z0-9]/g, '');
+      if (alnum) {
+        params.push(likePattern(alnum));
+        const alnumParam = `$${params.length}`;
+        conditions.push(
+          `d.phone LIKE ${alnumParam}`,
+          `d.whatsapp_phone LIKE ${alnumParam}`,
+          `EXISTS (SELECT 1 FROM crm_driver_vehicles sv WHERE sv.driver_id = d.id AND sv.removed_at IS NULL
+                   AND regexp_replace(sv.registration_no, '[^A-Za-z0-9]', '', 'g') ILIKE ${alnumParam})`
+        );
+      }
+      where.push(`(${conditions.join(' OR ')})`);
+    }
+
     if (where.length > 0) {
       sql += ` WHERE ` + where.join(' AND ');
     }
@@ -62,6 +88,8 @@ export async function GET(req: NextRequest) {
 
     const res = await query(sql, params);
     const revPolicy = await getRevenueProtectionPolicy();
+    // Every city with a driver, for the city filter (not narrowed by the current filters).
+    const cityRes = await query(`SELECT DISTINCT base_city FROM crm_drivers ORDER BY base_city`);
 
     const enrichedDrivers = res.rows.map((d: any) => {
       const rating = Number(d.rating || 5.0);
@@ -86,9 +114,10 @@ export async function GET(req: NextRequest) {
       };
     });
 
-    return NextResponse.json({ success: true, drivers: enrichedDrivers });
+    return NextResponse.json({ success: true, drivers: enrichedDrivers, cities: cityRes.rows.map((r: any) => r.base_city) });
   } catch (err: any) {
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+    console.error('[Drivers] Loading drivers failed:', err?.message);
+    return NextResponse.json({ success: false, error: 'Loading drivers failed' }, { status: 500 });
   }
 }
 

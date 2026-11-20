@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { UserCheck, ShieldAlert, Car, PlusCircle, RefreshCw, Wallet, Phone, CheckCircle, Star, AlertTriangle, X, Gift, Award, ShieldCheck, Pencil } from 'lucide-react';
 import { allowedActions, DriverStatusAction, REASON_MAX, REASON_MIN } from '@/lib/driver-status-rules';
 import DriverEditDialog, { VEHICLE_CATEGORIES } from '@/components/DriverEditDialog';
@@ -68,18 +68,39 @@ export default function DriversPage() {
   const setVehicleField = (field: keyof typeof emptyForm.vehicle, value: string) =>
     setForm({ ...form, vehicle: { ...form.vehicle, [field]: value } });
 
+  // Search and filters run on the server. A ref keeps the latest filters for reloads triggered from
+  // dialogs, and a request counter drops answers to older requests that arrive late.
+  const [filters, setFilters] = useState({ q: '', city: '', status: '' });
+  const filtersRef = useRef(filters);
+  filtersRef.current = filters;
+  const requestSeq = useRef(0);
+  const [cities, setCities] = useState<string[]>([]);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const filtering = Boolean(filters.q.trim() || filters.city || filters.status);
+
   async function loadDrivers() {
+    const seq = ++requestSeq.current;
+    const params = new URLSearchParams();
+    const f = filtersRef.current;
+    if (f.q.trim()) params.set('q', f.q.trim());
+    if (f.city) params.set('city', f.city);
+    if (f.status) params.set('status', f.status);
     setLoading(true);
     try {
-      const res = await fetch('/api/drivers');
-      const data = await res.json();
-      if (data.success) {
+      const res = await fetch(`/api/drivers${params.toString() ? `?${params}` : ''}`);
+      const data = await res.json().catch(() => ({}));
+      if (seq !== requestSeq.current) return;
+      if (res.ok && data.success) {
         setDrivers(data.drivers);
+        setCities(data.cities || []);
+        setLoadError(null);
+      } else {
+        setLoadError(data.error || `Could not load drivers (HTTP ${res.status})`);
       }
-    } catch (err) {
-      console.error('Failed to load drivers:', err);
+    } catch {
+      if (seq === requestSeq.current) setLoadError('Could not load drivers: network error');
     } finally {
-      setLoading(false);
+      if (seq === requestSeq.current) setLoading(false);
     }
   }
 
@@ -88,12 +109,18 @@ export default function DriversPage() {
   const [role, setRole] = useState<string | null>(null);
 
   useEffect(() => {
-    loadDrivers();
     fetch('/api/auth/me')
       .then((r) => r.json())
       .then((data) => setRole(data?.user?.role ?? null))
       .catch(() => setRole(null));
   }, []);
+
+  // Load on open, and again shortly after the filters stop changing.
+  useEffect(() => {
+    const t = setTimeout(loadDrivers, filters.q ? 300 : 0);
+    return () => clearTimeout(t);
+    // loadDrivers reads the filters through filtersRef, so only `filters` is a dependency.
+  }, [filters]);
 
   async function handleOnboardDriver(e: React.FormEvent) {
     e.preventDefault();
@@ -286,6 +313,62 @@ export default function DriversPage() {
         </div>
       </div>
 
+      <div className="flex flex-col sm:flex-row gap-2">
+        <input
+          type="search"
+          value={filters.q}
+          onChange={(e) => setFilters({ ...filters, q: e.target.value })}
+          placeholder="Search name, phone, licence or vehicle number"
+          aria-label="Search drivers"
+          maxLength={50}
+          className="flex-1 min-w-0 px-3 py-2 border border-slate-300 rounded-md text-sm"
+        />
+        <select
+          value={filters.city}
+          onChange={(e) => setFilters({ ...filters, city: e.target.value })}
+          aria-label="Filter by city"
+          className="px-3 py-2 border border-slate-300 rounded-md text-sm bg-white"
+        >
+          <option value="">All cities</option>
+          {cities.map((c) => (
+            <option key={c} value={c}>{c}</option>
+          ))}
+        </select>
+        <select
+          value={filters.status}
+          onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+          aria-label="Filter by status"
+          className="px-3 py-2 border border-slate-300 rounded-md text-sm bg-white"
+        >
+          <option value="">All statuses</option>
+          {Object.keys(STATUS_BADGE).map((s) => (
+            <option key={s} value={s}>{s === 'RESTRICTED_DIGITAL_ONLY' ? 'DIGITAL ONLY' : s.replace(/_/g, ' ')}</option>
+          ))}
+        </select>
+        {filtering && (
+          <button
+            type="button"
+            onClick={() => setFilters({ q: '', city: '', status: '' })}
+            className="px-3 py-2 text-sm text-slate-600 hover:text-slate-900"
+          >
+            Clear
+          </button>
+        )}
+      </div>
+
+      {loadError && (
+        <div className="flex flex-wrap items-center justify-between gap-2 p-3 bg-rose-50 border border-rose-200 rounded-md text-sm text-rose-700">
+          <span className="flex items-center">
+            <AlertTriangle className="h-4 w-4 mr-1.5 flex-shrink-0" />
+            {loadError}
+            {drivers.length > 0 && ' The list below may be out of date.'}
+          </span>
+          <button type="button" onClick={() => loadDrivers()} className="px-3 py-1 bg-white border border-rose-300 rounded text-xs font-semibold hover:bg-rose-100">
+            Retry
+          </button>
+        </div>
+      )}
+
       <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
@@ -304,7 +387,13 @@ export default function DriversPage() {
               {drivers.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-4 py-8 text-center text-slate-400">
-                    No drivers registered yet. Click &quot;Onboard New Driver&quot; to add BiharCabs fleet partners.
+                    {loading
+                      ? 'Loading drivers...'
+                      : loadError
+                      ? 'Drivers could not be loaded.'
+                      : filtering
+                      ? 'No drivers match this search or filter.'
+                      : 'No drivers registered yet. Click "Onboard New Driver" to add BiharCabs fleet partners.'}
                   </td>
                 </tr>
               ) : (

@@ -300,6 +300,8 @@ npx tsx --test src/tests/driver-status.test.ts src/tests/driver-onboarding.test.
 
 ## Editing drivers and vehicles
 
+**Finding a driver:** the search box on **Drivers** matches part of the name or licence number, or the digits of a phone or the letters and digits of a current vehicle's registration (spaces and dashes ignored, so `BR01PK` finds `BR-01-PK-9821`). City and status filters combine with it. `GET /api/drivers?q=&city=&status=` does the same and also returns `cities`, every city with a driver. If the list cannot load, the page says so with a **Retry** button instead of showing an empty list. Tests: `DATABASE_URL=postgresql://localhost/biharcabs_crm_test npx tsx --test src/tests/drivers-list.integration.ts`
+
 **Drivers → Edit** opens a dialog; every change is recorded in `crm_driver_edits` (migration 31) with the admin and the old and new values, and listed under **Change history**. A save that changes nothing records nothing.
 
 | What | API | Permission |
