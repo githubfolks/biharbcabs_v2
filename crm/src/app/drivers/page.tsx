@@ -4,6 +4,8 @@ import { useState, useEffect, useRef } from 'react';
 import { UserCheck, ShieldAlert, Car, PlusCircle, RefreshCw, Wallet, Phone, CheckCircle, Star, AlertTriangle, X, Gift, Award, ShieldCheck, Pencil } from 'lucide-react';
 import { allowedActions, DriverStatusAction, REASON_MAX, REASON_MIN } from '@/lib/driver-status-rules';
 import DriverEditDialog, { VEHICLE_CATEGORIES } from '@/components/DriverEditDialog';
+import DriverWalletDialog from '@/components/DriverWalletDialog';
+import { hasPermission } from '@/lib/permissions';
 
 const ACTION_LABEL: Record<DriverStatusAction, string> = { ACTIVATE: 'Activate', SUSPEND: 'Suspend', OFFBOARD: 'Offboard' };
 
@@ -43,6 +45,10 @@ export default function DriversPage() {
   const [statusVehicles, setStatusVehicles] = useState<any[]>([]);
   const [statusError, setStatusError] = useState<string | null>(null);
   const [savingStatus, setSavingStatus] = useState(false);
+  const [offersReason, setOffersReason] = useState('');
+  const [offersError, setOffersError] = useState<string | null>(null);
+  const [savingOffers, setSavingOffers] = useState(false);
+  const [walletDriver, setWalletDriver] = useState<any | null>(null);
 
   // Expiry dates start empty: the admin must enter the dates printed on the documents.
   const emptyForm = {
@@ -202,6 +208,7 @@ export default function DriversPage() {
     setStatusAction('');
     setStatusReason('');
     setStatusError(null);
+    setOffersError(null);
     try {
       const res = await fetch(`/api/drivers/${driver.id}/status`);
       const data = await res.json();
@@ -221,6 +228,31 @@ export default function DriversPage() {
       );
     } catch {
       setStatusLoadError('Could not load driver status: network error');
+    }
+  }
+
+  async function handleOffers(paused: boolean) {
+    if (!statusDriver) return;
+    setSavingOffers(true);
+    setOffersError(null);
+    try {
+      const res = await fetch(`/api/drivers/${statusDriver.id}/offers`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ paused, reason: offersReason }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success) {
+        setOffersReason('');
+        await openStatusModal(statusDriver);
+        loadDrivers();
+      } else {
+        setOffersError(data.error || 'Not saved');
+      }
+    } catch {
+      setOffersError('Not saved: network error');
+    } finally {
+      setSavingOffers(false);
     }
   }
 
@@ -488,8 +520,25 @@ export default function DriversPage() {
                       }`}>
                         {d.onboarding_status === 'RESTRICTED_DIGITAL_ONLY' ? 'DIGITAL ONLY' : d.onboarding_status.replace(/_/g, ' ')}
                       </span>
+                      {d.offers_paused && (
+                        <div className="mt-1">
+                          <span className="inline-flex px-1.5 py-0.5 rounded text-[10px] font-bold uppercase bg-amber-100 text-amber-800 border border-amber-300" title={d.offers_paused_reason || ''}>
+                            Offers paused
+                          </span>
+                        </div>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-right space-x-1.5 whitespace-nowrap">
+                      {hasPermission(role, 'ledger.view') && (
+                        <button
+                          onClick={() => setWalletDriver(d)}
+                          className="inline-flex items-center px-2 py-1 bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 rounded text-xs font-medium"
+                          title="Wallet ledger entries"
+                        >
+                          <Wallet className="h-3 w-3 mr-1" />
+                          Wallet
+                        </button>
+                      )}
                       <button
                         onClick={() => setEditDriverId(d.id)}
                         className="inline-flex items-center px-2 py-1 bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 rounded text-xs font-medium"
@@ -882,6 +931,8 @@ export default function DriversPage() {
         </div>
       )}
 
+      {walletDriver && <DriverWalletDialog driverId={walletDriver.id} onClose={() => setWalletDriver(null)} />}
+
       {editDriverId !== null && (
         <DriverEditDialog
           driverId={editDriverId}
@@ -921,6 +972,41 @@ export default function DriversPage() {
                   <span className={`inline-flex px-2 py-0.5 rounded text-[11px] font-semibold uppercase ${STATUS_BADGE[statusDetail.status] || 'bg-amber-100 text-amber-800'}`}>
                     {statusDetail.status.replace(/_/g, ' ')}
                   </span>
+                </div>
+
+                <div className={`p-3 rounded-lg border text-xs space-y-2 ${statusDetail.offers.paused ? 'bg-amber-50 border-amber-200' : 'bg-slate-50 border-slate-200'}`}>
+                  <div className="font-semibold text-slate-800">
+                    Ride offers: {statusDetail.offers.paused ? 'PAUSED' : 'receiving offers'}
+                  </div>
+                  {statusDetail.offers.paused && (
+                    <div className="text-slate-600 break-words">
+                      &quot;{statusDetail.offers.reason}&quot; by {statusDetail.offers.by || 'unknown'},{' '}
+                      {new Date(statusDetail.offers.at).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                    </div>
+                  )}
+                  <p className="text-[11px] text-slate-500">
+                    Pausing stops new ride offers without changing the driver&apos;s status. It lasts until someone resumes it. Rides they already hold are not affected.
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <input
+                      type="text"
+                      value={offersReason}
+                      onChange={(e) => setOffersReason(e.target.value)}
+                      minLength={REASON_MIN}
+                      maxLength={REASON_MAX}
+                      placeholder={statusDetail.offers.paused ? 'Reason for resuming, e.g. Back from leave' : 'Reason, e.g. On leave until 5 Dec'}
+                      className="flex-1 min-w-0 px-2 py-1.5 border rounded text-xs bg-white"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleOffers(!statusDetail.offers.paused)}
+                      disabled={savingOffers || offersReason.trim().length < REASON_MIN}
+                      className="px-3 py-1.5 bg-amber-600 text-white rounded text-xs font-bold hover:bg-amber-700 disabled:opacity-50"
+                    >
+                      {savingOffers ? 'Saving...' : statusDetail.offers.paused ? 'Resume offers' : 'Pause offers'}
+                    </button>
+                  </div>
+                  {offersError && <div className="text-rose-700">{offersError}</div>}
                 </div>
 
                 {allowedActions(statusDetail.status).length === 0 ? (

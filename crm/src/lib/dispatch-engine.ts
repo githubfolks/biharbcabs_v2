@@ -124,6 +124,7 @@ async function eligibilityRows(db: Db, q: EligibilityQuery, filter: { sql: strin
          (CASE WHEN $3::boolean THEN d.onboarding_status IN ('APPROVED_ACTIVE', 'RESTRICTED_DIGITAL_ONLY')
                ELSE d.onboarding_status = 'APPROVED_ACTIVE' END) AS status_ok,
          d.is_available AS available_ok,
+         (NOT d.offers_paused) AS offers_ok,
          d.rating >= ($2::numeric) AS rating_ok,
          (d.license_expiry IS NULL OR d.license_expiry >= CURRENT_DATE) AS licence_ok,
          (v.id IS NOT NULL AND v.is_verified = true
@@ -164,6 +165,7 @@ async function eligibilityRows(db: Db, q: EligibilityQuery, filter: { sql: strin
 const RULES: Array<[string, string]> = [
   ['status_ok', 'account is not active for this ride'],
   ['available_ok', 'driver is marked unavailable'],
+  ['offers_ok', 'ride offers are paused by staff'],
   ['rating_ok', 'rating is below the dispatch minimum'],
   ['licence_ok', 'driving licence has expired'],
   ['vehicle_ok', 'no verified cab of this type with valid insurance, fitness and permit'],

@@ -29,6 +29,8 @@ const ACTION_LABEL: Record<string, string> = {
   VEHICLE_ADD: 'Vehicle added',
   VEHICLE_EDIT: 'Vehicle changed',
   VEHICLE_REMOVE: 'Vehicle removed',
+  OFFERS_PAUSE: 'Ride offers paused',
+  OFFERS_RESUME: 'Ride offers resumed',
 };
 
 const input = 'w-full mt-1 px-3 py-1.5 border rounded-md text-sm';

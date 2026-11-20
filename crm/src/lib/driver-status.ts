@@ -145,8 +145,10 @@ export async function changeDriverStatus(driverId: number, change: StatusChangeR
 /** Current status, document dates (as YYYY-MM-DD) and status history for the status dialog. */
 export async function getDriverStatusDetail(driverId: number) {
   const dRes = await query(
-    `SELECT id, onboarding_status, to_char(license_expiry, 'YYYY-MM-DD') AS license_expiry
-     FROM crm_drivers WHERE id = $1`,
+    `SELECT d.id, d.onboarding_status, to_char(d.license_expiry, 'YYYY-MM-DD') AS license_expiry,
+            d.offers_paused, d.offers_paused_reason, d.offers_paused_at, a.full_name AS offers_paused_by_name
+     FROM crm_drivers d LEFT JOIN crm_admin_users a ON a.id = d.offers_paused_by
+     WHERE d.id = $1`,
     [driverId]
   );
   if (dRes.rows.length === 0) throw new DriverStatusError('Driver not found', 404);
@@ -167,6 +169,12 @@ export async function getDriverStatusDetail(driverId: number) {
   return {
     status: dRes.rows[0].onboarding_status as string,
     license_expiry: dRes.rows[0].license_expiry as string | null,
+    offers: {
+      paused: dRes.rows[0].offers_paused as boolean,
+      reason: dRes.rows[0].offers_paused_reason as string | null,
+      at: dRes.rows[0].offers_paused_at,
+      by: dRes.rows[0].offers_paused_by_name as string | null,
+    },
     vehicles: vRes.rows,
     history: hRes.rows,
   };

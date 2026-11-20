@@ -151,6 +151,24 @@ async function record(
   );
 }
 
+/**
+ * The driver (other than excludeId) whose phone or WhatsApp phone is any of these numbers. The WhatsApp
+ * bot recognises a driver by either number, so each number may belong to one driver only.
+ */
+export async function findDriverByPhones(
+  db: { query: (text: string, params?: any[]) => Promise<{ rows: any[] }> },
+  phones: string[],
+  excludeId = 0
+): Promise<{ id: number; full_name: string; onboarding_status: string } | null> {
+  const r = await db.query(
+    `SELECT id, full_name, onboarding_status FROM crm_drivers
+     WHERE (phone = ANY($1) OR whatsapp_phone = ANY($1)) AND id <> $2
+     ORDER BY id LIMIT 1`,
+    [phones, excludeId]
+  );
+  return r.rows[0] ? { id: Number(r.rows[0].id), full_name: r.rows[0].full_name, onboarding_status: r.rows[0].onboarding_status } : null;
+}
+
 async function lockDriver(client: PoolClient, driverId: number) {
   const r = await client.query(
     `SELECT id, full_name, phone, whatsapp_phone, base_city, license_number,
@@ -184,6 +202,11 @@ async function updateDriverColumns(
     const changes = diffValues(current, values);
     const { sql, cols } = setClause(changes, allowed, 2);
     if (cols.length === 0) return { changed: [] as string[] };
+    const newPhones = ['phone', 'whatsapp_phone'].filter((c) => cols.includes(c)).map((c) => changes[c].to);
+    if (newPhones.length) {
+      const owner = await findDriverByPhones(client, newPhones as string[], driverId);
+      if (owner) throw new DriverEditError(`That number belongs to driver ${owner.full_name} (#${owner.id})`, 409);
+    }
     try {
       await client.query('SAVEPOINT driver_edit');
       await client.query(
@@ -206,6 +229,34 @@ export function updateDriverDetails(driverId: number, values: Values, adminId: n
 
 export function updatePayoutDetails(driverId: number, values: Values, adminId: number) {
   return updateDriverColumns(driverId, values, PAYOUT_COLUMNS, 'PAYOUT_DETAILS_EDIT', adminId);
+}
+
+/**
+ * Pauses or resumes a driver's ride offers (migration 32). Status is unchanged; dispatch refuses a
+ * paused driver. Pausing a paused driver, or resuming one that is not paused, is refused (409).
+ */
+export async function setOffersPaused(driverId: number, paused: boolean, reason: string, adminId: number) {
+  return withTransaction(async (client) => {
+    const r = await client.query(`SELECT offers_paused FROM crm_drivers WHERE id = $1 FOR UPDATE`, [driverId]);
+    if (r.rows.length === 0) throw new DriverEditError('Driver not found', 404);
+    if (r.rows[0].offers_paused === paused) {
+      throw new DriverEditError(paused ? 'Ride offers are already paused' : 'Ride offers are not paused', 409);
+    }
+    await client.query(
+      `UPDATE crm_drivers
+       SET offers_paused = $2, offers_paused_reason = $3, offers_paused_at = $4, offers_paused_by = $5, updated_at = CURRENT_TIMESTAMP
+       WHERE id = $1`,
+      paused ? [driverId, true, reason, new Date(), adminId] : [driverId, false, null, null, null]
+    );
+    await record(client, {
+      driverId,
+      action: paused ? 'OFFERS_PAUSE' : 'OFFERS_RESUME',
+      changes: { offers_paused: { from: String(!paused), to: String(paused) } },
+      reason,
+      adminId,
+    });
+    return { offersPaused: paused };
+  });
 }
 
 /** Adds a vehicle, verified: the admin has entered its document dates, none of which may be past. */

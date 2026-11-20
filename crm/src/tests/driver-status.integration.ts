@@ -225,12 +225,23 @@ describe('onboarding from the CRM', () => {
     assert.strictEqual(data.vehicle.is_verified, false);
   });
 
-  it('keeps an existing driver status when the phone is onboarded again', async () => {
+  it('refuses a phone already on file, as phone or WhatsApp number, and changes nothing', async () => {
     const d = await driver('SUSPENDED_MANUAL', future(), []);
     const p = (await query(`SELECT phone FROM crm_drivers WHERE id = $1`, [d.id])).rows[0].phone;
     const res = await driversRoute.POST(req('POST', opsToken, body(p, regNo())));
-    assert.strictEqual(res.status, 200);
-    assert.strictEqual((await row(d.id)).onboarding_status, 'SUSPENDED_MANUAL');
+    assert.strictEqual(res.status, 409);
+    assert.match((await res.json()).error, /already belongs to driver Status Driver/);
+    const after = (await query(`SELECT full_name, base_city, onboarding_status FROM crm_drivers WHERE id = $1`, [d.id])).rows[0];
+    assert.deepStrictEqual(after, { full_name: 'Status Driver', base_city: 'Patna', onboarding_status: 'SUSPENDED_MANUAL' });
+
+    // A new primary phone whose WhatsApp number is the existing driver's is refused too.
+    const viaWa = await driversRoute.POST(req('POST', opsToken, { ...body(phone(), regNo()), whatsapp_phone: p }));
+    assert.strictEqual(viaWa.status, 409);
+  });
+
+  it('rejects a phone without enough digits', async () => {
+    const res = await driversRoute.POST(req('POST', opsToken, body('98-76', regNo())));
+    assert.strictEqual(res.status, 400);
   });
 
   it("refuses another driver's registration number and saves nothing", async () => {

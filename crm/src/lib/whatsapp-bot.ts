@@ -1,4 +1,8 @@
 import { query, withTransaction } from './db';
+import { findDriverByPhones } from './driver-edits';
+
+const ALREADY_REGISTERED_REPLY =
+  '🙏 You are already registered with BiharCabs as a driver, so nothing has been changed. Please contact the BiharCabs operations team to update your details.';
 import {
   sendWhatsAppText,
   sendWhatsAppButtons,
@@ -755,6 +759,12 @@ export async function processIncomingWhatsAppMessage(params: {
   ) || ['join', 'attach', 'driver', 'partner'].includes(lowerText);
 
   if (isDriverKeyword) {
+    // A registered driver is never changed by signing up again (owner decision); staff use Edit in the CRM.
+    if (await findDriverByPhones({ query }, [fromPhone.replace(/\D/g, '')])) {
+      await resetConversation(fromPhone);
+      await sendWhatsAppText(fromPhone, ALREADY_REGISTERED_REPLY);
+      return;
+    }
     await updateConversation(fromPhone, 'DRIVER_ONBOARD_NAME', {}, 'DRIVER');
     await sendWhatsAppText(
       fromPhone,
@@ -820,16 +830,25 @@ export async function processIncomingWhatsAppMessage(params: {
     const ctx = conv.context_data;
 
     // New drivers start PENDING_DOCS with an unverified vehicle: staff check the documents and activate
-    // them in the CRM (migration 30). Re-running sign-up never changes an existing driver's status, and a
-    // registration number already on file is left as it is.
-    const dRes = await query(
-      `INSERT INTO crm_drivers (full_name, phone, whatsapp_phone, base_city, onboarding_status, wallet_balance, is_available)
-       VALUES ($1, $2, $2, $3, 'PENDING_DOCS', 0.00, true)
-       ON CONFLICT (phone) DO UPDATE
-       SET full_name = EXCLUDED.full_name, base_city = EXCLUDED.base_city
-       RETURNING id, onboarding_status`,
-      [ctx.full_name || 'Driver', fromPhone, ctx.base_city || 'Patna']
-    );
+    // them in the CRM (migration 30). A number already on file (checked again here, in case the driver
+    // registered while this conversation was open) is never changed, and neither is a registration
+    // number already on file.
+    const cleanPhone = fromPhone.replace(/\D/g, '');
+    const existing = await findDriverByPhones({ query }, [cleanPhone]);
+    const dRes = existing
+      ? { rows: [] }
+      : await query(
+          `INSERT INTO crm_drivers (full_name, phone, whatsapp_phone, base_city, onboarding_status, wallet_balance, is_available)
+           VALUES ($1, $2, $2, $3, 'PENDING_DOCS', 0.00, true)
+           ON CONFLICT (phone) DO NOTHING
+           RETURNING id`,
+          [ctx.full_name || 'Driver', cleanPhone, ctx.base_city || 'Patna']
+        );
+    if (dRes.rows.length === 0) {
+      await resetConversation(fromPhone);
+      await sendWhatsAppText(fromPhone, ALREADY_REGISTERED_REPLY);
+      return;
+    }
 
     const driverId = dRes.rows[0].id;
     await query(
@@ -840,11 +859,10 @@ export async function processIncomingWhatsAppMessage(params: {
     );
 
     await resetConversation(fromPhone);
-    const reply =
-      dRes.rows[0].onboarding_status === 'PENDING_DOCS'
-        ? `🙏 Thank you ${ctx.full_name}! Your details and vehicle (${regNo}) for ${ctx.base_city} are received.\n\nOur team will verify your driving licence and vehicle documents (insurance, fitness, permit). You will start receiving ride offers once your account is approved.`
-        : `🙏 Thank you ${ctx.full_name}. You are already registered with BiharCabs, so your account status has not changed. Please contact the BiharCabs operations team for any changes.`;
-    await sendWhatsAppText(fromPhone, reply);
+    await sendWhatsAppText(
+      fromPhone,
+      `🙏 Thank you ${ctx.full_name}! Your details and vehicle (${regNo}) for ${ctx.base_city} are received.\n\nOur team will verify your driving licence and vehicle documents (insurance, fitness, permit). You will start receiving ride offers once your account is approved.`
+    );
     return;
   }
 

@@ -86,8 +86,8 @@ Work through these in order. Each feature section below has the detail; this lis
 ### 1. Database (native PostgreSQL)
 - [ ] **Back up first:** `pg_dump -Fc biharcabs_crm > biharcabs_crm_$(date +%F).dump`
 - [ ] **See which migrations have run:** `SELECT version FROM crm_schema_migrations ORDER BY version;` (migrations 08 onwards record themselves).
-- [ ] **Apply the missing ones in order**, up to **31**: `psql -v ON_ERROR_STOP=1 -d biharcabs_crm -f crm-design/NN_name.sql`. Each one from 08 on is safe to run again.
-- [ ] **Migrations before code.** Apply them **before** the new code starts. From migration 26 on, the code writes to tables and columns the migrations add. Without 26, no GST document number can be issued, so **trip settlement and advance payments fail**. Without 27 and 28, settlement and payments fail on the new place-of-supply columns. Without 29, the document send step fails (other jobs carry on). Without 30, driver onboarding still works but the driver Status dialog fails. Without 31, **dispatch and the document expiry jobs fail** (they read the new `removed_at` column), as do the driver list, CRM onboarding and activation.
+- [ ] **Apply the missing ones in order**, up to **32**: `psql -v ON_ERROR_STOP=1 -d biharcabs_crm -f crm-design/NN_name.sql`. Each one from 08 on is safe to run again.
+- [ ] **Migrations before code.** Apply them **before** the new code starts. From migration 26 on, the code writes to tables and columns the migrations add. Without 26, no GST document number can be issued, so **trip settlement and advance payments fail**. Without 27 and 28, settlement and payments fail on the new place-of-supply columns. Without 29, the document send step fails (other jobs carry on). Without 30, driver onboarding still works but the driver Status dialog fails. Without 31, **dispatch and the document expiry jobs fail** (they read the new `removed_at` column), as do the driver list, CRM onboarding and activation. Without 32, **dispatch fails** (it reads the new `offers_paused` column).
 - [ ] **Check the GST migrations:**
   - `SELECT * FROM crm_document_counters ORDER BY series, financial_year;` should show this year's `RV`, `RF` and `CC` counters at the last numbers already issued (migration 26). `TI` starts at 1.
   - `SELECT setting_value FROM crm_settings WHERE setting_key = 'cancellation_policy';` should show `cancellation_charge_gst_pct` 5.
@@ -153,6 +153,9 @@ Work through these in order. Each feature section below has the detail; this lis
   - **Hovering a pill** shows the details.
 - [ ] **New drivers start as Pending:** a driver added on **Drivers** or through WhatsApp gets no rides until someone checks their documents and presses **Review → Activate**. See [Driver status](#driver-status-activate-suspend-offboard).
 - [ ] **Editing drivers:** **Drivers → Edit** changes a driver's details and vehicles. Only super admin and finance can change UPI or bank details. See [Editing drivers and vehicles](#editing-drivers-and-vehicles).
+- [ ] **Pausing offers:** **Drivers → Status → Pause offers** stops a driver getting ride offers (leave, car in the garage) without suspending them, until someone resumes. Use it instead of suspending.
+- [ ] **Existing phone numbers:** onboarding a number already on file is now refused; use **Edit** on that driver instead.
+- [ ] **Wallet:** finance and super admin see each driver's ledger entries under **Drivers → Wallet**.
 
 ### 7. After deploying
 - [ ] Sign in, and check the dispatch board loads.
@@ -275,7 +278,7 @@ DATABASE_URL=postgresql://localhost/biharcabs_crm_test npx tsx --test src/tests/
 
 ## Driver status (activate, suspend, offboard)
 
-New drivers, from **Drivers → Onboard New Driver** or WhatsApp "JOIN", start as `PENDING_DOCS` with unverified vehicles, and get no rides. Signing up again on WhatsApp never changes an existing driver's status, and leaves a registration number already on file as it is. The CRM form refuses a registration number that belongs to another driver (409) and saves nothing.
+New drivers, from **Drivers → Onboard New Driver** or WhatsApp "JOIN", start as `PENDING_DOCS` with unverified vehicles, and get no rides. A number already on file, as anyone's phone or WhatsApp number, is never overwritten: the CRM form refuses it (409, naming the driver; use **Edit**), and WhatsApp "JOIN" from a registered driver changes nothing and replies that they are already registered (checked again at the last step, in case staff registered the number meanwhile). A registration number already on file is never changed either; the CRM form refuses one that belongs to another driver (409) and saves nothing.
 
 Staff change a driver's status on **Drivers → Status** (or **Review** for a pending driver), or `POST /api/drivers/[id]/status` with `{ action, reason, license_expiry?, vehicles?: [{ id, insurance_expiry, fitness_expiry, permit_expiry }] }`. Permission: `drivers.manage` (SUPER_ADMIN, DISPATCHER). `GET` on the same path returns the status, document dates and history (`drivers.view`).
 
@@ -313,7 +316,7 @@ npx tsx --test src/tests/driver-status.test.ts src/tests/driver-onboarding.test.
 | Remove a vehicle (`{ reason }`) | `DELETE /api/drivers/[id]/vehicles/[vehicleId]` | `drivers.manage` |
 | Details, current vehicles, history | `GET /api/drivers/[id]` | `drivers.view` |
 
-- **Phone:** must be 10-15 digits with country code; one already used by another driver is refused (409). The phone decides which WhatsApp number the bot recognises as the driver.
+- **Phone:** must be 10-15 digits with country code; one already used by another driver, as their phone or WhatsApp number, is refused (409). The phone decides which WhatsApp number the bot recognises as the driver.
 - **Adding a vehicle:** all three dates required and none past. Entering them counts as checking the documents, so the vehicle is verified and can get rides at once. A registration number already on file (any driver, or removed) is refused (409).
 - **Editing dates:** a past date is saved as entered; the next expiry job suspends the driver. The registration number cannot be changed: remove the vehicle and add the new one.
 - **Removing a vehicle** keeps it for ride history (`removed_at`, `removed_by`, `removed_reason`). Dispatch, the expiry suspension and the expiry reminders ignore it. A vehicle on a `DRIVER_ASSIGNED` or `TRIP_IN_PROGRESS` ride cannot be removed. A removed registration number cannot be added again.
@@ -324,6 +327,21 @@ Apply `crm-design/31_driver_edits.sql` before deploying. Tests:
 ```bash
 DATABASE_URL=postgresql://localhost/biharcabs_crm_test npx tsx --test src/tests/driver-edits.integration.ts
 npx tsx --test src/tests/driver-edits.test.ts
+```
+
+## Pausing ride offers, and the driver wallet
+
+**Pause offers** (migration 32): **Drivers → Status → Pause offers**, or `POST /api/drivers/[id]/offers` with `{ paused: true | false, reason }`. Permission: `drivers.manage`.
+- Dispatch refuses a paused driver ("ride offers are paused by staff"), for broadcasts and staff assignment alike. Rides the driver already holds are not affected. Status is unchanged.
+- The pause is its own flag (`crm_drivers.offers_paused`), not `is_available`: settlement, dues payments, incentives and activation set `is_available` back to true, and none of them lifts a pause. Only **Resume offers** does.
+- Pausing and resuming need a reason (5-500 characters) and are recorded in `crm_driver_edits` (`OFFERS_PAUSE`, `OFFERS_RESUME`). The list shows an **Offers paused** badge.
+
+**Wallet**: **Drivers → Wallet**, or `GET /api/drivers/[id]/wallet`. Permission: `ledger.view` (SUPER_ADMIN, FINANCE_MANAGER). Shows the wallet and security reserve balances and the latest 100 ledger entries for the driver.
+- The entries are listed as recorded, **not as a running balance**: they do not add up line by line to the wallet. A trip settlement records its net amount (which already includes any reserve deduction and streak bonus) and also records those two as their own entries, and cash the driver collects from the customer is recorded although it does not move the wallet.
+
+Apply `crm-design/32_driver_offer_pause.sql` before deploying. Tests:
+```bash
+DATABASE_URL=postgresql://localhost/biharcabs_crm_test npx tsx --test src/tests/driver-extras.integration.ts
 ```
 
 ## Sign-in attempt limits

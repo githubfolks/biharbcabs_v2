@@ -28,6 +28,8 @@ import * as driverIncentives from '../app/api/drivers/[id]/incentives/route';
 import * as driverRatings from '../app/api/drivers/[id]/ratings/route';
 import * as driverStatus from '../app/api/drivers/[id]/status/route';
 import * as driverDetail from '../app/api/drivers/[id]/route';
+import * as driverWallet from '../app/api/drivers/[id]/wallet/route';
+import * as driverOffers from '../app/api/drivers/[id]/offers/route';
 import * as driverPayout from '../app/api/drivers/[id]/payout-details/route';
 import * as driverVehicles from '../app/api/drivers/[id]/vehicles/route';
 import * as driverVehicle from '../app/api/drivers/[id]/vehicles/[vehicleId]/route';
@@ -82,6 +84,8 @@ const PROTECTED: ProtectedRoute[] = [
   { name: 'GET /api/drivers/[id]/status', method: 'GET', handler: driverStatus.GET, permission: 'drivers.view', ctx: NONE },
   { name: 'POST /api/drivers/[id]/status', method: 'POST', handler: driverStatus.POST, permission: 'drivers.manage', body: { action: 'none' }, ctx: NONE },
   { name: 'GET /api/drivers/[id]', method: 'GET', handler: driverDetail.GET, permission: 'drivers.view', ctx: NONE },
+  { name: 'GET /api/drivers/[id]/wallet', method: 'GET', handler: driverWallet.GET, permission: 'ledger.view', ctx: NONE },
+  { name: 'POST /api/drivers/[id]/offers', method: 'POST', handler: driverOffers.POST, permission: 'drivers.manage', body: {}, ctx: NONE },
   { name: 'PATCH /api/drivers/[id]', method: 'PATCH', handler: driverDetail.PATCH, permission: 'drivers.manage', body: {}, ctx: NONE },
   { name: 'PATCH /api/drivers/[id]/payout-details', method: 'PATCH', handler: driverPayout.PATCH, permission: 'drivers.payout_details', body: {}, ctx: NONE },
   { name: 'POST /api/drivers/[id]/vehicles', method: 'POST', handler: driverVehicles.POST, permission: 'drivers.manage', body: {}, ctx: NONE },

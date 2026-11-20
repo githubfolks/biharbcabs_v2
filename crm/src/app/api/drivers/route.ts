@@ -3,12 +3,19 @@ import { requireAdmin } from '@/lib/auth';
 import { query, withTransaction } from '@/lib/db';
 import { getRevenueProtectionPolicy } from '@/lib/settings';
 import { validateOnboardingDocs } from '@/lib/driver-onboarding';
+import { findDriverByPhones } from '@/lib/driver-edits';
 
 export const dynamic = 'force-dynamic';
 
 /** Matches text anywhere, with LIKE's own wildcard characters (% _ and the backslash) taken literally. */
 function likePattern(text: string) {
   return `%${text.replace(/[\\%_]/g, (c) => '\\' + c)}%`;
+}
+
+class PhoneTakenError extends Error {
+  constructor(owner: { id: number; full_name: string; onboarding_status: string }) {
+    super(`This number already belongs to driver ${owner.full_name} (#${owner.id}, ${owner.onboarding_status}). Use Edit on that driver instead.`);
+  }
 }
 
 class VehicleTakenError extends Error {
@@ -149,26 +156,29 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: checked.error }, { status: 400 });
     }
 
-    const cleanPhone = phone.replace(/\D/g, '');
-    const cleanWa = (whatsapp_phone || phone).replace(/\D/g, '');
+    const cleanPhone = String(phone).replace(/\D/g, '');
+    const cleanWa = String(whatsapp_phone || phone).replace(/\D/g, '');
+    if (!/^\d{10,15}$/.test(cleanPhone) || !/^\d{10,15}$/.test(cleanWa)) {
+      return NextResponse.json(
+        { success: false, error: 'phone and whatsapp_phone must have 10 to 15 digits, with country code (e.g. 917070992170)' },
+        { status: 400 }
+      );
+    }
 
     // New drivers start PENDING_DOCS: they get rides only after staff activate them (migration 30).
     // An existing phone keeps its current status. Driver and vehicle are saved together or not at all.
     const docs = checked.docs;
     const result = await withTransaction(async (client) => {
+      // A number already on file is refused, never overwritten (owner decision): staff change an
+      // existing driver with Edit. The WhatsApp bot recognises a driver by either number.
+      const owner = await findDriverByPhones(client, [...new Set([cleanPhone, cleanWa])]);
+      if (owner) throw new PhoneTakenError(owner);
       const driverRes = await client.query(
         `INSERT INTO crm_drivers (
           full_name, phone, whatsapp_phone, base_city, onboarding_status,
           license_number, license_expiry, bank_upi_id, bank_account_number, bank_ifsc,
           created_at, updated_at
         ) VALUES ($1, $2, $3, $4, 'PENDING_DOCS', $5, $6, $7, $8, $9, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-        ON CONFLICT (phone) DO UPDATE
-        SET full_name = EXCLUDED.full_name,
-            whatsapp_phone = EXCLUDED.whatsapp_phone,
-            base_city = EXCLUDED.base_city,
-            license_number = COALESCE(EXCLUDED.license_number, crm_drivers.license_number),
-            license_expiry = COALESCE(EXCLUDED.license_expiry, crm_drivers.license_expiry),
-            updated_at = CURRENT_TIMESTAMP
         RETURNING *`,
         [
           full_name,
@@ -220,7 +230,10 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, ...result });
   } catch (err: any) {
-    if (err instanceof VehicleTakenError) {
+    if (err?.code === '23505' && err?.constraint === 'crm_drivers_phone_key') {
+      return NextResponse.json({ success: false, error: 'That phone number was just registered to another driver. Use Edit on that driver.' }, { status: 409 });
+    }
+    if (err instanceof VehicleTakenError || err instanceof PhoneTakenError) {
       return NextResponse.json({ success: false, error: err.message }, { status: 409 });
     }
     return NextResponse.json({ success: false, error: err.message }, { status: 500 });
