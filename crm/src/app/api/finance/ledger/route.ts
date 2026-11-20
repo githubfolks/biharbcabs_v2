@@ -46,7 +46,9 @@ export async function GET(req: NextRequest) {
         COALESCE((SELECT SUM(ABS(wallet_balance)) FROM crm_drivers WHERE wallet_balance < 0), 0) AS total_driver_dues_outstanding,
         COALESCE((SELECT SUM(amount) FROM crm_payments_ledger WHERE transaction_type IN ('INCENTIVE_BONUS', 'INCENTIVE_STREAK_BONUS')), 0) AS total_incentives_awarded
       FROM crm_bookings b
-      WHERE b.booking_status IN ('COMPLETED_SETTLED', 'COMPLETED_UNBILLED', 'DRIVER_ASSIGNED', 'TRIP_IN_PROGRESS')
+      -- Completed rides only (owner decision): commission, GST and fees are counted once the trip is done,
+      -- not while a ride is only assigned or in progress. COMPLETED_SETTLED is what settlement sets.
+      WHERE b.booking_status IN ('COMPLETED_SETTLED', 'COMPLETED_UNBILLED')
     `);
 
     const summary = kpiRes.rows[0] ? {

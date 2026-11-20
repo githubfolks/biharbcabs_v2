@@ -242,7 +242,7 @@ export default function FinancePage() {
           <p className="text-[10px] text-blue-600/80 mt-1">
             5% ride GST (Sec 9(5)) ₹{Number(summary.totalRideGst).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
             {' '}+ 18% on commission &amp; fee ₹{Number(summary.totalCommissionGst).toLocaleString('en-IN', { minimumFractionDigits: 2 })}.
-            Assigned, ongoing and completed rides.
+            Completed rides.
           </p>
         </div>
 
@@ -255,7 +255,7 @@ export default function FinancePage() {
           <div className="mt-2 text-xl font-bold font-mono tabular-nums [overflow-wrap:anywhere] text-slate-900">
             ₹{Number(summary.totalTechFees).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
           </div>
-          <p className="text-[10px] text-slate-400 mt-1">Platform software fee</p>
+          <p className="text-[10px] text-slate-400 mt-1">Platform software fee on completed rides</p>
         </div>
 
         {/* Card 4: Security Reserve Float */}
