@@ -98,7 +98,9 @@ Work through these in order. Each feature section below has the detail; this lis
 - [ ] `META_APP_SECRET`: verifies WhatsApp webhooks; without it every webhook event is rejected.
 - [ ] `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET`: without the keys, advance payment links and refunds fail; without the webhook secret, payment webhooks are refused (503).
 - [ ] `CLIENT_IP_HEADER` (optional): the header your reverse proxy sets with the client IP (e.g. `x-real-ip`). Without it, sign-in limits apply per email only, not per IP.
-- [ ] **Database connection:** `DATABASE_URL` and `PG*` are set in `docker-compose.yml` itself (host PostgreSQL via `host.docker.internal`). Check the user and database match the VPS.
+- [ ] **Database connection:** the container connects to host PostgreSQL (`host.docker.internal`) as the role `biharcabs_crm`, with the password `CRM_DB_PASSWORD` from the root `.env`. Compose refuses to start without it.
+  - **Create the role once** per environment, as the owner of the CRM tables: `psql -v ON_ERROR_STOP=1 -d biharcabs_crm -v pw="$CRM_DB_PASSWORD" -f crm-design/crm_app_role.sql`. It can read and write data but not change the schema. Use a URL-safe password, e.g. `openssl rand -hex 24`. Running it again resets the password and re-applies the grants.
+  - **Port 5432 must belong to the host PostgreSQL.** A Docker container that publishes `5432` on the host takes `host.docker.internal:5432`, and the CRM then reaches the wrong database: every sign-in and scheduled job fails with `password authentication failed`.
 - [ ] `WP_API_BASE_URL` is only a fallback when the `biharcabs_wp_api` setting has no `base_url`.
 - [ ] **Deploy the code:** `git pull`, then `docker compose up -d --build crm`. Rebuild with `--build`; restarting the old image isn't enough. The image must include `crm/next.config.js`, which keeps the PDF library outside the build. Without it every GST document PDF fails (500, `Helvetica.afm` not found), both downloads and WhatsApp sends.
 
