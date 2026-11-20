@@ -159,15 +159,19 @@ export async function sendWhatsAppList(
 /**
  * Send a Document Message (e.g. PDF Invoice).
  */
+/**
+ * Send a document uploaded with uploadWhatsAppMedia, by its media id (Meta recommends ids over links;
+ * a link would need the document on a public URL). Delivered only inside the 24-hour service window.
+ */
 export async function sendWhatsAppDocument(
   toPhone: string,
-  documentUrl: string,
+  mediaId: string,
   fileName: string,
   caption?: string
 ): Promise<SendMessageResult> {
   return dispatchToMetaApi(toPhone, 'document', {
     document: {
-      link: documentUrl,
+      id: mediaId,
       filename: fileName,
       caption: caption || undefined,
     },
@@ -175,27 +179,66 @@ export async function sendWhatsAppDocument(
 }
 
 /**
+ * Upload a file to Meta for sending (POST /<PHONE_NUMBER_ID>/media, multipart: file, type,
+ * messaging_product; returns { id }). Meta keeps the media, and its id is valid, for 30 days.
+ * Without a configured token it is simulated, like sends. The file's contents are never logged.
+ */
+export async function uploadWhatsAppMedia(file: Buffer, fileName: string, mimeType: string): Promise<{ success: boolean; mediaId?: string; error?: string }> {
+  const config = await getMetaWhatsAppConfig();
+  if (!config.access_token || !config.phone_number_id) {
+    console.log(`[WhatsApp Sim] -> Media upload ${fileName} (${file.length} bytes)`);
+    return { success: true, mediaId: `local-sim-media-${Date.now()}-${Math.random().toString(36).slice(2, 10)}` };
+  }
+  const form = new FormData();
+  form.append('messaging_product', 'whatsapp');
+  form.append('type', mimeType);
+  form.append('file', new Blob([new Uint8Array(file)], { type: mimeType }), fileName);
+  try {
+    const res = await fetch(`https://graph.facebook.com/${config.api_version}/${config.phone_number_id}/media`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${config.access_token}` },
+      body: form,
+      signal: AbortSignal.timeout(30000),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || typeof data?.id !== 'string') {
+      return { success: false, error: data?.error?.message || `Media upload failed: HTTP ${res.status}` };
+    }
+    return { success: true, mediaId: data.id };
+  } catch (err: any) {
+    return { success: false, error: `Media upload failed: ${err?.message || err}` };
+  }
+}
+
+/**
  * Send an Official Meta WhatsApp Utility Template.
  */
+/** A document for a template's DOCUMENT header, by uploaded media id. */
+export interface TemplateHeaderDocument {
+  mediaId: string;
+  fileName: string;
+}
+
 export async function sendWhatsAppTemplate(
   toPhone: string,
   templateName: string,
   languageCode = 'en',
-  parameters: Array<{ type: 'text' | 'currency' | 'date_time'; text?: string }> = []
+  parameters: Array<{ type: 'text' | 'currency' | 'date_time'; text?: string }> = [],
+  headerDocument?: TemplateHeaderDocument
 ): Promise<SendMessageResult> {
   const templatePayload: any = {
     name: templateName,
     language: { code: languageCode },
   };
 
-  if (parameters.length > 0) {
-    templatePayload.components = [
-      {
-        type: 'body',
-        parameters,
-      },
-    ];
+  const components: any[] = [];
+  // UNVERIFIED against Meta's docs: they show image headers ({ type: 'image', image: { link } }) and
+  // document messages ({ id, filename }); this document header follows both. Confirm on the first live send.
+  if (headerDocument) {
+    components.push({ type: 'header', parameters: [{ type: 'document', document: { id: headerDocument.mediaId, filename: headerDocument.fileName } }] });
   }
+  if (parameters.length > 0) components.push({ type: 'body', parameters });
+  if (components.length) templatePayload.components = components;
 
   return dispatchToMetaApi(toPhone, 'template', { template: templatePayload });
 }

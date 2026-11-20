@@ -86,7 +86,7 @@ Work through these in order. Each feature section below has the detail; this lis
 ### 1. Database (native PostgreSQL)
 - [ ] **Back up first:** `pg_dump -Fc biharcabs_crm > biharcabs_crm_$(date +%F).dump`
 - [ ] **See which migrations have run:** `SELECT version FROM crm_schema_migrations ORDER BY version;` (migrations 08 onwards record themselves).
-- [ ] **Apply the missing ones in order**, up to **28**: `psql -v ON_ERROR_STOP=1 -d biharcabs_crm -f crm-design/NN_name.sql`. Each one from 08 on is safe to run again.
+- [ ] **Apply the missing ones in order**, up to **29**: `psql -v ON_ERROR_STOP=1 -d biharcabs_crm -f crm-design/NN_name.sql`. Each one from 08 on is safe to run again.
 
 ### 2. Environment and code
 `docker-compose.yml` passes these to the `crm` container from the root `.env` (never in git). After changing `.env`, recreate the container.
@@ -101,7 +101,7 @@ Work through these in order. Each feature section below has the detail; this lis
 ### 3. External services
 - [ ] **Razorpay webhook** to `https://<crm host>/api/payments/razorpay/webhook`, secret = `RAZORPAY_WEBHOOK_SECRET`, events: `payment_link.paid`, `payment_link.expired`, `payment_link.cancelled`, `refund.processed`, `refund.failed`.
 - [ ] **Meta WhatsApp webhook** to `https://<crm host>/api/whatsapp/webhook`, with the verify token from the `meta_whatsapp_config` setting.
-- [ ] **WhatsApp templates:** submit the 13 templates in [`crm-design/whatsapp_templates.md`](../crm-design/whatsapp_templates.md) to Meta, then put the approved names in the `whatsapp_templates` setting. Until a template is approved, that message fails outside the 24-hour window (it shows under **Failed messages** on the dispatch board).
+- [ ] **WhatsApp templates:** submit the 14 templates in [`crm-design/whatsapp_templates.md`](../crm-design/whatsapp_templates.md) to Meta, then put the approved names in the `whatsapp_templates` setting. Until a template is approved, that message fails outside the 24-hour window (it shows under **Failed messages** on the dispatch board). `bc_customer_gst_document` needs a **Document** header; upload any sample PDF when submitting it.
 - [ ] **Rotate the Meta access token** if any deployed CRM ran code from before 3e3e0e9: until then a request with any cookie value could read the settings, token included. Save the new one in `meta_whatsapp_config`.
 - [ ] **WordPress rate card:** fare quotes must be switched on (`public_enabled`). It ships switched off, and then the WhatsApp bot cannot price rides and staff bookings cannot use the rate card.
 - [ ] **n8n:** both workflows active (every 5 minutes, and daily at 09:00 IST).
@@ -503,11 +503,31 @@ The rules are in `src/lib/place-of-supply.ts`.
   - **What they show:** BiharCabs' and the customer's details, the number and date, the place of supply, the SAC, the CGST + SGST or IGST lines, "Tax payable on reverse charge: No", and an "Authorised signatory" line. Refund and cancellation documents quote their receipt voucher.
   - **When they're refused:** while BiharCabs' GSTIN or the place of supply is missing.
   - **Amounts print as "Rs.":** the built-in PDF fonts have no rupee sign.
-  - **Download:** finance can download any document at `GET /api/finance/gst-documents/[kind]/[id]/pdf` (`ledger.view`). Sending them to customers on WhatsApp comes next.
+  - **Download:** finance can download any document at `GET /api/finance/gst-documents/[kind]/[id]/pdf` (`ledger.view`). They are also sent to customers on WhatsApp (see below).
 - **Confirmed by the CA:** an "Authorised signatory" line is enough as the signature, and "Tax payable on reverse charge: No" is correct for rides taxed under Section 9(5).
 - **Existing documents** are filled in by migrations 27 and 28, by the same rules.
 
 Apply `crm-design/27_gst_place_of_supply.sql` and `crm-design/28_gst_voucher_place_of_supply.sql`. Tests:
 ```bash
 DATABASE_URL=postgresql://localhost/biharcabs_crm_test npx tsx --test src/tests/place-of-supply.integration.ts src/tests/gst-document-pdfs.integration.ts
+```
+
+## GST documents on WhatsApp (per CA)
+
+Customers must be given their tax invoices, receipt vouchers, refund vouchers and cancellation charge invoices (Section 31, CGST Act). The 5-minute job sends each one as a PDF (`src/lib/gst-delivery.ts`):
+- **How:** the PDF is uploaded to Meta and sent by media id, never by a public link.
+  - **Inside the 24-hour window:** a document message with a caption.
+  - **Outside it:** the `customer_gst_document` template, with the PDF in its document header.
+- **Unverified:** the send-time format for a template's document header. Meta's docs show image headers and document messages, and the CRM follows both. Confirm it on the first live send.
+- **Waiting:** a document waits, using no attempt, while BiharCabs' GSTIN or its place of supply is missing. It is sent once they are set.
+- **Failures:**
+  - **Retries:** a failed upload or send is retried on later runs, up to `gst_document_delivery.max_attempts` (3).
+  - **After the last try:** the document is marked `FAILED` and listed **once** under **Failed messages**. Finance downloads the PDF and sends it by hand.
+- **Delivery status on each document:** `wa_delivery_status` is `PENDING`, `SENT`, `FAILED` or `NOT_SENT`. Each document also records `wa_sent_at`, `wa_attempts` and `wa_last_error`.
+- **Older documents:** documents issued before migration 29 are `NOT_SENT` and are never sent automatically (owner decision). Finance can download them.
+- **Duplicates:** a document is locked while it is sent, so it is sent once. If the server stops after WhatsApp accepted it but before that was saved, the customer may get a second copy, never none.
+
+Apply `crm-design/29_gst_document_delivery.sql`, and submit the `bc_customer_gst_document` template (document header) to Meta. Tests:
+```bash
+DATABASE_URL=postgresql://localhost/biharcabs_crm_test npx tsx --test src/tests/gst-delivery.integration.ts
 ```
