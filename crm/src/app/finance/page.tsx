@@ -215,74 +215,74 @@ export default function FinancePage() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         {/* Card 1: Platform Facilitation (3%) */}
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+        <div className="min-w-0 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
           <div className="flex items-center justify-between text-slate-500 text-xs font-semibold uppercase">
             <span>Facilitation (3%)</span>
             <DollarSign className="h-4 w-4 text-emerald-600" />
           </div>
-          <div className="mt-2 text-xl font-bold font-mono text-slate-900">
+          <div className="mt-2 text-xl font-bold font-mono tabular-nums [overflow-wrap:anywhere] text-slate-900">
             ₹{Number(summary.totalCommissionRevenue).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
           </div>
           <p className="text-[10px] text-slate-400 mt-1">Net facilitation fees earned</p>
         </div>
 
         {/* Card 2: 18% Statutory GST */}
-        <div className="bg-white p-4 rounded-xl border border-blue-200 shadow-sm bg-blue-50/20">
+        <div className="min-w-0 bg-white p-4 rounded-xl border border-blue-200 shadow-sm bg-blue-50/20">
           <div className="flex items-center justify-between text-blue-800 text-xs font-semibold uppercase">
             <span>Statutory 18% GST</span>
             <Percent className="h-4 w-4 text-blue-600" />
           </div>
-          <div className="mt-2 text-xl font-bold font-mono text-blue-900">
+          <div className="mt-2 text-xl font-bold font-mono tabular-nums [overflow-wrap:anywhere] text-blue-900">
             ₹{Number(summary.totalGstStatutory).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
           </div>
           <p className="text-[10px] text-blue-600/80 mt-1">CGST Sec 9(5) collected</p>
         </div>
 
         {/* Card 3: Tech Fee */}
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+        <div className="min-w-0 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
           <div className="flex items-center justify-between text-slate-500 text-xs font-semibold uppercase">
             <span>Tech Fees (₹10)</span>
             <ShieldCheck className="h-4 w-4 text-indigo-600" />
           </div>
-          <div className="mt-2 text-xl font-bold font-mono text-slate-900">
+          <div className="mt-2 text-xl font-bold font-mono tabular-nums [overflow-wrap:anywhere] text-slate-900">
             ₹{Number(summary.totalTechFees).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
           </div>
           <p className="text-[10px] text-slate-400 mt-1">Platform software fee</p>
         </div>
 
         {/* Card 4: Security Reserve Float */}
-        <div className="bg-white p-4 rounded-xl border border-purple-200 shadow-sm bg-purple-50/20">
+        <div className="min-w-0 bg-white p-4 rounded-xl border border-purple-200 shadow-sm bg-purple-50/20">
           <div className="flex items-center justify-between text-purple-800 text-xs font-semibold uppercase">
             <span>Reserve Float Held</span>
             <Landmark className="h-4 w-4 text-purple-600" />
           </div>
-          <div className="mt-2 text-xl font-bold font-mono text-purple-900">
+          <div className="mt-2 text-xl font-bold font-mono tabular-nums [overflow-wrap:anywhere] text-purple-900">
             ₹{Number(summary.totalSecurityReserveHeld).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
           </div>
           <p className="text-[10px] text-purple-600/80 mt-1">Porter model cash float</p>
         </div>
 
         {/* Card 5: Outstanding Dues */}
-        <div className="bg-white p-4 rounded-xl border border-rose-200 shadow-sm bg-rose-50/20">
+        <div className="min-w-0 bg-white p-4 rounded-xl border border-rose-200 shadow-sm bg-rose-50/20">
           <div className="flex items-center justify-between text-rose-800 text-xs font-semibold uppercase">
             <span>Fleet Dues At Risk</span>
             <AlertCircle className="h-4 w-4 text-rose-600" />
           </div>
-          <div className="mt-2 text-xl font-bold font-mono text-rose-900">
+          <div className="mt-2 text-xl font-bold font-mono tabular-nums [overflow-wrap:anywhere] text-rose-900">
             ₹{Number(summary.totalDriverDuesOutstanding).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
           </div>
           <p className="text-[10px] text-rose-600/80 mt-1">Covered by leeway &amp; reserves</p>
         </div>
 
         {/* Card 6: Incentives Awarded */}
-        <div className="bg-white p-4 rounded-xl border border-amber-200 shadow-sm bg-amber-50/20">
+        <div className="min-w-0 bg-white p-4 rounded-xl border border-amber-200 shadow-sm bg-amber-50/20">
           <div className="flex items-center justify-between text-amber-800 text-xs font-semibold uppercase">
             <span>Incentives &amp; Streaks</span>
             <Gift className="h-4 w-4 text-amber-600" />
           </div>
-          <div className="mt-2 text-xl font-bold font-mono text-amber-900">
+          <div className="mt-2 text-xl font-bold font-mono tabular-nums [overflow-wrap:anywhere] text-amber-900">
             ₹{Number(summary.totalIncentivesAwarded).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
           </div>
           <p className="text-[10px] text-amber-600/80 mt-1">Auto-routed to clear debt</p>
