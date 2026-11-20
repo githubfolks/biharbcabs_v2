@@ -35,6 +35,7 @@ import * as messages from '../app/api/whatsapp/messages/route';
 import * as notificationFailures from '../app/api/notifications/failures/route';
 import * as notificationResolve from '../app/api/notifications/failures/[id]/resolve/route';
 import * as gstDocuments from '../app/api/finance/gst-documents/route';
+import * as systemStatus from '../app/api/system/status/route';
 import * as documentsAwaitingPos from '../app/api/finance/gst-documents/place-of-supply/route';
 import * as documentPos from '../app/api/finance/gst-documents/[kind]/[id]/place-of-supply/route';
 import * as documentPdf from '../app/api/finance/gst-documents/[kind]/[id]/pdf/route';
@@ -86,6 +87,7 @@ const PROTECTED: ProtectedRoute[] = [
   { name: 'POST /api/whatsapp/messages', method: 'POST', handler: messages.POST, permission: 'inbox.use', body: {} },
   { name: 'GET /api/notifications/failures', method: 'GET', handler: notificationFailures.GET, permission: 'bookings.view' },
   { name: 'POST /api/notifications/failures/[id]/resolve', method: 'POST', handler: notificationResolve.POST, permission: 'notifications.resolve', body: {}, ctx: NONE },
+  { name: 'GET /api/system/status', method: 'GET', handler: systemStatus.GET, permission: 'settings.view' },
   { name: 'GET /api/finance/gst-documents', method: 'GET', handler: gstDocuments.GET, permission: 'ledger.view' },
   { name: 'GET /api/finance/gst-documents/place-of-supply', method: 'GET', handler: documentsAwaitingPos.GET, permission: 'ledger.view' },
   { name: 'POST /api/finance/gst-documents/[kind]/[id]/place-of-supply', method: 'POST', handler: documentPos.POST, permission: 'gst_documents.manage', body: { stateCode: 'xx' }, ctx: { params: { kind: 'TI', id: '-1' } } },
