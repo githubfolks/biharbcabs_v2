@@ -14,11 +14,13 @@ import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert';
 import crypto from 'crypto';
 import { query, getDbPool } from '../lib/db';
-import { hashPassword } from '../lib/auth';
+import { NextRequest } from 'next/server';
+import { createAdminSession, hashPassword, SESSION_COOKIE_NAME } from '../lib/auth';
 import { getAllSettings, updateSetting } from '../lib/settings';
 import { processRazorpayEvent } from '../lib/advance-payments';
 import { setDocumentPlaceOfSupply } from '../lib/place-of-supply';
-import { sendPendingGstDocuments } from '../lib/gst-delivery';
+import { listGstDocuments, sendPendingGstDocuments } from '../lib/gst-delivery';
+import * as pdfRoute from '../app/api/finance/gst-documents/[kind]/[id]/pdf/route';
 import { executeFrequentCronTasks } from '../lib/cron-service';
 import { notify } from '../lib/wa-notify';
 
@@ -202,5 +204,48 @@ describe('failures', () => {
 
   it('the document template cannot be sent without its PDF', async () => {
     await assert.rejects(notify('919999999999', 'customer_gst_document', { params: ['tax invoice', 'TI2627000001', '#BC-X'] }), /document is required/);
+  });
+});
+
+describe('finance: find and download documents', () => {
+  it('lists undelivered documents by default, and finds any by booking code or number', async () => {
+    const failed = await receiptVoucher();
+    await query(`UPDATE crm_payment_links SET wa_delivery_status = 'FAILED', wa_last_error = 'test' WHERE id = $1`, [failed.id]);
+    const delivered = await receiptVoucher();
+    await sendPendingGstDocuments();
+
+    const undelivered = await listGstDocuments();
+    assert.ok(undelivered.some((d) => d.kind === 'RV' && d.id === failed.id), 'the failed one is listed');
+    assert.ok(!undelivered.some((d) => d.id === delivered.id && d.kind === 'RV'), 'a delivered one is not');
+    assert.ok(undelivered.every((d) => d.deliveryStatus === 'FAILED'));
+
+    const byBooking = await listGstDocuments(`#${delivered.bookingCode.toLowerCase()}`);
+    assert.deepStrictEqual(byBooking.map((d) => [d.kind, d.number, d.deliveryStatus, d.amount]), [['RV', delivered.number, 'SENT', 500]]);
+    const byNumber = await listGstDocuments(` ${failed.number} `);
+    assert.deepStrictEqual(byNumber.map((d) => d.id), [failed.id]);
+    assert.deepStrictEqual(await listGstDocuments('%'), [], 'exact matches only, no wildcards');
+  });
+
+  it('the download route returns the PDF to finance', async () => {
+    const doc = await receiptVoucher();
+    const { hash, salt } = hashPassword(crypto.randomBytes(12).toString('hex'));
+    const fin = Number((await query(
+      `INSERT INTO crm_admin_users (email, password_hash, salt, full_name, role, is_active) VALUES ($1, $2, $3, 'Download Tester', 'FINANCE_MANAGER', true) RETURNING id`,
+      [`download-${RUN}@example.test`, hash, salt]
+    )).rows[0].id);
+    try {
+      const { token } = await createAdminSession(fin);
+      const res = await pdfRoute.GET(
+        new NextRequest(`http://localhost:3001/api/finance/gst-documents/RV/${doc.id}/pdf`, { headers: { cookie: `${SESSION_COOKIE_NAME}=${token}` } }),
+        { params: { kind: 'rv', id: String(doc.id) } }
+      );
+      assert.strictEqual(res.status, 200);
+      assert.strictEqual(res.headers.get('content-type'), 'application/pdf');
+      assert.ok(res.headers.get('content-disposition')?.includes(`${doc.number}.pdf`));
+      assert.strictEqual(Buffer.from(await res.arrayBuffer()).subarray(0, 5).toString(), '%PDF-');
+    } finally {
+      await query(`DELETE FROM crm_admin_sessions WHERE user_id = $1`, [fin]);
+      await query(`UPDATE crm_admin_users SET is_active = false WHERE id = $1`, [fin]);
+    }
   });
 });

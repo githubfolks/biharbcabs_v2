@@ -123,7 +123,7 @@ Work through these in order. Each feature section below has the detail; this lis
 - [ ] **Double-booked rides:** `psql -d biharcabs_crm -f crm/scripts/check-double-booked-rides.sql` lists drivers holding rides less than 4 hours apart. Reassign one ride of each pair.
 - [ ] **Documents waiting for a place of supply:** migrations 27 and 28 fill in existing ride invoices, receipt vouchers, refund vouchers and cancellation charges. Those whose pickup city isn't listed, or whose customer GSTIN is malformed, are listed under **Finance → GST Documents Waiting for Place of Supply**. Choose each one's state there. List the cities first, so fewer need choosing.
 - [ ] **Excess GST to reclaim:** **Finance → Excess GST to Reclaim (Form GST RFD-01)** shows, by month, the 18% paid on advances later kept at 5%. Give it to the CA to file. Charges marked "unknown" have no GST recorded on their receipt voucher; check them with the CA.
-- [ ] **Older documents:** everything issued before migration 29 is `NOT_SENT` and is never sent automatically. If a customer asks for one, open `https://<crm host>/api/finance/gst-documents/<kind>/<id>/pdf` while signed in as finance (there is no download button yet), and send it.
+- [ ] **Older documents:** everything issued before migration 29 is `NOT_SENT` and is never sent automatically. If a customer asks for one, search its booking code under **Finance → GST Documents**, download the PDF and send it.
 
 ### 6. Tell drivers
 - [ ] **GST:** drivers now bear the 5% ride GST, and pay 18% GST on commission plus the tech fee (₹10 becomes ₹11.80). See [GST](#gst-per-biharcabs-ca).
@@ -141,7 +141,7 @@ Work through these in order. Each feature section below has the detail; this lis
 - [ ] Send a WhatsApp message to the business number and check it appears in the staff inbox.
 - [ ] **First GST documents:**
   - After the first trip settles, check its invoice number is `TI<FY>000001`, or the next one.
-  - Open its PDF (`/api/finance/gst-documents/TI/<invoice id>/pdf`, signed in as finance), and check the GSTIN, the place of supply and the CGST/SGST or IGST lines.
+  - Download its PDF under **Finance → GST Documents** (search the booking code), and check the GSTIN, the place of supply and the CGST/SGST or IGST lines.
 - [ ] **First document on WhatsApp outside the 24-hour window:** check the customer received the template **with the PDF attached**. The send format for a document header is the one part not confirmed against Meta's docs. If it fails, it shows under **Failed messages** after 3 tries, with Meta's error.
 
 ---
@@ -519,7 +519,8 @@ The rules are in `src/lib/place-of-supply.ts`.
   - **What they show:** BiharCabs' and the customer's details, the number and date, the place of supply, the SAC, the CGST + SGST or IGST lines, "Tax payable on reverse charge: No", and an "Authorised signatory" line. Refund and cancellation documents quote their receipt voucher.
   - **When they're refused:** while BiharCabs' GSTIN or the place of supply is missing.
   - **Amounts print as "Rs.":** the built-in PDF fonts have no rupee sign.
-  - **Download:** finance can download any document at `GET /api/finance/gst-documents/[kind]/[id]/pdf` (`ledger.view`). They are also sent to customers on WhatsApp (see below).
+  - **Download:** **Finance → GST Documents** lists the documents WhatsApp could not deliver. It finds any document by booking code or document number (exact match), and each has a **Download PDF** button. A PDF that can't be made yet shows the reason instead of downloading. API: `GET /api/finance/gst-documents?q=` and `GET /api/finance/gst-documents/[kind]/[id]/pdf` (both `ledger.view`).
+  - **Also sent:** customers get them on WhatsApp (see below).
 - **Confirmed by the CA:** an "Authorised signatory" line is enough as the signature, and "Tax payable on reverse charge: No" is correct for rides taxed under Section 9(5).
 - **Existing documents** are filled in by migrations 27 and 28, by the same rules.
 
@@ -538,9 +539,9 @@ Customers must be given their tax invoices, receipt vouchers, refund vouchers an
 - **Waiting:** a document waits, using no attempt, while BiharCabs' GSTIN or its place of supply is missing. It is sent once they are set.
 - **Failures:**
   - **Retries:** a failed upload or send is retried on later runs, up to `gst_document_delivery.max_attempts` (3).
-  - **After the last try:** the document is marked `FAILED` and listed **once** under **Failed messages**. Finance downloads the PDF and sends it by hand.
+  - **After the last try:** the document is marked `FAILED` and listed **once** under **Failed messages**. It also appears under **Finance → GST Documents**, where finance downloads the PDF and sends it by hand.
 - **Delivery status on each document:** `wa_delivery_status` is `PENDING`, `SENT`, `FAILED` or `NOT_SENT`. Each document also records `wa_sent_at`, `wa_attempts` and `wa_last_error`.
-- **Older documents:** documents issued before migration 29 are `NOT_SENT` and are never sent automatically (owner decision). Finance can download them.
+- **Older documents:** documents issued before migration 29 are `NOT_SENT` and are never sent automatically (owner decision). Finance can find and download them under **Finance → GST Documents**.
 - **Duplicates:** a document is locked while it is sent, so it is sent once. If the server stops after WhatsApp accepted it but before that was saved, the customer may get a second copy, never none.
 
 Apply `crm-design/29_gst_document_delivery.sql`, and submit the `bc_customer_gst_document` template (document header) to Meta. Tests:
