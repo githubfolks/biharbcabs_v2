@@ -2,6 +2,7 @@ import { PoolClient } from 'pg';
 import { query, withTransaction } from './db';
 import { createRefund } from './razorpay';
 import { nextDocumentNumber } from './gst-documents';
+import { inheritedTax, taxColumns } from './place-of-supply';
 
 /**
  * Advance refunds through Razorpay (see cancellations.ts for when a refund is due). A refund is claimed
@@ -69,7 +70,8 @@ export async function markRefundProcessed(client: PoolClient, refundId: number, 
   // Refund Voucher (per CA): the advance was covered by a Receipt Voucher, not a tax invoice, so the refund
   // voucher quotes the receipt voucher's number and date, and records the GST it reverses.
   const link = (await client.query(
-    `SELECT receipt_voucher_number, gst_amount, amount_paise, (paid_at AT TIME ZONE 'Asia/Kolkata')::date AS receipt_date
+    `SELECT receipt_voucher_number, gst_amount, amount_paise, (paid_at AT TIME ZONE 'Asia/Kolkata')::date AS receipt_date,
+            supplier_state_code, place_of_supply_code
      FROM crm_payment_links WHERE booking_id = $1 AND provider_payment_id = $2 ORDER BY id DESC LIMIT 1`,
     [r.booking_id, r.provider_payment_id]
   )).rows[0];
@@ -77,12 +79,16 @@ export async function markRefundProcessed(client: PoolClient, refundId: number, 
   const gstReversed = link?.gst_amount != null && Number(link.amount_paise) > 0
     ? Math.round((Number(link.gst_amount) * r.amount_paise / Number(link.amount_paise)) * 100) / 100
     : null;
+  // The same place of supply and split as the receipt voucher it reverses (Rule 51); waits if that has none yet.
+  const tax = gstReversed === null ? null : inheritedTax(link, gstReversed);
   await client.query(
     `UPDATE crm_refunds
      SET refund_voucher_number = $1, refund_voucher_date = (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata')::date,
-         receipt_voucher_number = $2, receipt_voucher_date = $3, gst_reversed = $4
+         receipt_voucher_number = $2, receipt_voucher_date = $3, gst_reversed = $4,
+         supplier_state_code = $6, place_of_supply_code = $7, place_of_supply_basis = $8,
+         cgst_amount = $9, sgst_amount = $10, igst_amount = $11
      WHERE id = $5`,
-    [voucherNumber, link?.receipt_voucher_number ?? null, link?.receipt_date ?? null, gstReversed, r.id]
+    [voucherNumber, link?.receipt_voucher_number ?? null, link?.receipt_date ?? null, gstReversed, r.id, ...taxColumns(tax)]
   );
   if (!link?.receipt_voucher_number) {
     console.error(`[Refund] Refund voucher ${voucherNumber} for ${b.booking_code} has no receipt voucher to quote; finance must link it by hand.`);

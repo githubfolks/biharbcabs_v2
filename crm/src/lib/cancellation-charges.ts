@@ -2,6 +2,7 @@ import { PoolClient } from 'pg';
 import { query, withTransaction } from './db';
 import { getSetting } from './settings';
 import { nextDocumentNumber } from './gst-documents';
+import { documentTaxSplit, inheritedTax, taxColumns } from './place-of-supply';
 
 /**
  * An advance kept on a late customer cancellation is a taxable cancellation charge (per BiharCabs' CA).
@@ -62,8 +63,16 @@ export async function issuePendingCancellationDocuments(): Promise<number> {
       // GST paid at receipt on the part of the advance kept (as refunds reverse it). Unknown when the
       // receipt voucher has no GST recorded: then nothing is claimed rather than a guessed amount.
       const link = c.receipt_voucher_number
-        ? (await client.query(`SELECT gst_amount, amount_paise FROM crm_payment_links WHERE receipt_voucher_number = $1`, [c.receipt_voucher_number])).rows[0]
+        ? (await client.query(`SELECT gst_amount, amount_paise, supplier_state_code, place_of_supply_code FROM crm_payment_links WHERE receipt_voucher_number = $1`, [c.receipt_voucher_number])).rows[0]
         : undefined;
+      // Place of supply: its receipt voucher's; worked out for the booking only when there is no voucher.
+      let tax = inheritedTax(link, gst);
+      if (!c.receipt_voucher_number) {
+        const bk = (await client.query(
+          `SELECT b.origin_city, c.gstin FROM crm_bookings b JOIN crm_customers c ON c.id = b.customer_id WHERE b.id = $1`, [c.booking_id]
+        )).rows[0];
+        tax = await documentTaxSplit(bk?.gstin ?? null, bk?.origin_city ?? null, gst);
+      }
       const advanceGstPaid = link?.gst_amount != null && Number(link.amount_paise) > 0
         ? Math.round((Number(link.gst_amount) * amount * 100 / Number(link.amount_paise)) * 100) / 100
         : null;
@@ -73,9 +82,11 @@ export async function issuePendingCancellationDocuments(): Promise<number> {
         `UPDATE crm_cancellation_charges
          SET status = 'ISSUED', gst_pct = $1, taxable_value = $2, gst_amount = $3, invoice_number = $4,
              invoice_date = (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata')::date,
-             advance_gst_paid = $6, excess_gst = $7, updated_at = CURRENT_TIMESTAMP
+             advance_gst_paid = $6, excess_gst = $7,
+             supplier_state_code = $8, place_of_supply_code = $9, place_of_supply_basis = $10,
+             cgst_amount = $11, sgst_amount = $12, igst_amount = $13, updated_at = CURRENT_TIMESTAMP
          WHERE id = $5`,
-        [pct, taxable, gst, number, id, advanceGstPaid, excessGst]
+        [pct, taxable, gst, number, id, advanceGstPaid, excessGst, ...taxColumns(tax)]
       );
       return true;
     });

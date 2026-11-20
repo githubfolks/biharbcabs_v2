@@ -76,62 +76,143 @@ export function splitGst(tax: number, supplierCode: string, placeOfSupplyCode: s
   return { supplyType: 'INTER_STATE', cgst: 0, sgst: 0, igst: total };
 }
 
-export interface InvoiceAwaitingPlaceOfSupply {
+/** Fields a GST document stores for its place of supply and split. */
+export interface DocumentTax {
+  supplierCode: string;
+  placeOfSupply: { code: string; basis: PlaceOfSupplyBasis | 'RECEIPT_VOUCHER' };
+  split: GstSplit;
+}
+
+/**
+ * Place of supply and split for a document about to be issued, or null when staff must choose the state.
+ * A configuration problem (BiharCabs' state or GSTIN) also returns null: issuing the document, and the
+ * money movement it belongs to, must not fail because of it.
+ */
+export async function documentTaxSplit(customerGstin: string | null, pickupCity: string | null, tax: number): Promise<DocumentTax | null> {
+  try {
+    const placeOfSupply = await resolvePlaceOfSupply({ customerGstin, pickupCity });
+    if (!placeOfSupply) return null;
+    const supplierCode = await supplierStateCode();
+    return { supplierCode, placeOfSupply, split: splitGst(tax, supplierCode, placeOfSupply.code) };
+  } catch (err: any) {
+    console.error('[GST] Place of supply not set:', err?.message);
+    return null;
+  }
+}
+
+/** A refund voucher or cancellation charge takes the place of supply of its receipt voucher. */
+export function inheritedTax(rv: { supplier_state_code?: string | null; place_of_supply_code?: string | null } | undefined, tax: number): DocumentTax | null {
+  if (!rv?.supplier_state_code || !rv.place_of_supply_code) return null;
+  return {
+    supplierCode: rv.supplier_state_code,
+    placeOfSupply: { code: rv.place_of_supply_code, basis: 'RECEIPT_VOUCHER' },
+    split: splitGst(tax, rv.supplier_state_code, rv.place_of_supply_code),
+  };
+}
+
+/** SQL values for a document's place-of-supply columns, in the order supplier, code, basis, cgst, sgst, igst. */
+export const taxColumns = (t: DocumentTax | null) => [
+  t?.supplierCode ?? null, t?.placeOfSupply.code ?? null, t?.placeOfSupply.basis ?? null,
+  t?.split.cgst ?? null, t?.split.sgst ?? null, t?.split.igst ?? null,
+];
+
+/** Documents staff can choose a place of supply for. Refund vouchers follow their receipt voucher. */
+export const SETTABLE_KINDS = ['TI', 'RV', 'CC'] as const;
+export type SettableKind = (typeof SETTABLE_KINDS)[number];
+
+/** Each kind: its table, number column and taxed amount. Fixed identifiers, never from input. */
+const KIND_SQL: Record<SettableKind, { table: string; number: string; tax: string; issued: string }> = {
+  TI: { table: 'crm_invoices', number: 'invoice_number', tax: 'tax_amount', issued: 'TRUE' },
+  RV: { table: 'crm_payment_links', number: 'receipt_voucher_number', tax: 'gst_amount', issued: 'd.receipt_voucher_number IS NOT NULL AND d.gst_amount IS NOT NULL' },
+  CC: { table: 'crm_cancellation_charges', number: 'invoice_number', tax: 'gst_amount', issued: "d.status = 'ISSUED' AND d.receipt_voucher_number IS NULL" },
+};
+
+export interface DocumentAwaitingPlaceOfSupply {
+  kind: SettableKind;
   id: number;
-  invoiceNumber: string;
+  number: string;
   bookingCode: string;
   pickupCity: string;
   /** The customer gave a GSTIN that is not well formed (otherwise the pickup city is not listed). */
   customerGstin: string | null;
-  totalAmount: number;
+  tax: number;
   createdAt: string;
 }
 
-/** Ride invoices whose place of supply staff must choose, oldest first. */
-export async function listInvoicesAwaitingPlaceOfSupply(): Promise<InvoiceAwaitingPlaceOfSupply[]> {
-  const r = await query(
-    `SELECT i.id, i.invoice_number, i.total_amount, i.created_at, b.booking_code, b.origin_city, NULLIF(TRIM(c.gstin), '') AS gstin
-     FROM crm_invoices i
-     JOIN crm_bookings b ON b.id = i.booking_id
-     JOIN crm_customers c ON c.id = b.customer_id
-     WHERE i.place_of_supply_code IS NULL
-     ORDER BY i.created_at, i.id LIMIT 200`
-  );
+/**
+ * Documents whose place of supply staff must choose, oldest first. A cancellation charge with a receipt
+ * voucher is not listed: it follows that voucher.
+ */
+export async function listDocumentsAwaitingPlaceOfSupply(): Promise<DocumentAwaitingPlaceOfSupply[]> {
+  const parts = SETTABLE_KINDS.map((kind) => {
+    const k = KIND_SQL[kind];
+    return `SELECT '${kind}' AS kind, d.id, d.${k.number} AS number, d.${k.tax} AS tax, d.created_at,
+                   b.booking_code, b.origin_city, NULLIF(TRIM(c.gstin), '') AS gstin
+            FROM ${k.table} d JOIN crm_bookings b ON b.id = d.booking_id JOIN crm_customers c ON c.id = b.customer_id
+            WHERE d.place_of_supply_code IS NULL AND ${k.issued}`;
+  });
+  const r = await query(`${parts.join(' UNION ALL ')} ORDER BY created_at, kind, id LIMIT 200`);
   return r.rows.map((x) => ({
-    id: Number(x.id), invoiceNumber: x.invoice_number, bookingCode: x.booking_code, pickupCity: x.origin_city,
-    customerGstin: x.gstin, totalAmount: Number(x.total_amount), createdAt: x.created_at,
+    kind: x.kind, id: Number(x.id), number: x.number, bookingCode: x.booking_code, pickupCity: x.origin_city,
+    customerGstin: x.gstin, tax: Number(x.tax), createdAt: x.created_at,
   }));
 }
 
 /**
- * Staff choose the place of supply for a waiting invoice, which sets its GST split. An invoice whose place
- * of supply is already set is never changed. With rememberCity, the pickup city is added to
+ * Staff choose the place of supply for a waiting document, which sets its GST split. A place of supply
+ * already set is never changed. For a receipt voucher, its refund vouchers and cancellation charges
+ * waiting for it get the same place of supply. With rememberCity, the pickup city is added to
  * place_of_supply_cities for later rides (a city already listed is never changed).
  */
-export async function setInvoicePlaceOfSupply(input: { invoiceId: number; stateCode: string; rememberCity: boolean; adminId: number }):
-  Promise<{ invoiceNumber: string; split: GstSplit; cityRemembered: boolean }> {
-  if (!Number.isSafeInteger(input.invoiceId) || input.invoiceId <= 0) throw new PlaceOfSupplyError('Invalid invoice', 400);
+export async function setDocumentPlaceOfSupply(input: { kind: string; id: number; stateCode: string; rememberCity: boolean; adminId: number }):
+  Promise<{ number: string; split: GstSplit; cityRemembered: boolean; documentsUpdated: number }> {
+  if (!(SETTABLE_KINDS as readonly string[]).includes(input.kind)) throw new PlaceOfSupplyError('Unknown document type', 400);
+  const kind = input.kind as SettableKind;
+  if (!Number.isSafeInteger(input.id) || input.id <= 0) throw new PlaceOfSupplyError('Invalid document', 400);
   if (!isGstStateCode(input.stateCode)) throw new PlaceOfSupplyError('Choose a valid state', 400);
   const supplierCode = await supplierStateCode();
+  const k = KIND_SQL[kind];
 
   const result = await withTransaction(async (client) => {
-    const inv = (await client.query(
-      `SELECT i.id, i.invoice_number, i.tax_amount, i.place_of_supply_code, b.origin_city
-       FROM crm_invoices i JOIN crm_bookings b ON b.id = i.booking_id WHERE i.id = $1 FOR UPDATE OF i`,
-      [input.invoiceId]
+    const doc = (await client.query(
+      `SELECT d.id, d.${k.number} AS number, d.${k.tax} AS tax, d.place_of_supply_code, b.origin_city
+       FROM ${k.table} d JOIN crm_bookings b ON b.id = d.booking_id WHERE d.id = $1 AND ${k.issued} FOR UPDATE OF d`,
+      [input.id]
     )).rows[0];
-    if (!inv) throw new PlaceOfSupplyError('Invoice not found', 404);
-    if (inv.place_of_supply_code) throw new PlaceOfSupplyError(`Invoice ${inv.invoice_number} already has its place of supply`, 409);
-    const split = splitGst(Number(inv.tax_amount), supplierCode, input.stateCode);
+    if (!doc) throw new PlaceOfSupplyError('Document not found', 404);
+    if (doc.place_of_supply_code) throw new PlaceOfSupplyError(`${doc.number} already has its place of supply`, 409);
+    const split = splitGst(Number(doc.tax), supplierCode, input.stateCode);
     await client.query(
-      `UPDATE crm_invoices
+      `UPDATE ${k.table}
        SET supplier_state_code = $2, place_of_supply_code = $3, place_of_supply_basis = 'STAFF',
            cgst_amount = $4, sgst_amount = $5, igst_amount = $6,
            place_of_supply_set_by = $7, place_of_supply_set_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
        WHERE id = $1`,
-      [inv.id, supplierCode, input.stateCode, split.cgst, split.sgst, split.igst, input.adminId]
+      [doc.id, supplierCode, input.stateCode, split.cgst, split.sgst, split.igst, input.adminId]
     );
-    return { invoiceNumber: inv.invoice_number as string, split, city: cityKey(inv.origin_city) };
+    let documentsUpdated = 1;
+    if (kind === 'RV') {
+      // Its refund vouchers and cancellation charges follow it.
+      for (const [table, tax, issued] of [
+        ['crm_refunds', 'gst_reversed', 'refund_voucher_number IS NOT NULL'],
+        ['crm_cancellation_charges', 'gst_amount', "status = 'ISSUED'"],
+      ]) {
+        const followers = (await client.query(
+          `SELECT id, ${tax} AS tax FROM ${table} WHERE receipt_voucher_number = $1 AND place_of_supply_code IS NULL AND ${tax} IS NOT NULL AND ${issued} FOR UPDATE`,
+          [doc.number]
+        )).rows;
+        for (const f of followers) {
+          const s = splitGst(Number(f.tax), supplierCode, input.stateCode);
+          await client.query(
+            `UPDATE ${table} SET supplier_state_code = $2, place_of_supply_code = $3, place_of_supply_basis = 'RECEIPT_VOUCHER',
+               cgst_amount = $4, sgst_amount = $5, igst_amount = $6, updated_at = CURRENT_TIMESTAMP WHERE id = $1`,
+            [f.id, supplierCode, input.stateCode, s.cgst, s.sgst, s.igst]
+          );
+          documentsUpdated++;
+        }
+      }
+    }
+    return { number: doc.number as string, split, city: cityKey(doc.origin_city), documentsUpdated };
   });
 
   let cityRemembered = false;
@@ -145,5 +226,5 @@ export async function setInvoicePlaceOfSupply(input: { invoiceId: number; stateC
     cityRemembered = (r.rowCount ?? 0) > 0;
     invalidateSettingsCache();
   }
-  return { invoiceNumber: result.invoiceNumber, split: result.split, cityRemembered };
+  return { number: result.number, split: result.split, cityRemembered, documentsUpdated: result.documentsUpdated };
 }

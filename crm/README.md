@@ -86,7 +86,7 @@ Work through these in order. Each feature section below has the detail; this lis
 ### 1. Database (native PostgreSQL)
 - [ ] **Back up first:** `pg_dump -Fc biharcabs_crm > biharcabs_crm_$(date +%F).dump`
 - [ ] **See which migrations have run:** `SELECT version FROM crm_schema_migrations ORDER BY version;` (migrations 08 onwards record themselves).
-- [ ] **Apply the missing ones in order**, up to **27**: `psql -v ON_ERROR_STOP=1 -d biharcabs_crm -f crm-design/NN_name.sql`. Each one from 08 on is safe to run again.
+- [ ] **Apply the missing ones in order**, up to **28**: `psql -v ON_ERROR_STOP=1 -d biharcabs_crm -f crm-design/NN_name.sql`. Each one from 08 on is safe to run again.
 
 ### 2. Environment and code
 `docker-compose.yml` passes these to the `crm` container from the root `.env` (never in git). After changing `.env`, recreate the container.
@@ -489,12 +489,25 @@ The rules are in `src/lib/place-of-supply.ts`.
   - **Registered customer:** the state in their GSTIN (its first two digits).
   - **Anyone else:** the state where the passenger is picked up, looked up in the `place_of_supply_cities` setting (city in lowercase → GST state code).
 - **BiharCabs' state:** from its GSTIN once set, otherwise `company_billing_info.state_code` (10, Bihar). If they disagree, invoices wait rather than guess.
-- **Nothing is guessed.** A pickup city not in the list, or a malformed customer GSTIN, still lets the trip settle and the invoice be numbered. The invoice then waits under **Finance → Invoices Waiting for Place of Supply**, where finance chooses the state (`invoices.manage`: super admin and finance). They can also tick **Remember** to add the city for later rides. A city already listed is never changed, and an invoice's place of supply is never changed once set.
+- **Every GST document carries it** (migration 28):
+  - **Ride invoice (`TI`) and receipt voucher (`RV`):** worked out when issued.
+  - **Refund voucher (`RF`):** takes the place of supply of the receipt voucher it reverses.
+  - **Cancellation charge (`CC`):** takes its receipt voucher's; it's worked out on its own only when there is no receipt voucher.
+  - **Receipt vouchers** also record the rate they were issued at (`gst_pct`, 18%), so they split as 9% + 9% or 18% IGST.
+- **Nothing is guessed.** A pickup city not in the list, or a malformed customer GSTIN, still lets the money move and the document be numbered.
+  - **The document waits** under **Finance → GST Documents Waiting for Place of Supply**. Finance chooses the state there (`gst_documents.manage`: super admin and finance), and can tick **Remember** to add the city for later rides.
+  - **A receipt voucher's refund and cancellation documents follow it** when its state is chosen.
+  - **Nothing is overwritten:** a city already listed, or a place of supply once set, is never changed.
 - **State codes** come from the GST e-invoice portal's master list (`src/lib/gst-states.ts`).
-- **The invoice PDF** shows the place of supply, the SAC code and the CGST/SGST or IGST lines. It is refused while BiharCabs' GSTIN or the place of supply is missing.
-- **Existing invoices** are filled in by migration 27, by the same rules.
+- **PDFs** (`src/lib/gst-pdf.ts`): tax invoice (Rule 46), receipt voucher (Rule 50), refund voucher (Rule 51) and cancellation-charge tax invoice.
+  - **What they show:** BiharCabs' and the customer's details, the number and date, the place of supply, the SAC, the CGST + SGST or IGST lines, "Tax payable on reverse charge: No", and an "Authorised signatory" line. Refund and cancellation documents quote their receipt voucher.
+  - **When they're refused:** while BiharCabs' GSTIN or the place of supply is missing.
+  - **Amounts print as "Rs.":** the built-in PDF fonts have no rupee sign.
+  - **Download:** finance can download any document at `GET /api/finance/gst-documents/[kind]/[id]/pdf` (`ledger.view`). Sending them to customers on WhatsApp comes next.
+- **Confirmed by the CA:** an "Authorised signatory" line is enough as the signature, and "Tax payable on reverse charge: No" is correct for rides taxed under Section 9(5).
+- **Existing documents** are filled in by migrations 27 and 28, by the same rules.
 
-Apply `crm-design/27_gst_place_of_supply.sql`. Tests:
+Apply `crm-design/27_gst_place_of_supply.sql` and `crm-design/28_gst_voucher_place_of_supply.sql`. Tests:
 ```bash
-DATABASE_URL=postgresql://localhost/biharcabs_crm_test npx tsx --test src/tests/place-of-supply.integration.ts
+DATABASE_URL=postgresql://localhost/biharcabs_crm_test npx tsx --test src/tests/place-of-supply.integration.ts src/tests/gst-document-pdfs.integration.ts
 ```

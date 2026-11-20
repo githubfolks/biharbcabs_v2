@@ -12,6 +12,7 @@ import { MIN_WAIVER_REASON_LENGTH, WAIVABLE_STATUSES } from './advance-rules';
 import { applyDuesPayment } from './driver-dues';
 import { markRefundProcessed } from './refunds';
 import { financialYearCode, nextDocumentNumber } from './gst-documents';
+import { documentTaxSplit, taxColumns } from './place-of-supply';
 
 /**
  * Customer advance: which rides need it online, the Razorpay link for it, and the webhook that
@@ -155,7 +156,7 @@ async function handlePaid(client: PoolClient, event: any, after: AfterCommit): P
   if (link.purpose === 'DRIVER_DUES') return handleDuesPaid(client, link, payment, matches, after);
 
   const bookingRes = await client.query(
-    `SELECT b.*, c.phone AS customer_phone FROM crm_bookings b JOIN crm_customers c ON c.id = b.customer_id
+    `SELECT b.*, c.phone AS customer_phone, c.gstin AS customer_gstin FROM crm_bookings b JOIN crm_customers c ON c.id = b.customer_id
      WHERE b.id = $1 FOR UPDATE OF b`,
     [link.booking_id]
   );
@@ -174,13 +175,18 @@ async function handlePaid(client: PoolClient, event: any, after: AfterCommit): P
   const amount = Number(link.amount_paise) / 100;
   // GST is due on an advance when it is received (18%: rate not determinable at receipt, per CA). The advance
   // includes it. A consecutive receipt voucher number is recorded for the receipt.
-  const advanceGst = gstIncluded(amount, (await getRevenueProtectionPolicy()).advance_gst_pct);
+  const advanceGstPct = Number((await getRevenueProtectionPolicy()).advance_gst_pct);
+  const advanceGst = gstIncluded(amount, advanceGstPct);
   const voucherNumber = await nextDocumentNumber(client, 'RV');
+  // Place of supply and CGST/SGST or IGST (Rule 50, per CA); unknown ones wait for finance.
+  const tax = await documentTaxSplit(b.customer_gstin, b.origin_city, advanceGst);
   await client.query(
     `UPDATE crm_payment_links
-     SET status = 'PAID', provider_payment_id = $1, paid_at = CURRENT_TIMESTAMP, gst_amount = $3, receipt_voucher_number = $4, updated_at = CURRENT_TIMESTAMP
+     SET status = 'PAID', provider_payment_id = $1, paid_at = CURRENT_TIMESTAMP, gst_amount = $3, receipt_voucher_number = $4,
+         gst_pct = $5, supplier_state_code = $6, place_of_supply_code = $7, place_of_supply_basis = $8,
+         cgst_amount = $9, sgst_amount = $10, igst_amount = $11, updated_at = CURRENT_TIMESTAMP
      WHERE id = $2`,
-    [payment.id, link.id, advanceGst, voucherNumber]
+    [payment.id, link.id, advanceGst, voucherNumber, advanceGstPct, ...taxColumns(tax)]
   );
   await client.query(`UPDATE crm_bookings SET advance_gst_amount = advance_gst_amount + $1 WHERE id = $2`, [advanceGst, b.id]);
   await client.query(

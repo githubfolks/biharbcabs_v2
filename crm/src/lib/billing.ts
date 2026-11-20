@@ -2,13 +2,9 @@ import { query, withTransaction } from './db';
 import { getCompanyBillingInfo, getRevenueProtectionPolicy, getSplitRules } from './settings';
 import { gstIncluded, round2 } from './fare-split';
 import { nextDocumentNumber } from './gst-documents';
-import { resolvePlaceOfSupply, splitGst, supplierStateCode } from './place-of-supply';
-import { stateCodeFromGstin, stateLabel } from './gst-states';
+import { documentTaxSplit, taxColumns } from './place-of-supply';
 import { creditLimitFor } from './driver-dues';
 import { PoolClient } from 'pg';
-import PDFDocument from 'pdfkit';
-import fs from 'fs';
-import path from 'path';
 
 export interface FinalBillingInput {
   bookingId: number;
@@ -39,20 +35,6 @@ export interface BillingCalculationResult {
   securityReserveDeducted?: number;
   newSecurityReserveBalance?: number;
   streakBonusAwarded?: number;
-}
-
-/** Place of supply and GST split for a ride invoice, or null when staff must choose the state. */
-async function taxSplitFor(customerGstin: string | null, pickupCity: string | null, tax: number) {
-  try {
-    const placeOfSupply = await resolvePlaceOfSupply({ customerGstin, pickupCity });
-    if (!placeOfSupply) return null;
-    const supplierCode = await supplierStateCode();
-    return { supplierCode, placeOfSupply, split: splitGst(tax, supplierCode, placeOfSupply.code) };
-  } catch (err: any) {
-    // A configuration problem (BiharCabs' state or GSTIN) must not stop the trip being settled.
-    console.error('[Billing] Place of supply not set:', err?.message);
-    return null;
-  }
 }
 
 /**
@@ -266,7 +248,7 @@ export async function completeTripAndSettle(
     // Place of supply and CGST/SGST or IGST (Rule 46; Section 12(9) IGST Act). When it cannot be known
     // (unlisted pickup city, malformed customer GSTIN, BiharCabs' state not configured), the trip is still
     // settled and the invoice numbered; the invoice waits for staff to choose the state.
-    const tax = await taxSplitFor(b.customer_gstin, b.origin_city, invoiceTax);
+    const tax = await documentTaxSplit(b.customer_gstin, b.origin_city, invoiceTax);
     await client.query(
       `INSERT INTO crm_invoices
        (invoice_number, booking_id, line_items, subtotal, tax_amount, total_amount, created_at,
@@ -287,8 +269,7 @@ export async function completeTripAndSettle(
            updated_at = CURRENT_TIMESTAMP`,
       // subtotal = taxable value of the ride (excludes tolls), so subtotal + tax + tolls = total.
       [invoiceNumber, input.bookingId, JSON.stringify(lineItems), round2(totalCustomerPayable - tollParking - invoiceTax), invoiceTax, totalCustomerPayable,
-        tax?.supplierCode ?? null, tax?.placeOfSupply.code ?? null, tax?.placeOfSupply.basis ?? null,
-        tax?.split.cgst ?? null, tax?.split.sgst ?? null, tax?.split.igst ?? null]
+        ...taxColumns(tax)]
     );
 
     return {
@@ -312,135 +293,6 @@ export async function completeTripAndSettle(
       newSecurityReserveBalance: newReserveBalance,
       streakBonusAwarded: streakBonus,
     };
-  });
-}
-
-/**
- * The tax lines a ride invoice shows (Rule 46, CGST Rules, per CA): CGST + SGST at half the rate each
- * within BiharCabs' state, otherwise IGST at the full rate. Throws when the place of supply is not set yet.
- */
-export function invoiceTaxLines(
-  inv: { supplier_state_code?: string | null; place_of_supply_code?: string | null; cgst_amount?: any; sgst_amount?: any; igst_amount?: any },
-  ratePct: number
-) {
-  if (!inv.place_of_supply_code || !inv.supplier_state_code) throw new Error('The place of supply is not set yet; choose it on the Finance page.');
-  const half = round2(ratePct / 2);
-  return inv.supplier_state_code !== inv.place_of_supply_code
-    ? [{ label: `IGST @ ${ratePct}%`, amount: Number(inv.igst_amount) }]
-    : [
-        { label: `CGST @ ${half}%`, amount: Number(inv.cgst_amount) },
-        { label: `SGST @ ${half}%`, amount: Number(inv.sgst_amount) },
-      ];
-}
-
-/**
- * Generate a PDF invoice file using PDFKit. Refused while BiharCabs' GSTIN or the invoice's place of
- * supply is missing: a tax invoice without them is not valid.
- */
-export async function generateInvoicePdf(
-  invoiceNumber: string,
-  outDir = '/tmp'
-): Promise<string> {
-  const company = await getCompanyBillingInfo();
-
-  const invoiceRes = await query(
-    `SELECT i.*, b.booking_code, b.origin_city, b.destination_city, b.pickup_date, b.trip_type,
-            c.full_name AS customer_name, c.phone AS customer_phone, c.gstin AS customer_gstin
-     FROM crm_invoices i
-     JOIN crm_bookings b ON b.id = i.booking_id
-     JOIN crm_customers c ON c.id = b.customer_id
-     WHERE i.invoice_number = $1`,
-    [invoiceNumber]
-  );
-
-  if (invoiceRes.rows.length === 0) {
-    throw new Error(`Invoice ${invoiceNumber} not found.`);
-  }
-
-  const inv = invoiceRes.rows[0];
-  if (!stateCodeFromGstin(company.gstin)) throw new Error('BiharCabs\' GSTIN is not set (company_billing_info.gstin); a tax invoice needs it.');
-  const taxLines = invoiceTaxLines(inv, Number(company.tax_percentage));
-  const pdfPath = path.join(outDir, `${invoiceNumber}.pdf`);
-
-  return new Promise((resolve, reject) => {
-    const doc = new PDFDocument({ margin: 40, size: 'A4' });
-    const stream = fs.createWriteStream(pdfPath);
-
-    doc.pipe(stream);
-
-    // Header
-    doc.fillColor('#ea580c').fontSize(22).font('Helvetica-Bold').text(company.trade_name || 'BiharCabs.com');
-    doc.fillColor('#333333').fontSize(9).font('Helvetica').text(company.legal_name || 'Bihar Cabs');
-    doc.text(company.address || 'Patna, Bihar, India');
-    doc.text(`Phone: ${company.phone} | Email: ${company.email}`);
-    doc.text(`GSTIN: ${company.gstin}`);
-
-    doc.moveDown(1);
-    doc.strokeColor('#e5e7eb').lineWidth(1).moveTo(40, doc.y).lineTo(550, doc.y).stroke();
-    doc.moveDown(1);
-
-    // Invoice Meta & Customer Details
-    const metaY = doc.y;
-    doc.font('Helvetica-Bold').fontSize(12).text(`TAX INVOICE: ${inv.invoice_number}`);
-    doc.font('Helvetica').fontSize(9).text(`Booking Code: #${inv.booking_code}`);
-    doc.text(`Date: ${new Date(inv.created_at).toLocaleDateString('en-IN')}`);
-    doc.text(`Trip: ${inv.origin_city} → ${inv.destination_city || 'Local'} (${inv.trip_type})`);
-    doc.text(`Place of supply: ${stateLabel(inv.place_of_supply_code)}`);
-    if (company.hsn_sac) doc.text(`SAC: ${company.hsn_sac}`);
-
-    doc.font('Helvetica-Bold').fontSize(10).text('Billed To:', 320, metaY);
-    doc.font('Helvetica').fontSize(9).text(inv.customer_name || 'Valued Customer', 320);
-    doc.text(`Phone: ${inv.customer_phone}`, 320);
-    if (inv.customer_gstin) doc.text(`GSTIN: ${inv.customer_gstin}`, 320);
-
-    doc.moveDown(2);
-
-    // Line items table
-    const tableTop = doc.y + 15;
-    doc.font('Helvetica-Bold').fontSize(10);
-    doc.text('Description', 40, tableTop);
-    doc.text('Amount (₹)', 480, tableTop, { align: 'right' });
-    doc.strokeColor('#cccccc').lineWidth(0.5).moveTo(40, tableTop + 14).lineTo(550, tableTop + 14).stroke();
-
-    let itemY = tableTop + 22;
-    const items = inv.line_items || [];
-    doc.font('Helvetica').fontSize(9);
-
-    for (const item of items) {
-      doc.text(item.description, 40, itemY);
-      doc.text(`₹${Number(item.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 480, itemY, { align: 'right' });
-      itemY += 20;
-    }
-
-    doc.strokeColor('#cccccc').lineWidth(0.5).moveTo(40, itemY).lineTo(550, itemY).stroke();
-    itemY += 10;
-
-    // Tax breakdown (line amounts above include GST)
-    const money = (n: number) => `₹${Number(n).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
-    doc.font('Helvetica').fontSize(9);
-    doc.text('Taxable value:', 350, itemY);
-    doc.text(money(inv.subtotal), 480, itemY, { align: 'right' });
-    itemY += 15;
-    for (const line of taxLines) {
-      doc.text(`${line.label} (included):`, 350, itemY);
-      doc.text(money(line.amount), 480, itemY, { align: 'right' });
-      itemY += 15;
-    }
-    itemY += 3;
-
-    // Totals
-    doc.font('Helvetica-Bold').fontSize(11);
-    doc.text('Total Amount:', 350, itemY);
-    doc.text(`₹${Number(inv.total_amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 480, itemY, { align: 'right' });
-
-    // Footer
-    doc.fontSize(8).font('Helvetica-Oblique').fillColor('#666666')
-      .text('Thank you for choosing BiharCabs! For round-the-clock booking assistance, WhatsApp +91 7070992170.', 40, 750, { align: 'center' });
-
-    doc.end();
-
-    stream.on('finish', () => resolve(pdfPath));
-    stream.on('error', (err) => reject(err));
   });
 }
 
