@@ -162,6 +162,19 @@ BiharCabs booking {{1}}: {{2}}
 - {{1}}: booking code
 - {{2}}: update (advance received, not confirmed, confirmed without advance)
 
+## bc_customer_gst_document
+**Settings key:** `customer_gst_document` · **Category:** UTILITY · **Header:** Document
+
+Add a **Document** header. Meta asks for a sample: upload any sample PDF. Each send attaches the customer's own PDF (tax invoice, receipt voucher, refund voucher or cancellation charge invoice).
+
+```
+Your BiharCabs {{1}} {{2}} for booking {{3}} is attached.
+```
+
+- {{1}}: document type (e.g. `tax invoice`, `receipt voucher`)
+- {{2}}: document number (e.g. `TI2627000001`)
+- {{3}}: booking code (e.g. `#BC-K536KL`)
+
 ## bc_admin_alert  
 **Settings key:** `admin_alert` · **Category:** UTILITY
 

@@ -23,6 +23,8 @@ export interface TemplateDef {
   /** What each {{n}} holds, in order (for the Meta submission and for checking callers). */
   params: string[];
   buttons?: TemplateButton[];
+  /** A DOCUMENT header: the file is supplied with each send (notify's headerDocument). */
+  header?: 'DOCUMENT';
 }
 
 export const TEMPLATE_DEFS = {
@@ -109,6 +111,13 @@ export const TEMPLATE_DEFS = {
     category: 'UTILITY',
     body: 'BiharCabs booking {{1}}: {{2}}',
     params: ['booking code', 'update (advance received, not confirmed, confirmed without advance)'],
+  },
+  customer_gst_document: {
+    title: 'GST document (customer)',
+    category: 'UTILITY',
+    header: 'DOCUMENT',
+    body: 'Your BiharCabs {{1}} {{2}} for booking {{3}} is attached.',
+    params: ['document type', 'document number', 'booking code'],
   },
   admin_alert: {
     title: 'Admin alert',

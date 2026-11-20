@@ -3,6 +3,7 @@ import { purgeOldLoginAttempts } from './login-security';
 import { issuePendingCancellationDocuments } from './cancellation-charges';
 import { reconcileStalePaymentLinks } from './advance-payments';
 import { runFailedMessageDigest } from './notification-failures';
+import { sendPendingGstDocuments } from './gst-delivery';
 import {
   getDriverWakeupCheckHours,
   getWakeupUnconfirmedAlertMinutes,
@@ -26,6 +27,8 @@ export interface FrequentCronResult {
   paymentLinksClosed: number;
   paymentLinkPaidAlerts: number;
   failedMessagesReported: number;
+  gstDocumentsSent: number;
+  gstDocumentsFailed: number;
 }
 
 export interface DailyCronResult {
@@ -315,6 +318,11 @@ export async function executeFrequentCronTasks(): Promise<FrequentCronResult> {
     console.error('[Cron] Payment link reconciliation failed:', err?.message);
     return { checked: 0, closed: 0, paidAlerts: 0 };
   });
+  // GST documents to customers (per CA); a WhatsApp or Meta problem must not stop the other jobs.
+  const gstDocs = await sendPendingGstDocuments().catch((err) => {
+    console.error('[Cron] GST document delivery failed:', err?.message);
+    return { sent: 0, failed: 0, retrying: 0, waitingForGstin: false };
+  });
   // Last, so it reports messages that failed in the jobs above.
   const failedMessages = await runFailedMessageDigest().catch((err) => {
     console.error('[Cron] Failed-message summary failed:', err?.message);
@@ -332,6 +340,8 @@ export async function executeFrequentCronTasks(): Promise<FrequentCronResult> {
     paymentLinksClosed: links.closed,
     paymentLinkPaidAlerts: links.paidAlerts,
     failedMessagesReported: failedMessages,
+    gstDocumentsSent: gstDocs.sent,
+    gstDocumentsFailed: gstDocs.failed,
   };
 }
 

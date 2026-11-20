@@ -1,5 +1,5 @@
 import { query } from './db';
-import { SendMessageResult, sendWhatsAppTemplate, sendWhatsAppText } from './whatsapp';
+import { SendMessageResult, TemplateHeaderDocument, sendWhatsAppTemplate, sendWhatsAppText } from './whatsapp';
 import { getAdminContacts, getWhatsAppTemplates } from './settings';
 import { TEMPLATE_DEFS, TemplateDef, TemplateKey } from './wa-templates';
 
@@ -47,6 +47,14 @@ export interface NotifyOptions {
   ref?: number;
   /** The rich message to send instead while the service window is open. */
   freeform?: () => Promise<SendMessageResult>;
+  /** The file for a template with a DOCUMENT header (uploaded media). */
+  headerDocument?: TemplateHeaderDocument;
+  /**
+   * Record a failure in crm_notification_failures (default). A caller that retries the send itself
+   * passes false and records only its final failure (recordNotificationFailure), so one undelivered
+   * message is reported once.
+   */
+  recordFailure?: boolean;
 }
 
 export interface NotifyResult extends SendMessageResult {
@@ -66,7 +74,7 @@ export function bookingCodeIn(key: TemplateKey, params: unknown[]): string | nul
  * message was, who it was for and the booking code are kept, never the params: some carry the trip OTP.
  * Never throws, so recording a failure cannot change what the caller sees.
  */
-async function recordFailure(phone: string, key: TemplateKey, params: unknown[], channel: NotifyResult['channel'] | null, error: unknown) {
+export async function recordNotificationFailure(phone: string, key: TemplateKey, params: unknown[], channel: NotifyResult['channel'] | null, error: unknown) {
   try {
     await query(
       `INSERT INTO crm_notification_failures (template_key, channel, phone, booking_code, error) VALUES ($1, $2, $3, $4, $5)`,
@@ -87,10 +95,10 @@ export async function notify(phone: string, key: TemplateKey, opts: NotifyOption
   try {
     result = await send(phone, key, opts, attempt);
   } catch (err: any) {
-    await recordFailure(phone, key, opts.params, attempt.channel, err?.message || err);
+    if (opts.recordFailure !== false) await recordNotificationFailure(phone, key, opts.params, attempt.channel, err?.message || err);
     throw err;
   }
-  if (!result.success) await recordFailure(phone, key, opts.params, result.channel, result.error);
+  if (!result.success && opts.recordFailure !== false) await recordNotificationFailure(phone, key, opts.params, result.channel, result.error);
   return result;
 }
 
@@ -100,6 +108,7 @@ async function send(phone: string, key: TemplateKey, opts: NotifyOptions, attemp
     throw new Error(`notify(${key}): expected ${def.params.length} params, got ${opts.params.length}`);
   }
   if (def.buttons?.length && !opts.ref) throw new Error(`notify(${key}): a ref is required for its buttons`);
+  if (def.header === 'DOCUMENT' && !opts.headerDocument) throw new Error(`notify(${key}): a document is required for its header`);
 
   if (opts.freeform && (await isServiceWindowOpen(phone))) {
     attempt.channel = 'FREEFORM';
@@ -117,7 +126,8 @@ async function send(phone: string, key: TemplateKey, opts: NotifyOptions, attemp
     phone,
     name,
     names.language || 'en',
-    opts.params.map((p) => ({ type: 'text' as const, text: templateParam(p) }))
+    opts.params.map((p) => ({ type: 'text' as const, text: templateParam(p) })),
+    def.header === 'DOCUMENT' ? opts.headerDocument : undefined
   );
   if (result.success && result.messageId && def.buttons?.length) {
     await query(
