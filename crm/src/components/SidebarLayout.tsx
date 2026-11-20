@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { 
-  Car, MessageSquare, Users, Wallet, Sliders, LogOut, User, Database, ChevronRight 
+  Car, MessageSquare, Users, Wallet, Sliders, LogOut, User, Database, ChevronRight, Menu, X,
 } from 'lucide-react';
 import { Permission, hasPermission } from '@/lib/permissions';
 
@@ -15,6 +15,26 @@ interface SidebarLayoutProps {
 export default function SidebarLayout({ children }: SidebarLayoutProps) {
   const pathname = usePathname();
   const [user, setUser] = useState<{ full_name: string; role: string; email: string } | null>(null);
+  // Below lg the sidebar is a slide-in menu; from lg up it is always shown and this has no effect.
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  // Close the menu when a page is chosen.
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [pathname]);
+
+  // While the menu is open: Escape closes it, and the page behind does not scroll.
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setMenuOpen(false);
+    document.addEventListener('keydown', onKey);
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.body.style.overflow = overflow;
+    };
+  }, [menuOpen]);
 
   useEffect(() => {
     if (pathname === '/login') return;
@@ -88,11 +108,19 @@ export default function SidebarLayout({ children }: SidebarLayoutProps) {
 
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden font-sans">
-      {/* Left Sidebar */}
-      <aside className="w-64 bg-slate-900 border-r border-slate-800 flex flex-col justify-between flex-shrink-0 z-30">
+      {/* Below lg: dims the page while the menu is open; tapping it closes the menu. */}
+      {menuOpen && (
+        <div className="fixed inset-0 z-30 bg-slate-900/50 lg:hidden" onClick={() => setMenuOpen(false)} aria-hidden="true" />
+      )}
+
+      {/* Left Sidebar: a slide-in menu below lg, always shown from lg up */}
+      <aside
+        id="crm-sidebar"
+        className={`fixed inset-y-0 left-0 z-40 w-64 max-w-[85vw] bg-slate-900 border-r border-slate-800 flex flex-col justify-between overflow-y-auto transition-transform duration-200 lg:static lg:z-30 lg:max-w-none lg:translate-x-0 lg:flex-shrink-0 ${menuOpen ? 'translate-x-0' : '-translate-x-full'}`}
+      >
         <div>
           {/* Brand Header */}
-          <div className="h-16 px-6 flex items-center border-b border-slate-800">
+          <div className="h-16 px-6 flex items-center justify-between border-b border-slate-800">
             <Link href="/" className="flex flex-col">
               <span className="text-xl font-black tracking-tight text-orange-500">
                 BIHAR<span className="text-white">CABS</span>
@@ -101,6 +129,13 @@ export default function SidebarLayout({ children }: SidebarLayoutProps) {
                 Operational CRM
               </span>
             </Link>
+            <button
+              onClick={() => setMenuOpen(false)}
+              className="lg:hidden p-1.5 -mr-2 text-slate-400 hover:text-white rounded-lg"
+              aria-label="Close menu"
+            >
+              <X className="h-5 w-5" />
+            </button>
           </div>
 
           {/* Navigation Links */}
@@ -179,16 +214,25 @@ export default function SidebarLayout({ children }: SidebarLayoutProps) {
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Top Header Bar */}
-        <header className="h-14 bg-white border-b border-slate-200 flex items-center justify-between px-6 flex-shrink-0">
-          <div className="flex items-center space-x-2 text-sm text-slate-600">
-            <span className="font-semibold text-slate-900">BiharCabs Operations</span>
-            <ChevronRight className="h-3.5 w-3.5 text-slate-400" />
-            <span className="capitalize text-slate-500">
+        <header className="h-14 bg-white border-b border-slate-200 flex items-center justify-between px-3 sm:px-6 flex-shrink-0 gap-2">
+          <div className="flex items-center space-x-2 text-sm text-slate-600 min-w-0">
+            <button
+              onClick={() => setMenuOpen(true)}
+              className="lg:hidden p-2 -ml-1 text-slate-700 hover:bg-slate-100 rounded-lg flex-shrink-0"
+              aria-label="Open menu"
+              aria-controls="crm-sidebar"
+              aria-expanded={menuOpen}
+            >
+              <Menu className="h-5 w-5" />
+            </button>
+            <span className="font-semibold text-slate-900 hidden sm:inline">BiharCabs Operations</span>
+            <ChevronRight className="h-3.5 w-3.5 text-slate-400 hidden sm:inline" />
+            <span className="capitalize text-slate-500 truncate">
               {pathname === '/' ? 'Live Dispatch' : pathname.replace('/', '').replace(/-/g, ' ')}
             </span>
           </div>
 
-          <div className="flex items-center space-x-3">
+          <div className="hidden md:flex items-center space-x-3">
             <div className="flex items-center space-x-2 text-xs text-slate-500 bg-slate-50 px-3 py-1.5 rounded-full border border-slate-200">
               <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
               <span>WhatsApp Cloud API Active</span>
@@ -197,7 +241,7 @@ export default function SidebarLayout({ children }: SidebarLayoutProps) {
         </header>
 
         {/* Scrollable Body Content */}
-        <main className="flex-1 overflow-y-auto p-6 md:p-8">
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8">
           <div className="max-w-7xl mx-auto">
             {children}
           </div>
