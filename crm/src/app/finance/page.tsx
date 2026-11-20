@@ -13,6 +13,8 @@ export default function FinancePage() {
   const [summary, setSummary] = useState<any>({
     totalCommissionRevenue: 0,
     totalGstStatutory: 0,
+    totalRideGst: 0,
+    totalCommissionGst: 0,
     totalTechFees: 0,
     totalSecurityReserveHeld: 0,
     totalDriverDuesOutstanding: 0,
@@ -228,16 +230,20 @@ export default function FinancePage() {
           <p className="text-[10px] text-slate-400 mt-1">Net facilitation fees earned</p>
         </div>
 
-        {/* Card 2: 18% Statutory GST */}
+        {/* Card 2: GST on rides: 5% ride GST (Sec 9(5)) + 18% on commission and tech fee */}
         <div className="min-w-0 bg-white p-4 rounded-xl border border-blue-200 shadow-sm bg-blue-50/20">
           <div className="flex items-center justify-between text-blue-800 text-xs font-semibold uppercase">
-            <span>Statutory 18% GST</span>
+            <span>GST on Rides</span>
             <Percent className="h-4 w-4 text-blue-600" />
           </div>
           <div className="mt-2 text-xl font-bold font-mono tabular-nums [overflow-wrap:anywhere] text-blue-900">
             ₹{Number(summary.totalGstStatutory).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
           </div>
-          <p className="text-[10px] text-blue-600/80 mt-1">CGST Sec 9(5) collected</p>
+          <p className="text-[10px] text-blue-600/80 mt-1">
+            5% ride GST (Sec 9(5)) ₹{Number(summary.totalRideGst).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+            {' '}+ 18% on commission &amp; fee ₹{Number(summary.totalCommissionGst).toLocaleString('en-IN', { minimumFractionDigits: 2 })}.
+            Assigned, ongoing and completed rides.
+          </p>
         </div>
 
         {/* Card 3: Tech Fee */}

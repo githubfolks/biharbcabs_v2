@@ -37,6 +37,10 @@ export async function GET(req: NextRequest) {
       SELECT
         COALESCE(SUM(b.commission_amount), 0) AS total_commission_revenue,
         COALESCE(SUM(b.gst_amount + b.ride_gst_amount), 0) AS total_gst_statutory_collected,
+        -- Its two parts: 5% GST on the ride fare (BiharCabs liable, CGST Sec 9(5)) and 18% GST on the
+        -- commission + tech fee charged to drivers.
+        COALESCE(SUM(b.ride_gst_amount), 0) AS total_ride_gst,
+        COALESCE(SUM(b.gst_amount), 0) AS total_commission_gst,
         COALESCE(SUM(b.tech_fee_amount), 0) AS total_tech_fees_collected,
         COALESCE((SELECT SUM(security_reserve_balance) FROM crm_drivers), 0) AS total_security_reserve_held,
         COALESCE((SELECT SUM(ABS(wallet_balance)) FROM crm_drivers WHERE wallet_balance < 0), 0) AS total_driver_dues_outstanding,
@@ -48,6 +52,8 @@ export async function GET(req: NextRequest) {
     const summary = kpiRes.rows[0] ? {
       totalCommissionRevenue: parseFloat(Number(kpiRes.rows[0].total_commission_revenue).toFixed(2)),
       totalGstStatutory: parseFloat(Number(kpiRes.rows[0].total_gst_statutory_collected).toFixed(2)),
+      totalRideGst: parseFloat(Number(kpiRes.rows[0].total_ride_gst).toFixed(2)),
+      totalCommissionGst: parseFloat(Number(kpiRes.rows[0].total_commission_gst).toFixed(2)),
       totalTechFees: parseFloat(Number(kpiRes.rows[0].total_tech_fees_collected).toFixed(2)),
       totalSecurityReserveHeld: parseFloat(Number(kpiRes.rows[0].total_security_reserve_held).toFixed(2)),
       totalDriverDuesOutstanding: parseFloat(Number(kpiRes.rows[0].total_driver_dues_outstanding).toFixed(2)),
@@ -55,6 +61,8 @@ export async function GET(req: NextRequest) {
     } : {
       totalCommissionRevenue: 0,
       totalGstStatutory: 0,
+      totalRideGst: 0,
+      totalCommissionGst: 0,
       totalTechFees: 0,
       totalSecurityReserveHeld: 0,
       totalDriverDuesOutstanding: 0,
