@@ -135,3 +135,47 @@ async function deliver(kind: GstDocumentKind, id: number, max: number): Promise<
     return 'retrying';
   });
 }
+
+export interface GstDocumentRow {
+  kind: GstDocumentKind;
+  id: number;
+  number: string;
+  date: string;
+  bookingCode: string;
+  amount: number;
+  deliveryStatus: 'PENDING' | 'SENT' | 'FAILED' | 'NOT_SENT';
+  sentAt: string | null;
+  lastError: string | null;
+  /** A PDF can be made once the place of supply is set (and BiharCabs' GSTIN, checked when downloading). */
+  placeOfSupplySet: boolean;
+}
+
+/** Each kind's date and amount, for the Finance list. Fixed SQL. */
+const LIST_SQL: Record<GstDocumentKind, { date: string; amount: string }> = {
+  TI: { date: 'd.created_at', amount: 'd.total_amount' },
+  RV: { date: 'd.paid_at', amount: 'd.amount_paise / 100.0' },
+  RF: { date: 'd.refund_voucher_date', amount: 'd.amount_paise / 100.0' },
+  CC: { date: 'd.invoice_date', amount: 'd.amount' },
+};
+
+/**
+ * GST documents for the Finance page: those matching a booking code or document number, or, with no
+ * search, those whose WhatsApp delivery FAILED (to send by hand). Newest first, at most 100.
+ */
+export async function listGstDocuments(search?: string): Promise<GstDocumentRow[]> {
+  const q = String(search ?? '').trim().replace(/^#/, '').toUpperCase().slice(0, 40);
+  const parts = (Object.keys(KINDS) as GstDocumentKind[]).map((kind) => {
+    const k = KINDS[kind];
+    const l = LIST_SQL[kind];
+    const filter = q ? `(UPPER(b.booking_code) = $1 OR UPPER(d.${k.number}) = $1)` : `d.wa_delivery_status = 'FAILED'`;
+    return `SELECT '${kind}' AS kind, d.id, d.${k.number} AS number, ${l.date} AS doc_date, b.booking_code, ${l.amount} AS amount,
+                   d.wa_delivery_status, d.wa_sent_at, d.wa_last_error, d.place_of_supply_code IS NOT NULL AS pos_set
+            FROM ${k.table} d JOIN crm_bookings b ON b.id = d.booking_id
+            WHERE ${k.issued} AND ${filter}`;
+  });
+  const r = await query(`${parts.join(' UNION ALL ')} ORDER BY doc_date DESC NULLS LAST, kind, id DESC LIMIT 100`, q ? [q] : []);
+  return r.rows.map((x) => ({
+    kind: x.kind, id: Number(x.id), number: x.number, date: x.doc_date, bookingCode: x.booking_code, amount: Number(x.amount),
+    deliveryStatus: x.wa_delivery_status, sentAt: x.wa_sent_at, lastError: x.wa_last_error, placeOfSupplySet: x.pos_set,
+  }));
+}
