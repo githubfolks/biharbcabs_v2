@@ -22,10 +22,13 @@ const dbName = new URL(process.env.DATABASE_URL || 'postgresql://x/none').pathna
 if (!dbName.endsWith('_test')) throw new Error(`Refusing to run: ${dbName} is not a _test database.`);
 
 const SECRET = 'test-app-secret-not-real';
-const DRIVER_A = '910000000301';
-const DRIVER_B = '910000000302';
-const CUSTOMER = '910000000401';
-const STRANGER = '910000000499';
+// New numbers and registrations on every run. Like the other suites that settle trips, this one leaves
+// its rows in place (settled trips carry GST documents), so fixed numbers failed on the second run.
+const RUN = `${String(Date.now()).slice(-6)}${crypto.randomInt(10, 100)}`;
+const DRIVER_A = `91${RUN}01`;
+const DRIVER_B = `91${RUN}02`;
+const CUSTOMER = `91${RUN}03`;
+const STRANGER = `91${RUN}04`;
 let driverA = 0, driverB = 0, customerId = 0, seq = 0;
 
 const sign = (body: string, secret = SECRET) => 'sha256=' + crypto.createHmac('sha256', secret).update(body, 'utf8').digest('hex');
@@ -62,7 +65,7 @@ before(async () => {
   driverA = await driver(DRIVER_A);
   driverB = await driver(DRIVER_B);
   // Eligible drivers have a verified cab of the booking's type (acceptance checks the dispatch rules).
-  for (const [id, reg] of [[driverA, 'BR01SECA'], [driverB, 'BR01SECB']] as const) {
+  for (const [id, reg] of [[driverA, `BR01SECA${RUN}`], [driverB, `BR01SECB${RUN}`]] as const) {
     await query(`INSERT INTO crm_driver_vehicles (driver_id, wp_vehicle_code, registration_no, model_name, is_verified) VALUES ($1, 'sedan', $2, 'Dzire', true)`, [id, reg]);
   }
   customerId = Number((await query(`INSERT INTO crm_customers (phone, full_name) VALUES ($1, 'Customer') RETURNING id`, [CUSTOMER])).rows[0].id);
