@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth';
 import { query } from '@/lib/db';
 import { getRevenueProtectionPolicy } from '@/lib/settings';
+import { validateOnboardingDocs } from '@/lib/driver-onboarding';
 
 export const dynamic = 'force-dynamic';
 
@@ -96,8 +97,6 @@ export async function POST(req: NextRequest) {
       whatsapp_phone,
       base_city,
       license_number,
-      license_expiry,
-      bank_upi_id,
       bank_account_number,
       bank_ifsc,
       vehicle, // { wp_vehicle_code, registration_no, model_name, insurance_expiry, fitness_expiry, permit_expiry }
@@ -108,6 +107,11 @@ export async function POST(req: NextRequest) {
         { success: false, error: 'full_name, phone, and base_city are mandatory' },
         { status: 400 }
       );
+    }
+
+    const checked = validateOnboardingDocs(body);
+    if (!checked.ok) {
+      return NextResponse.json({ success: false, error: checked.error }, { status: 400 });
     }
 
     const cleanPhone = phone.replace(/\D/g, '');
@@ -134,8 +138,8 @@ export async function POST(req: NextRequest) {
         cleanWa,
         base_city,
         license_number || null,
-        license_expiry || null,
-        bank_upi_id || null,
+        checked.docs.license_expiry,
+        checked.docs.bank_upi_id,
         bank_account_number || null,
         bank_ifsc || null,
       ]
@@ -145,7 +149,7 @@ export async function POST(req: NextRequest) {
 
     // 2. Insert vehicle if provided
     let insertedVehicle = null;
-    if (vehicle && vehicle.registration_no && vehicle.wp_vehicle_code) {
+    if (vehicle && vehicle.registration_no && vehicle.wp_vehicle_code && checked.docs.vehicle) {
       const vRes = await query(
         `INSERT INTO crm_driver_vehicles (
           driver_id, wp_vehicle_code, registration_no, model_name,
@@ -165,9 +169,9 @@ export async function POST(req: NextRequest) {
           vehicle.wp_vehicle_code,
           vehicle.registration_no.toUpperCase(),
           vehicle.model_name || vehicle.wp_vehicle_code,
-          vehicle.insurance_expiry || null,
-          vehicle.fitness_expiry || null,
-          vehicle.permit_expiry || null,
+          checked.docs.vehicle.insurance_expiry,
+          checked.docs.vehicle.fitness_expiry,
+          checked.docs.vehicle.permit_expiry,
         ]
       );
       insertedVehicle = vRes.rows[0];

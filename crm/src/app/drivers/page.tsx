@@ -18,23 +18,29 @@ export default function DriversPage() {
   const [incentiveReason, setIncentiveReason] = useState<string>('Top Partner Milestone Bonus');
   const [submittingIncentive, setSubmittingIncentive] = useState(false);
 
-  const [form, setForm] = useState({
+  // Expiry dates start empty: the admin must enter the dates printed on the documents.
+  const emptyForm = {
     full_name: '',
     phone: '',
     whatsapp_phone: '',
     base_city: 'Patna',
     license_number: '',
-    license_expiry: '2028-12-31',
+    license_expiry: '',
     bank_upi_id: '',
     vehicle: {
       wp_vehicle_code: 'sedan',
       registration_no: '',
-      model_name: 'Maruti Suzuki Dzire',
-      insurance_expiry: '2027-12-31',
-      fitness_expiry: '2027-12-31',
-      permit_expiry: '2027-12-31',
+      model_name: '',
+      insurance_expiry: '',
+      fitness_expiry: '',
+      permit_expiry: '',
     },
-  });
+  };
+  const [form, setForm] = useState(emptyForm);
+  const [onboardError, setOnboardError] = useState<string | null>(null);
+  const [onboarding, setOnboarding] = useState(false);
+  const setVehicleField = (field: keyof typeof emptyForm.vehicle, value: string) =>
+    setForm({ ...form, vehicle: { ...form.vehicle, [field]: value } });
 
   async function loadDrivers() {
     setLoading(true);
@@ -57,6 +63,8 @@ export default function DriversPage() {
 
   async function handleOnboardDriver(e: React.FormEvent) {
     e.preventDefault();
+    setOnboarding(true);
+    setOnboardError(null);
     try {
       const res = await fetch('/api/drivers', {
         method: 'POST',
@@ -66,13 +74,21 @@ export default function DriversPage() {
       const data = await res.json();
       if (data.success) {
         setShowModal(false);
+        setForm(emptyForm);
         loadDrivers();
       } else {
-        alert(data.error || 'Failed to onboard driver');
+        setOnboardError(data.error || 'Driver not onboarded');
       }
-    } catch (err: any) {
-      alert('Error onboarding driver: ' + err.message);
+    } catch {
+      setOnboardError('Driver not onboarded: network error');
+    } finally {
+      setOnboarding(false);
     }
+  }
+
+  function closeOnboardModal() {
+    setShowModal(false);
+    setOnboardError(null);
   }
 
   async function openRatingModal(driver: any) {
@@ -324,7 +340,7 @@ export default function DriversPage() {
           <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full p-6 space-y-4">
             <div className="flex justify-between items-center border-b pb-3">
               <h3 className="text-lg font-bold text-slate-900">Onboard Driver & Vehicle</h3>
-              <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
+              <button onClick={closeOnboardModal} className="text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
             </div>
             <form onSubmit={handleOnboardDriver} className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
@@ -377,6 +393,29 @@ export default function DriversPage() {
                 </div>
               </div>
 
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700">Licence Valid Until</label>
+                  <input
+                    type="date"
+                    required
+                    value={form.license_expiry}
+                    onChange={(e) => setForm({ ...form, license_expiry: e.target.value })}
+                    className="w-full mt-1 px-3 py-1.5 border rounded-md text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700">UPI ID for Payouts (optional)</label>
+                  <input
+                    type="text"
+                    value={form.bank_upi_id}
+                    onChange={(e) => setForm({ ...form, bank_upi_id: e.target.value })}
+                    className="w-full mt-1 px-3 py-1.5 border rounded-md text-sm"
+                    placeholder="e.g. name@okaxis"
+                  />
+                </div>
+              </div>
+
               <div className="pt-2 border-t">
                 <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Vehicle Details</span>
               </div>
@@ -420,19 +459,43 @@ export default function DriversPage() {
                 />
               </div>
 
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {([
+                  ['insurance_expiry', 'Insurance Valid Until'],
+                  ['fitness_expiry', 'Fitness Valid Until'],
+                  ['permit_expiry', 'Permit Valid Until'],
+                ] as const).map(([field, label]) => (
+                  <div key={field}>
+                    <label className="block text-xs font-semibold text-slate-700">{label}</label>
+                    <input
+                      type="date"
+                      required
+                      value={form.vehicle[field]}
+                      onChange={(e) => setVehicleField(field, e.target.value)}
+                      className="w-full mt-1 px-3 py-1.5 border rounded-md text-sm"
+                    />
+                  </div>
+                ))}
+              </div>
+
+              {onboardError && (
+                <div className="p-2 bg-rose-50 border border-rose-200 rounded text-xs text-rose-700">{onboardError}</div>
+              )}
+
               <div className="flex justify-end space-x-2 pt-4 border-t">
                 <button
                   type="button"
-                  onClick={() => setShowModal(false)}
+                  onClick={closeOnboardModal}
                   className="px-4 py-2 border rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-orange-600 text-white rounded-md text-sm font-medium hover:bg-orange-700"
+                  disabled={onboarding}
+                  className="px-4 py-2 bg-orange-600 text-white rounded-md text-sm font-medium hover:bg-orange-700 disabled:opacity-60"
                 >
-                  Approve & Onboard Driver
+                  {onboarding ? 'Saving...' : 'Approve & Onboard Driver'}
                 </button>
               </div>
             </form>
