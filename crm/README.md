@@ -87,6 +87,10 @@ Work through these in order. Each feature section below has the detail; this lis
 - [ ] **Back up first:** `pg_dump -Fc biharcabs_crm > biharcabs_crm_$(date +%F).dump`
 - [ ] **See which migrations have run:** `SELECT version FROM crm_schema_migrations ORDER BY version;` (migrations 08 onwards record themselves).
 - [ ] **Apply the missing ones in order**, up to **29**: `psql -v ON_ERROR_STOP=1 -d biharcabs_crm -f crm-design/NN_name.sql`. Each one from 08 on is safe to run again.
+- [ ] **Migrations before code.** Apply them **before** the new code starts. From migration 26 on, the code writes to tables and columns the migrations add. Without 26, no GST document number can be issued, so **trip settlement and advance payments fail**. Without 27 and 28, settlement and payments fail on the new place-of-supply columns. Without 29, the document send step fails (other jobs carry on).
+- [ ] **Check the GST migrations:**
+  - `SELECT * FROM crm_document_counters ORDER BY series, financial_year;` should show this year's `RV`, `RF` and `CC` counters at the last numbers already issued (migration 26). `TI` starts at 1.
+  - `SELECT setting_value FROM crm_settings WHERE setting_key = 'cancellation_policy';` should show `cancellation_charge_gst_pct` 5.
 
 ### 2. Environment and code
 `docker-compose.yml` passes these to the `crm` container from the root `.env` (never in git). After changing `.env`, recreate the container.
@@ -107,26 +111,38 @@ Work through these in order. Each feature section below has the detail; this lis
 - [ ] **n8n:** both workflows active (every 5 minutes, and daily at 09:00 IST).
 
 ### 4. Settings (`/settings` or `crm_settings`)
-- [ ] `company_billing_info.gstin`: BiharCabs' GSTIN. Invoice PDFs are refused without it, and its first two digits must match `state_code` (10, Bihar).
+- [ ] `company_billing_info.gstin`: BiharCabs' GSTIN. Without it no GST document PDF is produced and none is sent to customers; they wait, and go out once it is set. Its first two digits must match `state_code` (10, Bihar).
 - [ ] `place_of_supply_cities`: every city rides start from, with its GST state code. Migration 27 lists Patna, Darbhanga, Gaya and Muzaffarpur; invoices for other cities wait on the Finance page until finance chooses the state.
 - [ ] `admin_escalation_contacts`: at least one admin phone. Every admin alert (SLA, unconfirmed wake-ups, failed messages, OTP lockouts) goes here.
 - [ ] `cancellation_policy.cancellation_charge_gst_pct`: **5%** per the CA, set by migration 26 if it was empty. The cancellation charge documents waiting for it are issued by the next daily job.
-- [ ] Check the defaults the migrations set are what you want: `advance_collection_policy`, `revenue_protection_policy.streak_min_fare` (₹700), `driver_wakeup_unconfirmed_alert_minutes` (60), `driver_ride_gap_hours` (4).
+- [ ] Check the defaults the migrations set are what you want: `advance_collection_policy`, `revenue_protection_policy.streak_min_fare` (₹700), `driver_wakeup_unconfirmed_alert_minutes` (60), `driver_ride_gap_hours` (4), `gst_document_delivery.max_attempts` (3).
 
 ### 5. Accounts and data
 - [ ] **Old seeded admin:** if any CRM still has `admin@biharcabs.com` with the password once published in this repository, reset it: `CRM_ADMIN_EMAIL=admin@biharcabs.com node scripts/set-admin-password.mjs` (from `crm`).
 - [ ] **Advances never verified:** bookings marked `advance_status = 'LEGACY_UNVERIFIED'` by migration 11 carry an advance nobody confirmed. Check each before it is settled.
 - [ ] **Double-booked rides:** `psql -d biharcabs_crm -f crm/scripts/check-double-booked-rides.sql` lists drivers holding rides less than 4 hours apart. Reassign one ride of each pair.
+- [ ] **Documents waiting for a place of supply:** migrations 27 and 28 fill in existing ride invoices, receipt vouchers, refund vouchers and cancellation charges. Those whose pickup city isn't listed, or whose customer GSTIN is malformed, are listed under **Finance → GST Documents Waiting for Place of Supply**. Choose each one's state there. List the cities first, so fewer need choosing.
+- [ ] **Excess GST to reclaim:** **Finance → Excess GST to Reclaim (Form GST RFD-01)** shows, by month, the 18% paid on advances later kept at 5%. Give it to the CA to file. Charges marked "unknown" have no GST recorded on their receipt voucher; check them with the CA.
+- [ ] **Older documents:** everything issued before migration 29 is `NOT_SENT` and is never sent automatically. If a customer asks for one, open `https://<crm host>/api/finance/gst-documents/<kind>/<id>/pdf` while signed in as finance (there is no download button yet), and send it.
 
 ### 6. Tell drivers
 - [ ] **GST:** drivers now bear the 5% ride GST, and pay 18% GST on commission plus the tech fee (₹10 becomes ₹11.80). See [GST](#gst-per-biharcabs-ca).
 - [ ] **Streak bonus:** only rides of at least ₹700 count, and every driver's streak starts again from 0.
 - [ ] **Rides:** a driver can no longer hold two rides whose pickups are less than 4 hours apart.
 
+### 6b. Tell finance and the CA
+- [ ] **New ride invoice series:** from the deploy, ride invoices are numbered `TI<financial year><6 digits>` (e.g. `TI2627000001`), one running series. Earlier invoices keep their `INV-…` numbers. Report both series in GSTR-1 Table 13 for this year.
+- [ ] **Yearly restart:** every series (`TI`, `RV`, `RF`, `CC`) restarts at 000001 on 1 April.
+- [ ] **Tax split:** invoices and vouchers now show CGST + SGST within Bihar, or IGST for other states, by place of supply.
+
 ### 7. After deploying
 - [ ] Sign in, and check the dispatch board loads.
 - [ ] Run the frequent job once: `curl -X POST -H "Authorization: Bearer $CRON_SECRET" https://<crm host>/api/dispatch/cron`. It should return `success: true` with a count per job (`cronResults`); then check n8n's Executions list shows it succeeding.
 - [ ] Send a WhatsApp message to the business number and check it appears in the staff inbox.
+- [ ] **First GST documents:**
+  - After the first trip settles, check its invoice number is `TI<FY>000001`, or the next one.
+  - Open its PDF (`/api/finance/gst-documents/TI/<invoice id>/pdf`, signed in as finance), and check the GSTIN, the place of supply and the CGST/SGST or IGST lines.
+- [ ] **First document on WhatsApp outside the 24-hour window:** check the customer received the template **with the PDF attached**. The send format for a document header is the one part not confirmed against Meta's docs. If it fails, it shows under **Failed messages** after 3 tries, with Meta's error.
 
 ---
 
