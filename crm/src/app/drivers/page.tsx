@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { UserCheck, ShieldAlert, Car, PlusCircle, RefreshCw, Wallet, Phone, CheckCircle, Star, AlertTriangle, X, Gift, Award, ShieldCheck } from 'lucide-react';
+import { UserCheck, ShieldAlert, Car, PlusCircle, RefreshCw, Wallet, Phone, CheckCircle, Star, AlertTriangle, X, Gift, Award, ShieldCheck, Pencil } from 'lucide-react';
 import { allowedActions, DriverStatusAction, REASON_MAX, REASON_MIN } from '@/lib/driver-status-rules';
+import DriverEditDialog, { VEHICLE_CATEGORIES } from '@/components/DriverEditDialog';
 
 const ACTION_LABEL: Record<DriverStatusAction, string> = { ACTIVATE: 'Activate', SUSPEND: 'Suspend', OFFBOARD: 'Offboard' };
 
@@ -82,8 +83,16 @@ export default function DriversPage() {
     }
   }
 
+  // Edit dialog; the role only decides what the dialog offers (the API enforces permissions).
+  const [editDriverId, setEditDriverId] = useState<number | null>(null);
+  const [role, setRole] = useState<string | null>(null);
+
   useEffect(() => {
     loadDrivers();
+    fetch('/api/auth/me')
+      .then((r) => r.json())
+      .then((data) => setRole(data?.user?.role ?? null))
+      .catch(() => setRole(null));
   }, []);
 
   async function handleOnboardDriver(e: React.FormEvent) {
@@ -393,6 +402,14 @@ export default function DriversPage() {
                     </td>
                     <td className="px-4 py-3 text-right space-x-1.5 whitespace-nowrap">
                       <button
+                        onClick={() => setEditDriverId(d.id)}
+                        className="inline-flex items-center px-2 py-1 bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 rounded text-xs font-medium"
+                        title="Edit details, payout details and vehicles"
+                      >
+                        <Pencil className="h-3 w-3 mr-1" />
+                        Edit
+                      </button>
+                      <button
                         onClick={() => openStatusModal(d)}
                         className={`inline-flex items-center px-2 py-1 border rounded text-xs font-semibold ${
                           d.onboarding_status === 'PENDING_DOCS'
@@ -527,10 +544,9 @@ export default function DriversPage() {
                     onChange={(e) => setForm({ ...form, vehicle: { ...form.vehicle, wp_vehicle_code: e.target.value } })}
                     className="w-full mt-1 px-3 py-1.5 border rounded-md text-sm"
                   >
-                    <option value="sedan">Sedan (Dzire / Etios)</option>
-                    <option value="ertiga">Ertiga SUV (6+1)</option>
-                    <option value="innova">Innova Crysta</option>
-                    <option value="tempo">Tempo Traveller</option>
+                    {VEHICLE_CATEGORIES.map((c) => (
+                      <option key={c.code} value={c.code}>{c.label}</option>
+                    ))}
                   </select>
                 </div>
                 <div>
@@ -775,6 +791,15 @@ export default function DriversPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {editDriverId !== null && (
+        <DriverEditDialog
+          driverId={editDriverId}
+          role={role}
+          onClose={() => setEditDriverId(null)}
+          onChanged={loadDrivers}
+        />
       )}
 
       {/* Driver Status Modal: activate / suspend / offboard */}

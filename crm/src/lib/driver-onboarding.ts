@@ -19,6 +19,10 @@ export function isIsoDate(value: unknown): value is string {
 
 const UPI_ID = /^[a-zA-Z0-9._-]{2,256}@[a-zA-Z][a-zA-Z0-9]{1,63}$/;
 
+export function isUpiId(value: string): boolean {
+  return value.length <= 100 && UPI_ID.test(value);
+}
+
 export function validateOnboardingDocs(body: any):
   | { ok: true; docs: OnboardingDocs }
   | { ok: false; error: string } {
@@ -29,7 +33,7 @@ export function validateOnboardingDocs(body: any):
   let bank_upi_id: string | null = null;
   const rawUpi = typeof body?.bank_upi_id === 'string' ? body.bank_upi_id.trim() : '';
   if (rawUpi) {
-    if (rawUpi.length > 100 || !UPI_ID.test(rawUpi)) errors.push('bank_upi_id is not a valid UPI ID (e.g. name@bank)');
+    if (!isUpiId(rawUpi)) errors.push('bank_upi_id is not a valid UPI ID (e.g. name@bank)');
     else bank_upi_id = rawUpi;
   }
 

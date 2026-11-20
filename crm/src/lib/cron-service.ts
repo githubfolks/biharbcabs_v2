@@ -140,7 +140,7 @@ export async function runExpiredDocumentSuspensions(): Promise<number> {
   const expiredSql = `
     SELECT DISTINCT d.id, d.full_name, d.phone, d.whatsapp_phone, v.registration_no
     FROM crm_drivers d
-    JOIN crm_driver_vehicles v ON v.driver_id = d.id
+    JOIN crm_driver_vehicles v ON v.driver_id = d.id AND v.removed_at IS NULL
     WHERE d.onboarding_status = 'APPROVED_ACTIVE'
       AND (
         (d.license_expiry IS NOT NULL AND d.license_expiry < CURRENT_DATE)
@@ -182,7 +182,7 @@ export async function runDocumentExpiryWarnings(): Promise<number> {
     SELECT DISTINCT d.id, d.full_name, d.phone, d.whatsapp_phone, v.registration_no,
            LEAST(d.license_expiry, v.insurance_expiry, v.fitness_expiry, v.permit_expiry) AS earliest_expiry
     FROM crm_drivers d
-    JOIN crm_driver_vehicles v ON v.driver_id = d.id
+    JOIN crm_driver_vehicles v ON v.driver_id = d.id AND v.removed_at IS NULL
     WHERE d.onboarding_status = 'APPROVED_ACTIVE'
       AND LEAST(d.license_expiry, v.insurance_expiry, v.fitness_expiry, v.permit_expiry) BETWEEN CURRENT_DATE AND (CURRENT_DATE + INTERVAL '15 days');
   `;

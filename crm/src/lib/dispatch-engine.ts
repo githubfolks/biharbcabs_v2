@@ -146,7 +146,7 @@ async function eligibilityRows(db: Db, q: EligibilityQuery, filter: { sql: strin
           ORDER BY sb.pickup_date, sb.pickup_time LIMIT 1) AS clashing_booking_code,
          ($13::numeric) AS ride_gap_hours
        FROM crm_drivers d
-       LEFT JOIN crm_driver_vehicles v ON v.driver_id = d.id AND LOWER(v.wp_vehicle_code) = LOWER($1)
+       LEFT JOIN crm_driver_vehicles v ON v.driver_id = d.id AND v.removed_at IS NULL AND LOWER(v.wp_vehicle_code) = LOWER($1)
        WHERE ${filterSql}
      ),
      best AS (

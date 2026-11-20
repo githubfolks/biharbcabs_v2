@@ -93,10 +93,10 @@ export async function changeDriverStatus(driverId: number, change: StatusChangeR
         const u = await client.query(
           `UPDATE crm_driver_vehicles
            SET insurance_expiry = $1, fitness_expiry = $2, permit_expiry = $3, updated_at = CURRENT_TIMESTAMP
-           WHERE id = $4 AND driver_id = $5`,
+           WHERE id = $4 AND driver_id = $5 AND removed_at IS NULL`,
           [v.insurance_expiry, v.fitness_expiry, v.permit_expiry, v.id, driverId]
         );
-        if (u.rowCount === 0) throw new DriverStatusError(`Vehicle ${v.id} does not belong to this driver`, 400);
+        if (u.rowCount === 0) throw new DriverStatusError(`Vehicle ${v.id} is not a current vehicle of this driver`, 400);
       }
 
       // Same date rules as dispatch and the expiry job, but a missing date also blocks activation.
@@ -106,7 +106,7 @@ export async function changeDriverStatus(driverId: number, change: StatusChangeR
                 (v.insurance_expiry IS NOT NULL AND v.insurance_expiry >= CURRENT_DATE) AS insurance_ok,
                 (v.fitness_expiry IS NOT NULL AND v.fitness_expiry >= CURRENT_DATE) AS fitness_ok,
                 (v.permit_expiry IS NOT NULL AND v.permit_expiry >= CURRENT_DATE) AS permit_ok
-         FROM crm_drivers d LEFT JOIN crm_driver_vehicles v ON v.driver_id = d.id
+         FROM crm_drivers d LEFT JOIN crm_driver_vehicles v ON v.driver_id = d.id AND v.removed_at IS NULL
          WHERE d.id = $1
          ORDER BY v.id`,
         [driverId]
@@ -124,7 +124,7 @@ export async function changeDriverStatus(driverId: number, change: StatusChangeR
 
       // Activation is the admin's verification of the documents.
       await client.query(
-        `UPDATE crm_driver_vehicles SET is_verified = true, updated_at = CURRENT_TIMESTAMP WHERE driver_id = $1`,
+        `UPDATE crm_driver_vehicles SET is_verified = true, updated_at = CURRENT_TIMESTAMP WHERE driver_id = $1 AND removed_at IS NULL`,
         [driverId]
       );
     }
@@ -155,7 +155,7 @@ export async function getDriverStatusDetail(driverId: number) {
             to_char(insurance_expiry, 'YYYY-MM-DD') AS insurance_expiry,
             to_char(fitness_expiry, 'YYYY-MM-DD') AS fitness_expiry,
             to_char(permit_expiry, 'YYYY-MM-DD') AS permit_expiry
-     FROM crm_driver_vehicles WHERE driver_id = $1 ORDER BY id`,
+     FROM crm_driver_vehicles WHERE driver_id = $1 AND removed_at IS NULL ORDER BY id`,
     [driverId]
   );
   const hRes = await query(

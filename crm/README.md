@@ -86,8 +86,8 @@ Work through these in order. Each feature section below has the detail; this lis
 ### 1. Database (native PostgreSQL)
 - [ ] **Back up first:** `pg_dump -Fc biharcabs_crm > biharcabs_crm_$(date +%F).dump`
 - [ ] **See which migrations have run:** `SELECT version FROM crm_schema_migrations ORDER BY version;` (migrations 08 onwards record themselves).
-- [ ] **Apply the missing ones in order**, up to **30**: `psql -v ON_ERROR_STOP=1 -d biharcabs_crm -f crm-design/NN_name.sql`. Each one from 08 on is safe to run again.
-- [ ] **Migrations before code.** Apply them **before** the new code starts. From migration 26 on, the code writes to tables and columns the migrations add. Without 26, no GST document number can be issued, so **trip settlement and advance payments fail**. Without 27 and 28, settlement and payments fail on the new place-of-supply columns. Without 29, the document send step fails (other jobs carry on). Without 30, driver onboarding still works but the driver Status dialog fails.
+- [ ] **Apply the missing ones in order**, up to **31**: `psql -v ON_ERROR_STOP=1 -d biharcabs_crm -f crm-design/NN_name.sql`. Each one from 08 on is safe to run again.
+- [ ] **Migrations before code.** Apply them **before** the new code starts. From migration 26 on, the code writes to tables and columns the migrations add. Without 26, no GST document number can be issued, so **trip settlement and advance payments fail**. Without 27 and 28, settlement and payments fail on the new place-of-supply columns. Without 29, the document send step fails (other jobs carry on). Without 30, driver onboarding still works but the driver Status dialog fails. Without 31, **dispatch and the document expiry jobs fail** (they read the new `removed_at` column), as do the driver list, CRM onboarding and activation.
 - [ ] **Check the GST migrations:**
   - `SELECT * FROM crm_document_counters ORDER BY series, financial_year;` should show this year's `RV`, `RF` and `CC` counters at the last numbers already issued (migration 26). `TI` starts at 1.
   - `SELECT setting_value FROM crm_settings WHERE setting_key = 'cancellation_policy';` should show `cancellation_charge_gst_pct` 5.
@@ -152,6 +152,7 @@ Work through these in order. Each feature section below has the detail; this lis
   - **Database pill** (sidebar): shows whether the CRM can reach its database.
   - **Hovering a pill** shows the details.
 - [ ] **New drivers start as Pending:** a driver added on **Drivers** or through WhatsApp gets no rides until someone checks their documents and presses **Review → Activate**. See [Driver status](#driver-status-activate-suspend-offboard).
+- [ ] **Editing drivers:** **Drivers → Edit** changes a driver's details and vehicles. Only super admin and finance can change UPI or bank details. See [Editing drivers and vehicles](#editing-drivers-and-vehicles).
 
 ### 7. After deploying
 - [ ] Sign in, and check the dispatch board loads.
@@ -295,6 +296,32 @@ Apply `crm-design/30_driver_status_changes.sql` before deploying. Tests:
 ```bash
 DATABASE_URL=postgresql://localhost/biharcabs_crm_test npx tsx --test src/tests/driver-status.integration.ts
 npx tsx --test src/tests/driver-status.test.ts src/tests/driver-onboarding.test.ts
+```
+
+## Editing drivers and vehicles
+
+**Drivers → Edit** opens a dialog; every change is recorded in `crm_driver_edits` (migration 31) with the admin and the old and new values, and listed under **Change history**. A save that changes nothing records nothing.
+
+| What | API | Permission |
+|---|---|---|
+| Name, phone, WhatsApp phone, city, licence number and expiry | `PATCH /api/drivers/[id]` | `drivers.manage` (SUPER_ADMIN, DISPATCHER) |
+| UPI ID, bank account, IFSC | `PATCH /api/drivers/[id]/payout-details` | `drivers.payout_details` (SUPER_ADMIN, FINANCE_MANAGER) |
+| Add a vehicle | `POST /api/drivers/[id]/vehicles` | `drivers.manage` |
+| Change a vehicle's category, model, dates | `PATCH /api/drivers/[id]/vehicles/[vehicleId]` | `drivers.manage` |
+| Remove a vehicle (`{ reason }`) | `DELETE /api/drivers/[id]/vehicles/[vehicleId]` | `drivers.manage` |
+| Details, current vehicles, history | `GET /api/drivers/[id]` | `drivers.view` |
+
+- **Phone:** must be 10-15 digits with country code; one already used by another driver is refused (409). The phone decides which WhatsApp number the bot recognises as the driver.
+- **Adding a vehicle:** all three dates required and none past. Entering them counts as checking the documents, so the vehicle is verified and can get rides at once. A registration number already on file (any driver, or removed) is refused (409).
+- **Editing dates:** a past date is saved as entered; the next expiry job suspends the driver. The registration number cannot be changed: remove the vehicle and add the new one.
+- **Removing a vehicle** keeps it for ride history (`removed_at`, `removed_by`, `removed_reason`). Dispatch, the expiry suspension and the expiry reminders ignore it. A vehicle on a `DRIVER_ASSIGNED` or `TRIP_IN_PROGRESS` ride cannot be removed. A removed registration number cannot be added again.
+- **History** shows only the last 4 digits of bank account numbers; the full values stay in `crm_driver_edits`.
+- **Status** (activate, suspend, offboard) is separate: see [Driver status](#driver-status-activate-suspend-offboard). Editing a document date does not reactivate a suspended driver.
+
+Apply `crm-design/31_driver_edits.sql` before deploying. Tests:
+```bash
+DATABASE_URL=postgresql://localhost/biharcabs_crm_test npx tsx --test src/tests/driver-edits.integration.ts
+npx tsx --test src/tests/driver-edits.test.ts
 ```
 
 ## Sign-in attempt limits

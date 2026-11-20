@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 
 class VehicleTakenError extends Error {
   constructor(regNo: string) {
-    super(`Vehicle ${regNo} is already registered to another driver`);
+    super(`Vehicle ${regNo} is already on file for another driver, or was removed, so it cannot be added here`);
   }
 }
 
@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
           ) FILTER (WHERE v.id IS NOT NULL), '[]'::json
         ) AS vehicles
       FROM crm_drivers d
-      LEFT JOIN crm_driver_vehicles v ON v.driver_id = d.id
+      LEFT JOIN crm_driver_vehicles v ON v.driver_id = d.id AND v.removed_at IS NULL
     `;
 
     const where: string[] = [];
@@ -158,7 +158,7 @@ export async function POST(req: NextRequest) {
       let insertedVehicle = null;
       if (vehicle && vehicle.registration_no && vehicle.wp_vehicle_code && docs.vehicle) {
         const regNo = String(vehicle.registration_no).toUpperCase();
-        // A registration already held by another driver is refused, never moved or changed.
+        // A registration held by another driver, or removed, is refused, never moved or changed.
         const vRes = await client.query(
           `INSERT INTO crm_driver_vehicles (
             driver_id, wp_vehicle_code, registration_no, model_name,
@@ -171,7 +171,7 @@ export async function POST(req: NextRequest) {
               fitness_expiry = EXCLUDED.fitness_expiry,
               permit_expiry = EXCLUDED.permit_expiry,
               updated_at = CURRENT_TIMESTAMP
-          WHERE crm_driver_vehicles.driver_id = EXCLUDED.driver_id
+          WHERE crm_driver_vehicles.driver_id = EXCLUDED.driver_id AND crm_driver_vehicles.removed_at IS NULL
           RETURNING *`,
           [
             driver.id,
