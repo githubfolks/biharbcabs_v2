@@ -361,12 +361,14 @@ describe('BiharCabs Operational CRM Core Engine Tests', () => {
     const dRes = await query(`SELECT * FROM crm_drivers WHERE phone = $1`, [driverPhone]);
     assert.strictEqual(dRes.rows.length, 1);
     assert.strictEqual(dRes.rows[0].full_name, 'Mahesh Kumar Sharma');
-    assert.strictEqual(dRes.rows[0].onboarding_status, 'APPROVED_ACTIVE');
+    // Self sign-up waits for staff to check documents and activate (migration 30)
+    assert.strictEqual(dRes.rows[0].onboarding_status, 'PENDING_DOCS');
 
-    // Verify vehicle was created
+    // Verify vehicle was created, not yet verified
     const vRes = await query(`SELECT * FROM crm_driver_vehicles WHERE driver_id = $1`, [dRes.rows[0].id]);
     assert.strictEqual(vRes.rows.length, 1);
     assert.strictEqual(vRes.rows[0].registration_no, 'BR-01-AB-1234');
+    assert.strictEqual(vRes.rows[0].is_verified, false);
 
     // Cleanup
     await query(`DELETE FROM crm_driver_vehicles WHERE driver_id = $1`, [dRes.rows[0].id]);

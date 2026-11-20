@@ -2,6 +2,20 @@
 
 import { useState, useEffect } from 'react';
 import { UserCheck, ShieldAlert, Car, PlusCircle, RefreshCw, Wallet, Phone, CheckCircle, Star, AlertTriangle, X, Gift, Award, ShieldCheck } from 'lucide-react';
+import { allowedActions, DriverStatusAction, REASON_MAX, REASON_MIN } from '@/lib/driver-status-rules';
+
+const ACTION_LABEL: Record<DriverStatusAction, string> = { ACTIVATE: 'Activate', SUSPEND: 'Suspend', OFFBOARD: 'Offboard' };
+
+const STATUS_BADGE: Record<string, string> = {
+  APPROVED_ACTIVE: 'bg-emerald-100 text-emerald-800',
+  PENDING_DOCS: 'bg-sky-100 text-sky-800 border border-sky-300',
+  RESTRICTED_DIGITAL_ONLY: 'bg-indigo-100 text-indigo-800 border border-indigo-300',
+  SUSPENDED_UNPAID_DUES: 'bg-rose-100 text-rose-800',
+  SUSPENDED_DOC_EXPIRED: 'bg-rose-100 text-rose-800',
+  SUSPENDED_QUALITY: 'bg-rose-100 text-rose-800',
+  SUSPENDED_MANUAL: 'bg-rose-100 text-rose-800 border border-rose-300',
+  OFFBOARDED: 'bg-slate-200 text-slate-700',
+};
 
 export default function DriversPage() {
   const [drivers, setDrivers] = useState<any[]>([]);
@@ -17,6 +31,17 @@ export default function DriversPage() {
   const [incentiveAmount, setIncentiveAmount] = useState<number>(200);
   const [incentiveReason, setIncentiveReason] = useState<string>('Top Partner Milestone Bonus');
   const [submittingIncentive, setSubmittingIncentive] = useState(false);
+
+  // Status dialog (activate / suspend / offboard)
+  const [statusDriver, setStatusDriver] = useState<any | null>(null);
+  const [statusDetail, setStatusDetail] = useState<any | null>(null);
+  const [statusLoadError, setStatusLoadError] = useState<string | null>(null);
+  const [statusAction, setStatusAction] = useState<DriverStatusAction | ''>('');
+  const [statusReason, setStatusReason] = useState('');
+  const [statusLicense, setStatusLicense] = useState('');
+  const [statusVehicles, setStatusVehicles] = useState<any[]>([]);
+  const [statusError, setStatusError] = useState<string | null>(null);
+  const [savingStatus, setSavingStatus] = useState(false);
 
   // Expiry dates start empty: the admin must enter the dates printed on the documents.
   const emptyForm = {
@@ -131,6 +156,74 @@ export default function DriversPage() {
       }
     } catch (err: any) {
       alert('Error disputing review: ' + err.message);
+    }
+  }
+
+  async function openStatusModal(driver: any) {
+    setStatusDriver(driver);
+    setStatusDetail(null);
+    setStatusLoadError(null);
+    setStatusAction('');
+    setStatusReason('');
+    setStatusError(null);
+    try {
+      const res = await fetch(`/api/drivers/${driver.id}/status`);
+      const data = await res.json();
+      if (!data.success) {
+        setStatusLoadError(data.error || 'Could not load driver status');
+        return;
+      }
+      setStatusDetail(data);
+      setStatusLicense(data.license_expiry || '');
+      setStatusVehicles(
+        data.vehicles.map((v: any) => ({
+          ...v,
+          insurance_expiry: v.insurance_expiry || '',
+          fitness_expiry: v.fitness_expiry || '',
+          permit_expiry: v.permit_expiry || '',
+        }))
+      );
+    } catch {
+      setStatusLoadError('Could not load driver status: network error');
+    }
+  }
+
+  function setStatusVehicleDate(id: number, field: string, value: string) {
+    setStatusVehicles((vs) => vs.map((v) => (v.id === id ? { ...v, [field]: value } : v)));
+  }
+
+  async function handleStatusChange(e: React.FormEvent) {
+    e.preventDefault();
+    if (!statusDriver || !statusAction) return;
+    setSavingStatus(true);
+    setStatusError(null);
+    const body: any = { action: statusAction, reason: statusReason };
+    if (statusAction === 'ACTIVATE') {
+      body.license_expiry = statusLicense;
+      body.vehicles = statusVehicles.map((v) => ({
+        id: v.id,
+        insurance_expiry: v.insurance_expiry,
+        fitness_expiry: v.fitness_expiry,
+        permit_expiry: v.permit_expiry,
+      }));
+    }
+    try {
+      const res = await fetch(`/api/drivers/${statusDriver.id}/status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setStatusDriver(null);
+        loadDrivers();
+      } else {
+        setStatusError(data.error || 'Status not changed');
+      }
+    } catch {
+      setStatusError('Status not changed: network error');
+    } finally {
+      setSavingStatus(false);
     }
   }
 
@@ -293,18 +386,24 @@ export default function DriversPage() {
                     </td>
                     <td className="px-4 py-3">
                       <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold uppercase tracking-wide ${
-                        d.onboarding_status === 'APPROVED_ACTIVE'
-                          ? 'bg-emerald-100 text-emerald-800'
-                          : d.onboarding_status === 'RESTRICTED_DIGITAL_ONLY'
-                          ? 'bg-indigo-100 text-indigo-800 border border-indigo-300'
-                          : d.onboarding_status === 'SUSPENDED_UNPAID_DUES'
-                          ? 'bg-rose-100 text-rose-800'
-                          : 'bg-amber-100 text-amber-800'
+                        STATUS_BADGE[d.onboarding_status] || 'bg-amber-100 text-amber-800'
                       }`}>
                         {d.onboarding_status === 'RESTRICTED_DIGITAL_ONLY' ? 'DIGITAL ONLY' : d.onboarding_status.replace(/_/g, ' ')}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-right space-x-1.5 whitespace-nowrap">
+                      <button
+                        onClick={() => openStatusModal(d)}
+                        className={`inline-flex items-center px-2 py-1 border rounded text-xs font-semibold ${
+                          d.onboarding_status === 'PENDING_DOCS'
+                            ? 'bg-sky-600 hover:bg-sky-700 border-sky-600 text-white'
+                            : 'bg-white hover:bg-slate-50 border-slate-300 text-slate-700'
+                        }`}
+                        title="Activate, suspend or offboard this driver"
+                      >
+                        <ShieldCheck className="h-3 w-3 mr-1" />
+                        {d.onboarding_status === 'PENDING_DOCS' ? 'Review' : 'Status'}
+                      </button>
                       <button
                         onClick={() => openRatingModal(d)}
                         className="inline-flex items-center px-2 py-1 bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 rounded text-xs font-medium"
@@ -674,6 +773,177 @@ export default function DriversPage() {
                 Close Audit
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Driver Status Modal: activate / suspend / offboard */}
+      {statusDriver && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full p-6 space-y-4">
+            <div className="flex justify-between items-center border-b pb-3">
+              <div>
+                <h3 className="text-lg font-bold text-slate-900 flex items-center">
+                  <ShieldCheck className="h-5 w-5 mr-1.5 text-sky-600" />
+                  Driver Status: {statusDriver.full_name}
+                </h3>
+                <p className="text-xs text-slate-500">{statusDriver.phone} &bull; {statusDriver.base_city}</p>
+              </div>
+              <button onClick={() => setStatusDriver(null)} className="text-slate-400 hover:text-slate-600">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {statusLoadError ? (
+              <div className="p-3 bg-rose-50 border border-rose-200 rounded text-sm text-rose-700">{statusLoadError}</div>
+            ) : !statusDetail ? (
+              <div className="py-10 flex justify-center items-center text-slate-400 text-sm">
+                <RefreshCw className="h-5 w-5 animate-spin mr-2" /> Loading status...
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="text-sm">
+                  Current status:{' '}
+                  <span className={`inline-flex px-2 py-0.5 rounded text-[11px] font-semibold uppercase ${STATUS_BADGE[statusDetail.status] || 'bg-amber-100 text-amber-800'}`}>
+                    {statusDetail.status.replace(/_/g, ' ')}
+                  </span>
+                </div>
+
+                {allowedActions(statusDetail.status).length === 0 ? (
+                  <p className="text-sm text-slate-500">No manual change is available for this status.</p>
+                ) : (
+                  <form onSubmit={handleStatusChange} className="space-y-3">
+                    <div className="flex flex-wrap gap-2">
+                      {allowedActions(statusDetail.status).map((a) => (
+                        <label
+                          key={a}
+                          className={`px-3 py-1.5 border rounded-md text-xs font-semibold cursor-pointer ${
+                            statusAction === a ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-700 border-slate-300'
+                          }`}
+                        >
+                          <input
+                            type="radio"
+                            name="status-action"
+                            value={a}
+                            checked={statusAction === a}
+                            onChange={() => setStatusAction(a)}
+                            className="sr-only"
+                          />
+                          {ACTION_LABEL[a]}
+                        </label>
+                      ))}
+                    </div>
+                    {['RESTRICTED_DIGITAL_ONLY', 'SUSPENDED_UNPAID_DUES'].includes(statusDetail.status) && (
+                      <p className="text-[11px] text-slate-500">
+                        This driver is restricted for unpaid dues. The account is restored automatically when the dues are paid (Finance).
+                      </p>
+                    )}
+
+                    {statusAction === 'ACTIVATE' && (
+                      <div className="space-y-3 p-3 bg-slate-50 border border-slate-200 rounded-lg">
+                        <p className="text-[11px] text-slate-600">
+                          Check each document and enter the date it is valid until. Activation is refused if any date is missing or past,
+                          and marks the vehicles as verified.
+                        </p>
+                        <div className="max-w-xs">
+                          <label className="block text-xs font-semibold text-slate-700">Licence Valid Until</label>
+                          <input
+                            type="date"
+                            required
+                            value={statusLicense}
+                            onChange={(e) => setStatusLicense(e.target.value)}
+                            className="w-full mt-1 px-3 py-1.5 border rounded-md text-sm bg-white"
+                          />
+                        </div>
+                        {statusVehicles.length === 0 ? (
+                          <p className="text-xs text-rose-700">This driver has no vehicle, so they cannot be activated.</p>
+                        ) : (
+                          statusVehicles.map((v) => (
+                            <div key={v.id}>
+                              <div className="text-xs font-semibold text-slate-800">
+                                {v.registration_no} <span className="font-normal text-slate-500">{v.model_name} [{v.wp_vehicle_code}]</span>
+                              </div>
+                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-1">
+                                {([
+                                  ['insurance_expiry', 'Insurance'],
+                                  ['fitness_expiry', 'Fitness'],
+                                  ['permit_expiry', 'Permit'],
+                                ] as const).map(([field, label]) => (
+                                  <div key={field}>
+                                    <label className="block text-[11px] text-slate-600">{label} valid until</label>
+                                    <input
+                                      type="date"
+                                      required
+                                      value={v[field]}
+                                      onChange={(e) => setStatusVehicleDate(v.id, field, e.target.value)}
+                                      className="w-full mt-0.5 px-2 py-1 border rounded-md text-sm bg-white"
+                                    />
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    )}
+
+                    {statusAction && (
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700">Reason (recorded with your name)</label>
+                        <textarea
+                          rows={2}
+                          required
+                          minLength={REASON_MIN}
+                          maxLength={REASON_MAX}
+                          value={statusReason}
+                          onChange={(e) => setStatusReason(e.target.value)}
+                          placeholder={
+                            statusAction === 'ACTIVATE'
+                              ? 'e.g. Checked original licence, RC, insurance, fitness and permit'
+                              : 'e.g. Customer complaint of misconduct on trip BC-1234, under investigation'
+                          }
+                          className="w-full mt-1 px-3 py-1.5 border rounded-md text-sm"
+                        />
+                      </div>
+                    )}
+
+                    {statusError && (
+                      <div className="p-2 bg-rose-50 border border-rose-200 rounded text-xs text-rose-700">{statusError}</div>
+                    )}
+
+                    <div className="flex justify-end">
+                      <button
+                        type="submit"
+                        disabled={!statusAction || savingStatus || (statusAction === 'ACTIVATE' && statusVehicles.length === 0)}
+                        className="px-4 py-2 bg-slate-900 text-white rounded-md text-xs font-bold hover:bg-slate-800 disabled:opacity-50"
+                      >
+                        {savingStatus ? 'Saving...' : statusAction ? `${ACTION_LABEL[statusAction]} Driver` : 'Choose an action'}
+                      </button>
+                    </div>
+                  </form>
+                )}
+
+                <div className="border-t pt-3">
+                  <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Status History</h4>
+                  {statusDetail.history.length === 0 ? (
+                    <p className="text-xs text-slate-400 italic">No manual status changes recorded.</p>
+                  ) : (
+                    <ul className="space-y-1.5 max-h-48 overflow-y-auto text-xs">
+                      {statusDetail.history.map((h: any) => (
+                        <li key={h.id} className="p-2 bg-slate-50 border border-slate-200 rounded break-words">
+                          <span className="font-semibold">{h.action}</span>: {h.from_status} → {h.to_status}
+                          <span className="text-slate-500">
+                            {' '}by {h.changed_by_name},{' '}
+                            {new Date(h.created_at).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                          <div className="text-slate-600 italic">&quot;{h.reason}&quot;</div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

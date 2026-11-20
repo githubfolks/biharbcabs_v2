@@ -26,6 +26,7 @@ import * as refundsApi from '../app/api/finance/refunds/route';
 import * as drivers from '../app/api/drivers/route';
 import * as driverIncentives from '../app/api/drivers/[id]/incentives/route';
 import * as driverRatings from '../app/api/drivers/[id]/ratings/route';
+import * as driverStatus from '../app/api/drivers/[id]/status/route';
 import * as ledger from '../app/api/finance/ledger/route';
 import * as payouts from '../app/api/finance/payouts/route';
 import * as duesPayments from '../app/api/finance/dues-payments/route';
@@ -74,6 +75,8 @@ const PROTECTED: ProtectedRoute[] = [
   { name: 'POST /api/drivers/[id]/incentives', method: 'POST', handler: driverIncentives.POST, permission: 'incentives.award', body: { amount: -1 }, ctx: NONE },
   { name: 'GET /api/drivers/[id]/ratings', method: 'GET', handler: driverRatings.GET, permission: 'ratings.view', ctx: NONE },
   { name: 'POST /api/drivers/[id]/ratings', method: 'POST', handler: driverRatings.POST, permission: 'ratings.dispute', body: { action: 'dispute' }, ctx: NONE },
+  { name: 'GET /api/drivers/[id]/status', method: 'GET', handler: driverStatus.GET, permission: 'drivers.view', ctx: NONE },
+  { name: 'POST /api/drivers/[id]/status', method: 'POST', handler: driverStatus.POST, permission: 'drivers.manage', body: { action: 'none' }, ctx: NONE },
   { name: 'GET /api/finance/ledger', method: 'GET', handler: ledger.GET, permission: 'ledger.view' },
   { name: 'POST /api/finance/ledger', method: 'POST', handler: ledger.POST, permission: 'ledger.settle', body: {} },
   { name: 'GET /api/finance/payouts', method: 'GET', handler: payouts.GET, permission: 'ledger.view' },

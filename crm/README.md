@@ -86,8 +86,8 @@ Work through these in order. Each feature section below has the detail; this lis
 ### 1. Database (native PostgreSQL)
 - [ ] **Back up first:** `pg_dump -Fc biharcabs_crm > biharcabs_crm_$(date +%F).dump`
 - [ ] **See which migrations have run:** `SELECT version FROM crm_schema_migrations ORDER BY version;` (migrations 08 onwards record themselves).
-- [ ] **Apply the missing ones in order**, up to **29**: `psql -v ON_ERROR_STOP=1 -d biharcabs_crm -f crm-design/NN_name.sql`. Each one from 08 on is safe to run again.
-- [ ] **Migrations before code.** Apply them **before** the new code starts. From migration 26 on, the code writes to tables and columns the migrations add. Without 26, no GST document number can be issued, so **trip settlement and advance payments fail**. Without 27 and 28, settlement and payments fail on the new place-of-supply columns. Without 29, the document send step fails (other jobs carry on).
+- [ ] **Apply the missing ones in order**, up to **30**: `psql -v ON_ERROR_STOP=1 -d biharcabs_crm -f crm-design/NN_name.sql`. Each one from 08 on is safe to run again.
+- [ ] **Migrations before code.** Apply them **before** the new code starts. From migration 26 on, the code writes to tables and columns the migrations add. Without 26, no GST document number can be issued, so **trip settlement and advance payments fail**. Without 27 and 28, settlement and payments fail on the new place-of-supply columns. Without 29, the document send step fails (other jobs carry on). Without 30, driver onboarding still works but the driver Status dialog fails.
 - [ ] **Check the GST migrations:**
   - `SELECT * FROM crm_document_counters ORDER BY series, financial_year;` should show this year's `RV`, `RF` and `CC` counters at the last numbers already issued (migration 26). `TI` starts at 1.
   - `SELECT setting_value FROM crm_settings WHERE setting_key = 'cancellation_policy';` should show `cancellation_charge_gst_pct` 5.
@@ -125,12 +125,14 @@ Work through these in order. Each feature section below has the detail; this lis
 - [ ] **Double-booked rides:** `psql -d biharcabs_crm -f crm/scripts/check-double-booked-rides.sql` lists drivers holding rides less than 4 hours apart. Reassign one ride of each pair.
 - [ ] **Documents waiting for a place of supply:** migrations 27 and 28 fill in existing ride invoices, receipt vouchers, refund vouchers and cancellation charges. Those whose pickup city isn't listed, or whose customer GSTIN is malformed, are listed under **Finance → GST Documents Waiting for Place of Supply**. Choose each one's state there. List the cities first, so fewer need choosing.
 - [ ] **Excess GST to reclaim:** **Finance → Excess GST to Reclaim (Form GST RFD-01)** shows, by month, the 18% paid on advances later kept at 5%. Give it to the CA to file. Charges marked "unknown" have no GST recorded on their receipt voucher; check them with the CA.
+- [ ] **Drivers with made-up document dates:** before this release the CRM onboarding form saved licence expiry 2028-12-31 and insurance, fitness and permit expiry 2027-12-31 for every driver, whatever their documents said. List them with `SELECT d.id, d.full_name, d.phone, v.registration_no FROM crm_drivers d JOIN crm_driver_vehicles v ON v.driver_id = d.id WHERE d.license_expiry = '2028-12-31' AND v.insurance_expiry = '2027-12-31' AND v.fitness_expiry = '2027-12-31' AND v.permit_expiry = '2027-12-31';` and enter the real dates from each driver's documents.
 - [ ] **Older documents:** everything issued before migration 29 is `NOT_SENT` and is never sent automatically. If a customer asks for one, search its booking code under **Finance → GST Documents**, download the PDF and send it.
 
 ### 6. Tell drivers
 - [ ] **GST:** drivers now bear the 5% ride GST, and pay 18% GST on commission plus the tech fee (₹10 becomes ₹11.80). See [GST](#gst-per-biharcabs-ca).
 - [ ] **Streak bonus:** only rides of at least ₹700 count, and every driver's streak starts again from 0.
 - [ ] **Rides:** a driver can no longer hold two rides whose pickups are less than 4 hours apart.
+- [ ] **Joining:** drivers who join on WhatsApp now wait for BiharCabs to check their documents before they get ride offers.
 
 ### 6b. Tell finance and the CA
 - [ ] **New ride invoice series:** from the deploy, ride invoices are numbered `TI<financial year><6 digits>` (e.g. `TI2627000001`), one running series. Earlier invoices keep their `INV-…` numbers. Report both series in GSTR-1 Table 13 for this year.
@@ -149,6 +151,7 @@ Work through these in order. Each feature section below has the detail; this lis
     - **red** "not configured": nothing is being sent.
   - **Database pill** (sidebar): shows whether the CRM can reach its database.
   - **Hovering a pill** shows the details.
+- [ ] **New drivers start as Pending:** a driver added on **Drivers** or through WhatsApp gets no rides until someone checks their documents and presses **Review → Activate**. See [Driver status](#driver-status-activate-suspend-offboard).
 
 ### 7. After deploying
 - [ ] Sign in, and check the dispatch board loads.
@@ -268,6 +271,31 @@ DATABASE_URL=postgresql://localhost/biharcabs_crm_test npx tsx --test src/tests/
 ```
 
 **Commission setting:** bookings take commission from `revenue_protection_policy.platform_commission_pct` (Settings → "Platform Facilitation / Take-Rate"). The old `commission_model` and `driver_max_negative_balance_limit` settings were not used by any booking, dispatch or billing code, so their fields were removed from Settings. Credit limits are the tiered `dynamic_credit_limits`. The old rows remain in `crm_settings`, unused.
+
+## Driver status (activate, suspend, offboard)
+
+New drivers, from **Drivers → Onboard New Driver** or WhatsApp "JOIN", start as `PENDING_DOCS` with unverified vehicles, and get no rides. Signing up again on WhatsApp never changes an existing driver's status, and leaves a registration number already on file as it is. The CRM form refuses a registration number that belongs to another driver (409) and saves nothing.
+
+Staff change a driver's status on **Drivers → Status** (or **Review** for a pending driver), or `POST /api/drivers/[id]/status` with `{ action, reason, license_expiry?, vehicles?: [{ id, insurance_expiry, fitness_expiry, permit_expiry }] }`. Permission: `drivers.manage` (SUPER_ADMIN, DISPATCHER). `GET` on the same path returns the status, document dates and history (`drivers.view`).
+
+| Action | From | To |
+|---|---|---|
+| `ACTIVATE` | `PENDING_DOCS`, `SUSPENDED_DOC_EXPIRED`, `SUSPENDED_QUALITY`, `SUSPENDED_MANUAL`, `OFFBOARDED` | `APPROVED_ACTIVE` |
+| `SUSPEND` | any status except `SUSPENDED_MANUAL`, `OFFBOARDED` | `SUSPENDED_MANUAL` |
+| `OFFBOARD` | any status except `OFFBOARDED` | `OFFBOARDED` |
+
+- Every change needs a reason (5-500 characters) and is recorded in `crm_driver_status_changes` with the admin, in the same transaction.
+- **Activate** saves any dates sent, then is refused (422, nothing saved) unless the licence and every vehicle's insurance, fitness and permit dates are entered and not past, and the driver has a vehicle. It marks the driver's vehicles verified and available.
+- Drivers restricted for unpaid dues (`RESTRICTED_DIGITAL_ONLY`, `SUSPENDED_UNPAID_DUES`) cannot be activated by hand; paying the dues restores them, as before.
+- Suspend and offboard take the driver off rides (`is_available = false`). A ride the driver already holds is not cancelled; reassign it if needed.
+- The driver is not messaged about any of these changes.
+- Automatic status changes (expired documents, ratings, dues) are not recorded in `crm_driver_status_changes`.
+
+Apply `crm-design/30_driver_status_changes.sql` before deploying. Tests:
+```bash
+DATABASE_URL=postgresql://localhost/biharcabs_crm_test npx tsx --test src/tests/driver-status.integration.ts
+npx tsx --test src/tests/driver-status.test.ts src/tests/driver-onboarding.test.ts
+```
 
 ## Sign-in attempt limits
 

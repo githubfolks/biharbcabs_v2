@@ -819,30 +819,32 @@ export async function processIncomingWhatsAppMessage(params: {
     const regNo = rawText.toUpperCase().trim();
     const ctx = conv.context_data;
 
-    // Create Driver and Vehicle in DB
+    // New drivers start PENDING_DOCS with an unverified vehicle: staff check the documents and activate
+    // them in the CRM (migration 30). Re-running sign-up never changes an existing driver's status, and a
+    // registration number already on file is left as it is.
     const dRes = await query(
       `INSERT INTO crm_drivers (full_name, phone, whatsapp_phone, base_city, onboarding_status, wallet_balance, is_available)
-       VALUES ($1, $2, $2, $3, 'APPROVED_ACTIVE', 0.00, true)
+       VALUES ($1, $2, $2, $3, 'PENDING_DOCS', 0.00, true)
        ON CONFLICT (phone) DO UPDATE
-       SET full_name = EXCLUDED.full_name, base_city = EXCLUDED.base_city, onboarding_status = 'APPROVED_ACTIVE'
-       RETURNING id`,
+       SET full_name = EXCLUDED.full_name, base_city = EXCLUDED.base_city
+       RETURNING id, onboarding_status`,
       [ctx.full_name || 'Driver', fromPhone, ctx.base_city || 'Patna']
     );
 
     const driverId = dRes.rows[0].id;
     await query(
       `INSERT INTO crm_driver_vehicles (driver_id, wp_vehicle_code, registration_no, model_name, is_verified)
-       VALUES ($1, $2, $3, $4, true)
-       ON CONFLICT (registration_no) DO UPDATE
-       SET wp_vehicle_code = EXCLUDED.wp_vehicle_code, is_verified = true`,
+       VALUES ($1, $2, $3, $4, false)
+       ON CONFLICT (registration_no) DO NOTHING`,
       [driverId, ctx.wp_vehicle_code || 'sedan', regNo, `${ctx.wp_vehicle_code?.toUpperCase()} Commercial`]
     );
 
     await resetConversation(fromPhone);
-    await sendWhatsAppText(
-      fromPhone,
-      `🎉 Congratulations ${ctx.full_name}! Your vehicle (${regNo}) is approved and active for ${ctx.base_city}.\n\nYou will now receive live ride broadcasts on WhatsApp with instant [ Accept ] buttons!`
-    );
+    const reply =
+      dRes.rows[0].onboarding_status === 'PENDING_DOCS'
+        ? `🙏 Thank you ${ctx.full_name}! Your details and vehicle (${regNo}) for ${ctx.base_city} are received.\n\nOur team will verify your driving licence and vehicle documents (insurance, fitness, permit). You will start receiving ride offers once your account is approved.`
+        : `🙏 Thank you ${ctx.full_name}. You are already registered with BiharCabs, so your account status has not changed. Please contact the BiharCabs operations team for any changes.`;
+    await sendWhatsAppText(fromPhone, reply);
     return;
   }
 

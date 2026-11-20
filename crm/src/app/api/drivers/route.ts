@@ -1,10 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth';
-import { query } from '@/lib/db';
+import { query, withTransaction } from '@/lib/db';
 import { getRevenueProtectionPolicy } from '@/lib/settings';
 import { validateOnboardingDocs } from '@/lib/driver-onboarding';
 
 export const dynamic = 'force-dynamic';
+
+class VehicleTakenError extends Error {
+  constructor(regNo: string) {
+    super(`Vehicle ${regNo} is already registered to another driver`);
+  }
+}
 
 export async function GET(req: NextRequest) {
   const auth = await requireAdmin(req, 'drivers.view');
@@ -117,72 +123,77 @@ export async function POST(req: NextRequest) {
     const cleanPhone = phone.replace(/\D/g, '');
     const cleanWa = (whatsapp_phone || phone).replace(/\D/g, '');
 
-    // 1. Insert driver
-    const driverRes = await query(
-      `INSERT INTO crm_drivers (
-        full_name, phone, whatsapp_phone, base_city, onboarding_status,
-        license_number, license_expiry, bank_upi_id, bank_account_number, bank_ifsc,
-        created_at, updated_at
-      ) VALUES ($1, $2, $3, $4, 'APPROVED_ACTIVE', $5, $6, $7, $8, $9, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-      ON CONFLICT (phone) DO UPDATE
-      SET full_name = EXCLUDED.full_name,
-          whatsapp_phone = EXCLUDED.whatsapp_phone,
-          base_city = EXCLUDED.base_city,
-          license_number = COALESCE(EXCLUDED.license_number, crm_drivers.license_number),
-          license_expiry = COALESCE(EXCLUDED.license_expiry, crm_drivers.license_expiry),
-          updated_at = CURRENT_TIMESTAMP
-      RETURNING *`,
-      [
-        full_name,
-        cleanPhone,
-        cleanWa,
-        base_city,
-        license_number || null,
-        checked.docs.license_expiry,
-        checked.docs.bank_upi_id,
-        bank_account_number || null,
-        bank_ifsc || null,
-      ]
-    );
-
-    const driver = driverRes.rows[0];
-
-    // 2. Insert vehicle if provided
-    let insertedVehicle = null;
-    if (vehicle && vehicle.registration_no && vehicle.wp_vehicle_code && checked.docs.vehicle) {
-      const vRes = await query(
-        `INSERT INTO crm_driver_vehicles (
-          driver_id, wp_vehicle_code, registration_no, model_name,
-          insurance_expiry, fitness_expiry, permit_expiry, is_verified, created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-        ON CONFLICT (registration_no) DO UPDATE
-        SET wp_vehicle_code = EXCLUDED.wp_vehicle_code,
-            model_name = EXCLUDED.model_name,
-            insurance_expiry = EXCLUDED.insurance_expiry,
-            fitness_expiry = EXCLUDED.fitness_expiry,
-            permit_expiry = EXCLUDED.permit_expiry,
-            is_verified = true,
+    // New drivers start PENDING_DOCS: they get rides only after staff activate them (migration 30).
+    // An existing phone keeps its current status. Driver and vehicle are saved together or not at all.
+    const docs = checked.docs;
+    const result = await withTransaction(async (client) => {
+      const driverRes = await client.query(
+        `INSERT INTO crm_drivers (
+          full_name, phone, whatsapp_phone, base_city, onboarding_status,
+          license_number, license_expiry, bank_upi_id, bank_account_number, bank_ifsc,
+          created_at, updated_at
+        ) VALUES ($1, $2, $3, $4, 'PENDING_DOCS', $5, $6, $7, $8, $9, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        ON CONFLICT (phone) DO UPDATE
+        SET full_name = EXCLUDED.full_name,
+            whatsapp_phone = EXCLUDED.whatsapp_phone,
+            base_city = EXCLUDED.base_city,
+            license_number = COALESCE(EXCLUDED.license_number, crm_drivers.license_number),
+            license_expiry = COALESCE(EXCLUDED.license_expiry, crm_drivers.license_expiry),
             updated_at = CURRENT_TIMESTAMP
         RETURNING *`,
         [
-          driver.id,
-          vehicle.wp_vehicle_code,
-          vehicle.registration_no.toUpperCase(),
-          vehicle.model_name || vehicle.wp_vehicle_code,
-          checked.docs.vehicle.insurance_expiry,
-          checked.docs.vehicle.fitness_expiry,
-          checked.docs.vehicle.permit_expiry,
+          full_name,
+          cleanPhone,
+          cleanWa,
+          base_city,
+          license_number || null,
+          docs.license_expiry,
+          docs.bank_upi_id,
+          bank_account_number || null,
+          bank_ifsc || null,
         ]
       );
-      insertedVehicle = vRes.rows[0];
-    }
+      const driver = driverRes.rows[0];
 
-    return NextResponse.json({
-      success: true,
-      driver,
-      vehicle: insertedVehicle,
+      let insertedVehicle = null;
+      if (vehicle && vehicle.registration_no && vehicle.wp_vehicle_code && docs.vehicle) {
+        const regNo = String(vehicle.registration_no).toUpperCase();
+        // A registration already held by another driver is refused, never moved or changed.
+        const vRes = await client.query(
+          `INSERT INTO crm_driver_vehicles (
+            driver_id, wp_vehicle_code, registration_no, model_name,
+            insurance_expiry, fitness_expiry, permit_expiry, is_verified, created_at, updated_at
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, false, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+          ON CONFLICT (registration_no) DO UPDATE
+          SET wp_vehicle_code = EXCLUDED.wp_vehicle_code,
+              model_name = EXCLUDED.model_name,
+              insurance_expiry = EXCLUDED.insurance_expiry,
+              fitness_expiry = EXCLUDED.fitness_expiry,
+              permit_expiry = EXCLUDED.permit_expiry,
+              updated_at = CURRENT_TIMESTAMP
+          WHERE crm_driver_vehicles.driver_id = EXCLUDED.driver_id
+          RETURNING *`,
+          [
+            driver.id,
+            vehicle.wp_vehicle_code,
+            regNo,
+            vehicle.model_name || vehicle.wp_vehicle_code,
+            docs.vehicle.insurance_expiry,
+            docs.vehicle.fitness_expiry,
+            docs.vehicle.permit_expiry,
+          ]
+        );
+        if (vRes.rows.length === 0) throw new VehicleTakenError(regNo);
+        insertedVehicle = vRes.rows[0];
+      }
+      return { driver, vehicle: insertedVehicle };
     });
+
+    return NextResponse.json({ success: true, ...result });
   } catch (err: any) {
+    if (err instanceof VehicleTakenError) {
+      return NextResponse.json({ success: false, error: err.message }, { status: 409 });
+    }
     return NextResponse.json({ success: false, error: err.message }, { status: 500 });
   }
 }
