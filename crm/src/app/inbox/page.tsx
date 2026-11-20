@@ -11,20 +11,28 @@ export default function InboxPage() {
   const [replyText, setReplyText] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [threadsError, setThreadsError] = useState<string | null>(null);
+  const [messagesError, setMessagesError] = useState<string | null>(null);
+  // Phones show one pane at a time: the list, or the chat opened from it.
+  const [chatOpenOnPhone, setChatOpenOnPhone] = useState(false);
 
   async function loadThreads() {
     setLoading(true);
     try {
       const res = await fetch('/api/whatsapp/messages');
-      const data = await res.json();
-      if (data.success) {
-        setThreads(data.threads || []);
-        if (!selectedPhone && data.threads?.length > 0) {
-          setSelectedPhone(data.threads[0].phone);
-        }
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data?.success) {
+        setThreadsError(data?.error || `Could not load conversations (error ${res.status}). Press Refresh to try again.`);
+        return;
+      }
+      setThreadsError(null);
+      setThreads(data.threads || []);
+      if (!selectedPhone && data.threads?.length > 0) {
+        setSelectedPhone(data.threads[0].phone);
       }
     } catch (err) {
       console.error('Failed to load WhatsApp threads:', err);
+      setThreadsError('Could not reach the CRM. Check your connection, then press Refresh.');
     } finally {
       setLoading(false);
     }
@@ -32,14 +40,18 @@ export default function InboxPage() {
 
   async function loadMessages(phone: string) {
     try {
-      const res = await fetch(`/api/whatsapp/messages?phone=${phone}`);
-      const data = await res.json();
-      if (data.success) {
-        setActiveThread(data.conversation);
-        setMessages(data.messages || []);
+      const res = await fetch(`/api/whatsapp/messages?phone=${encodeURIComponent(phone)}`);
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data?.success) {
+        setMessagesError(data?.error || `Could not load this conversation (error ${res.status}). Press Refresh to try again.`);
+        return;
       }
+      setMessagesError(null);
+      setActiveThread(data.conversation);
+      setMessages(data.messages || []);
     } catch (err) {
       console.error('Failed to load message history:', err);
+      setMessagesError('Could not reach the CRM. Check your connection, then press Refresh.');
     }
   }
 
@@ -80,8 +92,8 @@ export default function InboxPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Live WhatsApp Inbox</h1>
           <p className="text-sm text-slate-500">Real-time customer inquiries, driver broadcasts, and manual takeover</p>
         </div>
@@ -97,9 +109,9 @@ export default function InboxPage() {
         </button>
       </div>
 
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex h-[720px]">
-        {/* Left Sidebar: Threads List */}
-        <div className="w-1/3 border-r border-slate-200 flex flex-col bg-slate-50/50">
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex h-[calc(100dvh-11rem)] min-h-[420px] md:h-[720px]">
+        {/* Left Sidebar: Threads List (full width on phones until a conversation is opened) */}
+        <div className={`${chatOpenOnPhone ? 'hidden' : 'flex'} md:flex w-full md:w-1/3 min-w-0 md:border-r border-slate-200 flex-col bg-slate-50/50`}>
           <div className="p-3 border-b border-slate-200 bg-white flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-600">Active Conversations</span>
             <span className="text-xs font-mono font-semibold px-2 py-0.5 bg-orange-100 text-orange-800 rounded-full">
@@ -108,7 +120,13 @@ export default function InboxPage() {
           </div>
 
           <div className="flex-1 overflow-y-auto divide-y divide-slate-100">
-            {threads.length === 0 ? (
+            {threadsError ? (
+              <div role="alert" className="m-3 p-3 rounded-lg border border-red-200 bg-red-50 text-xs text-red-700">
+                {threadsError}
+              </div>
+            ) : loading && threads.length === 0 ? (
+              <div className="p-6 text-center text-xs text-slate-400">Loading conversations…</div>
+            ) : threads.length === 0 ? (
               <div className="p-6 text-center text-xs text-slate-400">
                 No active WhatsApp conversations yet. Messages sent to +91 7070992170 will appear here.
               </div>
@@ -118,7 +136,10 @@ export default function InboxPage() {
                 return (
                   <button
                     key={t.phone}
-                    onClick={() => setSelectedPhone(t.phone)}
+                    onClick={() => {
+                      setSelectedPhone(t.phone);
+                      setChatOpenOnPhone(true);
+                    }}
                     className={`w-full text-left p-3 transition flex items-start space-x-3 ${
                       isSelected ? 'bg-orange-50/80 border-l-4 border-orange-600' : 'hover:bg-slate-100/70'
                     }`}
@@ -129,15 +150,15 @@ export default function InboxPage() {
                       {t.role === 'DRIVER' ? <Car className="h-4 w-4" /> : <User className="h-4 w-4" />}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between gap-2">
                         <span className="font-semibold text-slate-900 text-sm truncate">
                           {t.customer_name || t.driver_name || `+${t.phone}`}
                         </span>
-                        <span className="text-[10px] text-slate-400">
+                        <span className="text-[10px] text-slate-400 shrink-0">
                           {new Date(t.last_message_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
                         </span>
                       </div>
-                      <div className="text-xs text-slate-500 font-mono mt-0.5">
+                      <div className="text-xs text-slate-500 font-mono mt-0.5 truncate">
                         +{t.phone} &bull; <span className="uppercase text-[10px] font-semibold text-slate-600">[{t.role}]</span>
                       </div>
                       <div className="text-xs text-slate-400 truncate mt-1">
@@ -152,32 +173,44 @@ export default function InboxPage() {
         </div>
 
         {/* Right Pane: Chat Thread */}
-        <div className="flex-1 flex flex-col bg-slate-100/40">
+        <div className={`${chatOpenOnPhone ? 'flex' : 'hidden'} md:flex flex-1 min-w-0 flex-col bg-slate-100/40`}>
           {selectedPhone ? (
             <>
               {/* Chat Header */}
-              <div className="p-3 bg-white border-b border-slate-200 flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <div className="bg-orange-100 text-orange-700 p-2 rounded-full">
+              <div className="p-3 bg-white border-b border-slate-200 flex items-center justify-between gap-2">
+                <div className="flex items-center space-x-3 min-w-0">
+                  <button
+                    type="button"
+                    onClick={() => setChatOpenOnPhone(false)}
+                    className="md:hidden -ml-1 p-1.5 rounded-md text-slate-600 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
+                    aria-label="Back to conversations"
+                  >
+                    <ArrowLeft className="h-5 w-5" />
+                  </button>
+                  <div className="bg-orange-100 text-orange-700 p-2 rounded-full shrink-0">
                     <Phone className="h-4 w-4" />
                   </div>
-                  <div>
-                    <h3 className="font-bold text-slate-900 text-sm">+{selectedPhone}</h3>
+                  <div className="min-w-0">
+                    <h3 className="font-bold text-slate-900 text-sm truncate">+{selectedPhone}</h3>
                     <div className="text-xs text-slate-500">
                       Role: <span className="font-semibold">{activeThread?.role || 'CUSTOMER'}</span> &bull; State:{' '}
                       <span className="font-mono">{activeThread?.state || 'IDLE'}</span>
                     </div>
                   </div>
                 </div>
-                <div className="text-xs text-slate-400 flex items-center">
+                <div className="hidden sm:flex text-xs text-slate-400 items-center shrink-0">
                   <Clock className="h-3.5 w-3.5 mr-1" />
                   Live WhatsApp Cloud API
                 </div>
               </div>
 
               {/* Chat Messages */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-3">
-                {messages.length === 0 ? (
+              <div className="flex-1 overflow-y-auto p-3 md:p-4 space-y-3">
+                {messagesError ? (
+                  <div role="alert" className="p-3 rounded-lg border border-red-200 bg-red-50 text-xs text-red-700">
+                    {messagesError}
+                  </div>
+                ) : messages.length === 0 ? (
                   <div className="h-full flex items-center justify-center text-xs text-slate-400">
                     No messages recorded for this conversation yet.
                   </div>
@@ -197,13 +230,13 @@ export default function InboxPage() {
                         className={`flex flex-col ${isOutbound ? 'items-end' : 'items-start'}`}
                       >
                         <div
-                          className={`max-w-[75%] rounded-2xl p-3 shadow-sm text-sm ${
+                          className={`max-w-[85%] md:max-w-[75%] min-w-0 rounded-2xl p-3 shadow-sm text-sm ${
                             isOutbound
                               ? 'bg-emerald-600 text-white rounded-tr-none'
                               : 'bg-white border border-slate-200 text-slate-800 rounded-tl-none'
                           }`}
                         >
-                          <div className="whitespace-pre-wrap">{textBody}</div>
+                          <div className="whitespace-pre-wrap [overflow-wrap:anywhere]">{textBody}</div>
                           {m.payload?.interactive?.action?.buttons && (
                             <div className="mt-2 pt-2 border-t border-emerald-500/40 flex flex-wrap gap-1">
                               {m.payload.interactive.action.buttons.map((b: any, idx: number) => (
@@ -231,18 +264,18 @@ export default function InboxPage() {
               </div>
 
               {/* Chat Input */}
-              <form onSubmit={handleSendReply} className="p-3 bg-white border-t border-slate-200 flex space-x-2">
+              <form onSubmit={handleSendReply} className="p-3 bg-white border-t border-slate-200 flex gap-2">
                 <input
                   type="text"
                   value={replyText}
                   onChange={(e) => setReplyText(e.target.value)}
                   placeholder="Type an official WhatsApp reply or price quote..."
-                  className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  className="flex-1 min-w-0 px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
                 />
                 <button
                   type="submit"
                   disabled={sending || !replyText.trim()}
-                  className="px-4 py-2 bg-orange-600 text-white rounded-lg text-sm font-semibold hover:bg-orange-700 disabled:opacity-50 flex items-center"
+                  className="shrink-0 px-4 py-2 bg-orange-600 text-white rounded-lg text-sm font-semibold hover:bg-orange-700 disabled:opacity-50 flex items-center"
                 >
                   <Send className="h-4 w-4 mr-1" />
                   {sending ? 'Sending...' : 'Send'}
