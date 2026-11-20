@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth';
 import { changeDriverStatus, DriverStatusError, getDriverStatusDetail, parseStatusChange } from '@/lib/driver-status';
+import { notifyDriver, statusChangeEvent } from '@/lib/driver-notices';
 
 export const dynamic = 'force-dynamic';
 
@@ -48,7 +49,10 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
   try {
     const result = await changeDriverStatus(driverId, parsed.change, auth.id);
-    return NextResponse.json({ success: true, ...result });
+    // The change is saved; the message to the driver follows and cannot undo it.
+    const event = statusChangeEvent(parsed.change.action, result.fromStatus);
+    const notice = event ? await notifyDriver(driverId, event) : null;
+    return NextResponse.json({ success: true, ...result, notice });
   } catch (err: any) {
     return errorResponse(err, 'Changing driver status');
   }

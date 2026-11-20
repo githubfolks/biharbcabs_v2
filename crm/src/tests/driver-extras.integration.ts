@@ -16,6 +16,7 @@ import { setOffersPaused } from '../lib/driver-edits';
 import { findEligibleDrivers, failedRules } from '../lib/dispatch-engine';
 import { getConversation, processIncomingWhatsAppMessage, resetConversation } from '../lib/whatsapp-bot';
 import * as offersRoute from '../app/api/drivers/[id]/offers/route';
+import * as statusRoute from '../app/api/drivers/[id]/status/route';
 import * as walletRoute from '../app/api/drivers/[id]/wallet/route';
 
 const dbName = new URL(process.env.DATABASE_URL || 'postgresql://x/none').pathname.slice(1);
@@ -81,6 +82,7 @@ before(async () => {
 after(async () => {
   await query(`DELETE FROM crm_payments_ledger WHERE driver_id = ANY($1)`, [driverIds]);
   await query(`DELETE FROM crm_driver_edits WHERE driver_id = ANY($1)`, [driverIds]);
+  await query(`DELETE FROM crm_driver_status_changes WHERE driver_id = ANY($1)`, [driverIds]);
   await query(`DELETE FROM crm_driver_vehicles WHERE driver_id = ANY($1)`, [driverIds]);
   await query(`DELETE FROM crm_drivers WHERE id = ANY($1)`, [driverIds]);
   await query(`DELETE FROM crm_whatsapp_conversations WHERE phone = ANY($1)`, [phones]);
@@ -126,6 +128,56 @@ describe('pausing ride offers', () => {
     assert.strictEqual((await offersRoute.POST(req('POST', opsToken, { paused: true, reason: '' }), ctx)).status, 400);
     assert.strictEqual((await offersRoute.POST(req('POST', opsToken, { paused: false, reason: 'Not paused' }), ctx)).status, 409);
     assert.strictEqual((await offersRoute.POST(req('POST', opsToken, { paused: true, reason: 'Car in garage' }), ctx)).status, 200);
+  });
+});
+
+describe('messages to the driver', () => {
+  const lastLogId = async () => Number((await query(`SELECT COALESCE(MAX(id), 0) AS id FROM crm_whatsapp_logs`)).rows[0].id);
+  const sentSince = async (p: string, since: number) =>
+    (await query(`SELECT payload::text AS body FROM crm_whatsapp_logs WHERE phone = $1 AND direction = 'OUTBOUND' AND id > $2 ORDER BY id`, [p, since])).rows.map((r) => r.body as string);
+
+  it('tells the driver when approved, suspended, paused and resumed, never with the staff reason', async () => {
+    const d = await driver('Notice Driver', 'PENDING_DOCS');
+    const ctx = { params: { id: String(d.id) } };
+    const steps: Array<[() => Promise<Response>, RegExp]> = [
+      [() => statusRoute.POST(req('POST', opsToken, { action: 'ACTIVATE', reason: 'SECRET-A originals checked' }), ctx), /account is approved/],
+      [() => offersRoute.POST(req('POST', opsToken, { paused: true, reason: 'SECRET-B on leave' }), ctx), /Ride offers to you are paused/],
+      [() => offersRoute.POST(req('POST', opsToken, { paused: false, reason: 'SECRET-C back' }), ctx), /Ride offers to you have resumed/],
+      [() => statusRoute.POST(req('POST', opsToken, { action: 'SUSPEND', reason: 'SECRET-D complaint' }), ctx), /has been suspended/],
+      [() => statusRoute.POST(req('POST', opsToken, { action: 'ACTIVATE', reason: 'SECRET-E resolved' }), ctx), /account is active again/],
+    ];
+    for (const [call, expected] of steps) {
+      const since = await lastLogId();
+      const res = await call();
+      const data = await res.json();
+      assert.strictEqual(res.status, 200, data.error);
+      assert.deepStrictEqual(data.notice, { sent: true });
+      const sent = await sentSince(d.phone, since);
+      assert.strictEqual(sent.length, 1, `one message for ${expected}`);
+      assert.match(sent[0], expected);
+      assert.doesNotMatch(sent[0], /SECRET/, 'the staff reason is never sent');
+    }
+  });
+
+  it('does not message an offboarded driver', async () => {
+    const d = await driver();
+    const since = await lastLogId();
+    const res = await statusRoute.POST(req('POST', opsToken, { action: 'OFFBOARD', reason: 'Left the fleet' }), { params: { id: String(d.id) } });
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual((await res.json()).notice, null);
+    assert.deepStrictEqual(await sentSince(d.phone, since), []);
+  });
+
+  it('keeps the change and says so when the message cannot be sent', async () => {
+    const d = await driver();
+    // A phone with no digits cannot be messaged (unique letters only, so no other row clashes).
+    const letters = (s: string) => s.replace(/\d/g, (c) => 'abcdefghij'[Number(c)]);
+    await query(`UPDATE crm_drivers SET phone = $2, whatsapp_phone = '' WHERE id = $1`, [d.id, `nophone-${letters(RUN)}-${letters(String(seq++))}`]);
+    const res = await statusRoute.POST(req('POST', opsToken, { action: 'SUSPEND', reason: 'Testing failure' }), { params: { id: String(d.id) } });
+    const data = await res.json();
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(data.notice.sent, false);
+    assert.strictEqual((await query(`SELECT onboarding_status FROM crm_drivers WHERE id = $1`, [d.id])).rows[0].onboarding_status, 'SUSPENDED_MANUAL');
   });
 });
 

@@ -292,7 +292,7 @@ Staff change a driver's status on **Drivers → Status** (or **Review** for a pe
 - **Activate** saves any dates sent, then is refused (422, nothing saved) unless the licence and every vehicle's insurance, fitness and permit dates are entered and not past, and the driver has a vehicle. It marks the driver's vehicles verified and available.
 - Drivers restricted for unpaid dues (`RESTRICTED_DIGITAL_ONLY`, `SUSPENDED_UNPAID_DUES`) cannot be activated by hand; paying the dues restores them, as before.
 - Suspend and offboard take the driver off rides (`is_available = false`). A ride the driver already holds is not cancelled; reassign it if needed.
-- The driver is not messaged about any of these changes.
+- **The driver is told on WhatsApp** when approved (from `PENDING_DOCS`), reactivated, or suspended; not when offboarded (owner decision). The wording is fixed per event and **never includes the reason staff typed**. It goes out after the change is saved, through `driver_account_notice` (free-form inside the 24-hour window, the approved template otherwise). A message that fails does not undo the change: staff see "not delivered" on the page, and it is listed under **Failed messages**.
 - Automatic status changes (expired documents, ratings, dues) are not recorded in `crm_driver_status_changes`.
 
 Apply `crm-design/30_driver_status_changes.sql` before deploying. Tests:
@@ -334,6 +334,7 @@ npx tsx --test src/tests/driver-edits.test.ts
 **Pause offers** (migration 32): **Drivers → Status → Pause offers**, or `POST /api/drivers/[id]/offers` with `{ paused: true | false, reason }`. Permission: `drivers.manage`.
 - Dispatch refuses a paused driver ("ride offers are paused by staff"), for broadcasts and staff assignment alike. Rides the driver already holds are not affected. Status is unchanged.
 - The pause is its own flag (`crm_drivers.offers_paused`), not `is_available`: settlement, dues payments, incentives and activation set `is_available` back to true, and none of them lifts a pause. Only **Resume offers** does.
+- The driver is told on WhatsApp when offers are paused and when they resume, in the same way as status changes (fixed wording, no staff reason).
 - Pausing and resuming need a reason (5-500 characters) and are recorded in `crm_driver_edits` (`OFFERS_PAUSE`, `OFFERS_RESUME`). The list shows an **Offers paused** badge.
 
 **Wallet**: **Drivers → Wallet**, or `GET /api/drivers/[id]/wallet`. Permission: `ledger.view` (SUPER_ADMIN, FINANCE_MANAGER). Shows the wallet and security reserve balances and the latest 100 ledger entries for the driver.

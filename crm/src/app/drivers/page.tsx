@@ -7,6 +7,14 @@ import DriverEditDialog, { VEHICLE_CATEGORIES } from '@/components/DriverEditDia
 import DriverWalletDialog from '@/components/DriverWalletDialog';
 import { hasPermission } from '@/lib/permissions';
 
+/** Staff-facing line about the WhatsApp message sent after a change (null: none is sent). */
+function noticeMessage(name: string, notice: { sent: boolean; error?: string } | null) {
+  if (!notice) return { ok: true, text: `Saved. ${name} was not messaged (no message is sent for this change).` };
+  return notice.sent
+    ? { ok: true, text: `Saved. ${name} was told on WhatsApp.` }
+    : { ok: false, text: `Saved, but the WhatsApp message to ${name} was not delivered (${notice.error || 'unknown error'}). It is listed under Failed messages on the dispatch board; tell the driver another way.` };
+}
+
 const ACTION_LABEL: Record<DriverStatusAction, string> = { ACTIVATE: 'Activate', SUSPEND: 'Suspend', OFFBOARD: 'Offboard' };
 
 const STATUS_BADGE: Record<string, string> = {
@@ -49,6 +57,8 @@ export default function DriversPage() {
   const [offersError, setOffersError] = useState<string | null>(null);
   const [savingOffers, setSavingOffers] = useState(false);
   const [walletDriver, setWalletDriver] = useState<any | null>(null);
+  // What happened to the WhatsApp message after a status change or offer pause.
+  const [noticeFlash, setNoticeFlash] = useState<{ ok: boolean; text: string } | null>(null);
 
   // Expiry dates start empty: the admin must enter the dates printed on the documents.
   const emptyForm = {
@@ -209,6 +219,7 @@ export default function DriversPage() {
     setStatusReason('');
     setStatusError(null);
     setOffersError(null);
+    setNoticeFlash(null);
     try {
       const res = await fetch(`/api/drivers/${driver.id}/status`);
       const data = await res.json();
@@ -245,6 +256,7 @@ export default function DriversPage() {
       if (res.ok && data.success) {
         setOffersReason('');
         await openStatusModal(statusDriver);
+        setNoticeFlash(noticeMessage(statusDriver.full_name, data.notice));
         loadDrivers();
       } else {
         setOffersError(data.error || 'Not saved');
@@ -283,6 +295,7 @@ export default function DriversPage() {
       });
       const data = await res.json();
       if (data.success) {
+        setNoticeFlash(noticeMessage(statusDriver.full_name, data.notice));
         setStatusDriver(null);
         loadDrivers();
       } else {
@@ -387,6 +400,15 @@ export default function DriversPage() {
           </button>
         )}
       </div>
+
+      {noticeFlash && (
+        <div className={`flex items-start justify-between gap-2 p-3 rounded-md text-sm border ${noticeFlash.ok ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-amber-50 border-amber-200 text-amber-800'}`}>
+          <span>{noticeFlash.text}</span>
+          <button type="button" onClick={() => setNoticeFlash(null)} aria-label="Dismiss" className="text-current opacity-60 hover:opacity-100">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
 
       {loadError && (
         <div className="flex flex-wrap items-center justify-between gap-2 p-3 bg-rose-50 border border-rose-200 rounded-md text-sm text-rose-700">
@@ -1007,6 +1029,7 @@ export default function DriversPage() {
                     </button>
                   </div>
                   {offersError && <div className="text-rose-700">{offersError}</div>}
+                  {noticeFlash && <div className={noticeFlash.ok ? 'text-emerald-700' : 'text-amber-800'}>{noticeFlash.text}</div>}
                 </div>
 
                 {allowedActions(statusDetail.status).length === 0 ? (
