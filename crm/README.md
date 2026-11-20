@@ -100,7 +100,7 @@ Work through these in order. Each feature section below has the detail; this lis
 - [ ] `CLIENT_IP_HEADER` (optional): the header your reverse proxy sets with the client IP (e.g. `x-real-ip`). Without it, sign-in limits apply per email only, not per IP.
 - [ ] **Database connection:** `DATABASE_URL` and `PG*` are set in `docker-compose.yml` itself (host PostgreSQL via `host.docker.internal`). Check the user and database match the VPS.
 - [ ] `WP_API_BASE_URL` is only a fallback when the `biharcabs_wp_api` setting has no `base_url`.
-- [ ] **Deploy the code:** `git pull`, then `docker compose up -d --build crm`.
+- [ ] **Deploy the code:** `git pull`, then `docker compose up -d --build crm`. Rebuild with `--build`; restarting the old image isn't enough. The image must include `crm/next.config.js`, which keeps the PDF library outside the build. Without it every GST document PDF fails (500, `Helvetica.afm` not found), both downloads and WhatsApp sends.
 
 ### 3. External services
 - [ ] **Razorpay webhook** to `https://<crm host>/api/payments/razorpay/webhook`, secret = `RAZORPAY_WEBHOOK_SECRET`, events: `payment_link.paid`, `payment_link.expired`, `payment_link.cancelled`, `refund.processed`, `refund.failed`.
@@ -134,14 +134,30 @@ Work through these in order. Each feature section below has the detail; this lis
 - [ ] **New ride invoice series:** from the deploy, ride invoices are numbered `TI<financial year><6 digits>` (e.g. `TI2627000001`), one running series. Earlier invoices keep their `INV-…` numbers. Report both series in GSTR-1 Table 13 for this year.
 - [ ] **Yearly restart:** every series (`TI`, `RV`, `RF`, `CC`) restarts at 000001 on 1 April.
 - [ ] **Tax split:** invoices and vouchers now show CGST + SGST within Bihar, or IGST for other states, by place of supply.
+- [ ] **Finance summary cards:**
+  - **Completed rides only:** Facilitation, GST on Rides and Tech Fees now count only completed rides, not rides that are only assigned or in progress. Expect those totals to be **lower** than before the deploy. They no longer move as rides are assigned or cancelled.
+  - **GST card:** the old "Statutory 18% GST" card is now **GST on Rides**. It shows its two parts: 5% ride GST (Sec 9(5)), and 18% on commission and the tech fee.
+
+### 6c. Tell staff
+- [ ] **Phones:** the CRM now works on a phone. Tap the menu button (top left) to open the menu.
+- [ ] **Status pills:**
+  - **WhatsApp pill** (top bar; inside the menu on phones):
+    - **green** "configured";
+    - **amber** "sends failing": every send in the last hour failed, so check **Failed messages**;
+    - **red** "not configured": nothing is being sent.
+  - **Database pill** (sidebar): shows whether the CRM can reach its database.
+  - **Hovering a pill** shows the details.
 
 ### 7. After deploying
 - [ ] Sign in, and check the dispatch board loads.
+- [ ] **Status pills:** the sidebar should show **Database connected**, and the top bar **WhatsApp configured**.
+  - **Red "WhatsApp not configured":** the Meta access token or phone number id is missing in `meta_whatsapp_config`. Every message is only simulated until it is set.
+  - **Amber "WhatsApp sends failing":** check **Failed messages** for Meta's error, which is often an expired token.
 - [ ] Run the frequent job once: `curl -X POST -H "Authorization: Bearer $CRON_SECRET" https://<crm host>/api/dispatch/cron`. It should return `success: true` with a count per job (`cronResults`); then check n8n's Executions list shows it succeeding.
 - [ ] Send a WhatsApp message to the business number and check it appears in the staff inbox.
 - [ ] **First GST documents:**
   - After the first trip settles, check its invoice number is `TI<FY>000001`, or the next one.
-  - Download its PDF under **Finance → GST Documents** (search the booking code), and check the GSTIN, the place of supply and the CGST/SGST or IGST lines.
+  - Download its PDF under **Finance → GST Documents** (search the booking code), and check the GSTIN, the place of supply and the CGST/SGST or IGST lines. A "Could not produce the PDF" error means the image was built without `next.config.js` (see step 2).
 - [ ] **First document on WhatsApp outside the 24-hour window:** check the customer received the template **with the PDF attached**. The send format for a document header is the one part not confirmed against Meta's docs. If it fails, it shows under **Failed messages** after 3 tries, with Meta's error.
 
 ---
