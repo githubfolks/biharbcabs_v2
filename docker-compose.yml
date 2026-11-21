@@ -73,12 +73,14 @@ services:
     ports:
       - "3001:3001"
     environment:
-      DATABASE_URL: postgresql://vikram@host.docker.internal:5432/biharcabs_crm
+      # Native host Postgres, role "biharcabs_crm" (data access only; see crm-design/crm_app_role.sql).
+      # CRM_DB_PASSWORD lives in the root .env, never in git. Use a URL-safe value (e.g. openssl rand -hex 24).
+      DATABASE_URL: postgresql://biharcabs_crm:${CRM_DB_PASSWORD:?Set CRM_DB_PASSWORD in .env (see crm-design/crm_app_role.sql)}@host.docker.internal:5432/biharcabs_crm
       PGHOST: host.docker.internal
       PGPORT: 5432
       PGDATABASE: biharcabs_crm
-      PGUSER: vikram
-      PGPASSWORD: ""
+      PGUSER: biharcabs_crm
+      PGPASSWORD: ${CRM_DB_PASSWORD:?Set CRM_DB_PASSWORD in .env (see crm-design/crm_app_role.sql)}
       WP_API_BASE_URL: http://wordpress:80
       PORT: 3001
       # Meta App Secret for webhook signatures. Set it in the shell or a local .env file, never in git.
