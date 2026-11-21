@@ -24,6 +24,8 @@ export const PERMISSIONS = {
   'dispatch.manage': OPS,
   'drivers.view': ALL,
   'drivers.manage': OPS,
+  // UPI ID, bank account and IFSC decide where payouts go, so only money roles change them.
+  'drivers.payout_details': MONEY,
   'ratings.view': ALL,
   'ratings.dispute': OPS,
   'incentives.award': MONEY,

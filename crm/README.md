@@ -86,8 +86,8 @@ Work through these in order. Each feature section below has the detail; this lis
 ### 1. Database (native PostgreSQL)
 - [ ] **Back up first:** `pg_dump -Fc biharcabs_crm > biharcabs_crm_$(date +%F).dump`
 - [ ] **See which migrations have run:** `SELECT version FROM crm_schema_migrations ORDER BY version;` (migrations 08 onwards record themselves).
-- [ ] **Apply the missing ones in order**, up to **29**: `psql -v ON_ERROR_STOP=1 -d biharcabs_crm -f crm-design/NN_name.sql`. Each one from 08 on is safe to run again.
-- [ ] **Migrations before code.** Apply them **before** the new code starts. From migration 26 on, the code writes to tables and columns the migrations add. Without 26, no GST document number can be issued, so **trip settlement and advance payments fail**. Without 27 and 28, settlement and payments fail on the new place-of-supply columns. Without 29, the document send step fails (other jobs carry on).
+- [ ] **Apply the missing ones in order**, up to **32**: `psql -v ON_ERROR_STOP=1 -d biharcabs_crm -f crm-design/NN_name.sql`. Each one from 08 on is safe to run again.
+- [ ] **Migrations before code.** Apply them **before** the new code starts. From migration 26 on, the code writes to tables and columns the migrations add. Without 26, no GST document number can be issued, so **trip settlement and advance payments fail**. Without 27 and 28, settlement and payments fail on the new place-of-supply columns. Without 29, the document send step fails (other jobs carry on). Without 30, driver onboarding still works but the driver Status dialog fails. Without 31, **dispatch and the document expiry jobs fail** (they read the new `removed_at` column), as do the driver list, CRM onboarding and activation. Without 32, **dispatch fails** (it reads the new `offers_paused` column).
 - [ ] **Check the GST migrations:**
   - `SELECT * FROM crm_document_counters ORDER BY series, financial_year;` should show this year's `RV`, `RF` and `CC` counters at the last numbers already issued (migration 26). `TI` starts at 1.
   - `SELECT setting_value FROM crm_settings WHERE setting_key = 'cancellation_policy';` should show `cancellation_charge_gst_pct` 5.
@@ -125,12 +125,14 @@ Work through these in order. Each feature section below has the detail; this lis
 - [ ] **Double-booked rides:** `psql -d biharcabs_crm -f crm/scripts/check-double-booked-rides.sql` lists drivers holding rides less than 4 hours apart. Reassign one ride of each pair.
 - [ ] **Documents waiting for a place of supply:** migrations 27 and 28 fill in existing ride invoices, receipt vouchers, refund vouchers and cancellation charges. Those whose pickup city isn't listed, or whose customer GSTIN is malformed, are listed under **Finance → GST Documents Waiting for Place of Supply**. Choose each one's state there. List the cities first, so fewer need choosing.
 - [ ] **Excess GST to reclaim:** **Finance → Excess GST to Reclaim (Form GST RFD-01)** shows, by month, the 18% paid on advances later kept at 5%. Give it to the CA to file. Charges marked "unknown" have no GST recorded on their receipt voucher; check them with the CA.
+- [ ] **Drivers with made-up document dates:** before this release the CRM onboarding form saved licence expiry 2028-12-31 and insurance, fitness and permit expiry 2027-12-31 for every driver, whatever their documents said. List them with `SELECT d.id, d.full_name, d.phone, v.registration_no FROM crm_drivers d JOIN crm_driver_vehicles v ON v.driver_id = d.id WHERE d.license_expiry = '2028-12-31' AND v.insurance_expiry = '2027-12-31' AND v.fitness_expiry = '2027-12-31' AND v.permit_expiry = '2027-12-31';` and enter the real dates from each driver's documents.
 - [ ] **Older documents:** everything issued before migration 29 is `NOT_SENT` and is never sent automatically. If a customer asks for one, search its booking code under **Finance → GST Documents**, download the PDF and send it.
 
 ### 6. Tell drivers
 - [ ] **GST:** drivers now bear the 5% ride GST, and pay 18% GST on commission plus the tech fee (₹10 becomes ₹11.80). See [GST](#gst-per-biharcabs-ca).
 - [ ] **Streak bonus:** only rides of at least ₹700 count, and every driver's streak starts again from 0.
 - [ ] **Rides:** a driver can no longer hold two rides whose pickups are less than 4 hours apart.
+- [ ] **Joining:** drivers who join on WhatsApp now wait for BiharCabs to check their documents before they get ride offers.
 
 ### 6b. Tell finance and the CA
 - [ ] **New ride invoice series:** from the deploy, ride invoices are numbered `TI<financial year><6 digits>` (e.g. `TI2627000001`), one running series. Earlier invoices keep their `INV-…` numbers. Report both series in GSTR-1 Table 13 for this year.
@@ -149,6 +151,11 @@ Work through these in order. Each feature section below has the detail; this lis
     - **red** "not configured": nothing is being sent.
   - **Database pill** (sidebar): shows whether the CRM can reach its database.
   - **Hovering a pill** shows the details.
+- [ ] **New drivers start as Pending:** a driver added on **Drivers** or through WhatsApp gets no rides until someone checks their documents and presses **Review → Activate**. See [Driver status](#driver-status-activate-suspend-offboard).
+- [ ] **Editing drivers:** **Drivers → Edit** changes a driver's details and vehicles. Only super admin and finance can change UPI or bank details. See [Editing drivers and vehicles](#editing-drivers-and-vehicles).
+- [ ] **Pausing offers:** **Drivers → Status → Pause offers** stops a driver getting ride offers (leave, car in the garage) without suspending them, until someone resumes. Use it instead of suspending.
+- [ ] **Existing phone numbers:** onboarding a number already on file is now refused; use **Edit** on that driver instead.
+- [ ] **Wallet:** finance and super admin see each driver's ledger entries under **Drivers → Wallet**.
 
 ### 7. After deploying
 - [ ] Sign in, and check the dispatch board loads.
@@ -268,6 +275,75 @@ DATABASE_URL=postgresql://localhost/biharcabs_crm_test npx tsx --test src/tests/
 ```
 
 **Commission setting:** bookings take commission from `revenue_protection_policy.platform_commission_pct` (Settings → "Platform Facilitation / Take-Rate"). The old `commission_model` and `driver_max_negative_balance_limit` settings were not used by any booking, dispatch or billing code, so their fields were removed from Settings. Credit limits are the tiered `dynamic_credit_limits`. The old rows remain in `crm_settings`, unused.
+
+## Driver status (activate, suspend, offboard)
+
+New drivers, from **Drivers → Onboard New Driver** or WhatsApp "JOIN", start as `PENDING_DOCS` with unverified vehicles, and get no rides. A number already on file, as anyone's phone or WhatsApp number, is never overwritten: the CRM form refuses it (409, naming the driver; use **Edit**), and WhatsApp "JOIN" from a registered driver changes nothing and replies that they are already registered (checked again at the last step, in case staff registered the number meanwhile). A registration number already on file is never changed either; the CRM form refuses one that belongs to another driver (409) and saves nothing.
+
+Staff change a driver's status on **Drivers → Status** (or **Review** for a pending driver), or `POST /api/drivers/[id]/status` with `{ action, reason, license_expiry?, vehicles?: [{ id, insurance_expiry, fitness_expiry, permit_expiry }] }`. Permission: `drivers.manage` (SUPER_ADMIN, DISPATCHER). `GET` on the same path returns the status, document dates and history (`drivers.view`).
+
+| Action | From | To |
+|---|---|---|
+| `ACTIVATE` | `PENDING_DOCS`, `SUSPENDED_DOC_EXPIRED`, `SUSPENDED_QUALITY`, `SUSPENDED_MANUAL`, `OFFBOARDED` | `APPROVED_ACTIVE` |
+| `SUSPEND` | any status except `SUSPENDED_MANUAL`, `OFFBOARDED` | `SUSPENDED_MANUAL` |
+| `OFFBOARD` | any status except `OFFBOARDED` | `OFFBOARDED` |
+
+- Every change needs a reason (5-500 characters) and is recorded in `crm_driver_status_changes` with the admin, in the same transaction.
+- **Activate** saves any dates sent, then is refused (422, nothing saved) unless the licence and every vehicle's insurance, fitness and permit dates are entered and not past, and the driver has a vehicle. It marks the driver's vehicles verified and available.
+- Drivers restricted for unpaid dues (`RESTRICTED_DIGITAL_ONLY`, `SUSPENDED_UNPAID_DUES`) cannot be activated by hand; paying the dues restores them, as before.
+- Suspend and offboard take the driver off rides (`is_available = false`). A ride the driver already holds is not cancelled; reassign it if needed.
+- **The driver is told on WhatsApp** when approved (from `PENDING_DOCS`), reactivated, or suspended; not when offboarded (owner decision). The wording is fixed per event and **never includes the reason staff typed**. It goes out after the change is saved, through `driver_account_notice` (free-form inside the 24-hour window, the approved template otherwise). A message that fails does not undo the change: staff see "not delivered" on the page, and it is listed under **Failed messages**.
+- Automatic status changes (expired documents, ratings, dues) are not recorded in `crm_driver_status_changes`.
+
+Apply `crm-design/30_driver_status_changes.sql` before deploying. Tests:
+```bash
+DATABASE_URL=postgresql://localhost/biharcabs_crm_test npx tsx --test src/tests/driver-status.integration.ts
+npx tsx --test src/tests/driver-status.test.ts src/tests/driver-onboarding.test.ts
+```
+
+## Editing drivers and vehicles
+
+**Finding a driver:** the search box on **Drivers** matches part of the name or licence number, or the digits of a phone or the letters and digits of a current vehicle's registration (spaces and dashes ignored, so `BR01PK` finds `BR-01-PK-9821`). City and status filters combine with it. `GET /api/drivers?q=&city=&status=` does the same and also returns `cities`, every city with a driver. If the list cannot load, the page says so with a **Retry** button instead of showing an empty list. Tests: `DATABASE_URL=postgresql://localhost/biharcabs_crm_test npx tsx --test src/tests/drivers-list.integration.ts`
+
+**Drivers → Edit** opens a dialog; every change is recorded in `crm_driver_edits` (migration 31) with the admin and the old and new values, and listed under **Change history**. A save that changes nothing records nothing.
+
+| What | API | Permission |
+|---|---|---|
+| Name, phone, WhatsApp phone, city, licence number and expiry | `PATCH /api/drivers/[id]` | `drivers.manage` (SUPER_ADMIN, DISPATCHER) |
+| UPI ID, bank account, IFSC | `PATCH /api/drivers/[id]/payout-details` | `drivers.payout_details` (SUPER_ADMIN, FINANCE_MANAGER) |
+| Add a vehicle | `POST /api/drivers/[id]/vehicles` | `drivers.manage` |
+| Change a vehicle's category, model, dates | `PATCH /api/drivers/[id]/vehicles/[vehicleId]` | `drivers.manage` |
+| Remove a vehicle (`{ reason }`) | `DELETE /api/drivers/[id]/vehicles/[vehicleId]` | `drivers.manage` |
+| Details, current vehicles, history | `GET /api/drivers/[id]` | `drivers.view` |
+
+- **Phone:** must be 10-15 digits with country code; one already used by another driver, as their phone or WhatsApp number, is refused (409). The phone decides which WhatsApp number the bot recognises as the driver.
+- **Adding a vehicle:** all three dates required and none past. Entering them counts as checking the documents, so the vehicle is verified and can get rides at once. A registration number already on file (any driver, or removed) is refused (409).
+- **Editing dates:** a past date is saved as entered; the next expiry job suspends the driver. The registration number cannot be changed: remove the vehicle and add the new one.
+- **Removing a vehicle** keeps it for ride history (`removed_at`, `removed_by`, `removed_reason`). Dispatch, the expiry suspension and the expiry reminders ignore it. A vehicle on a `DRIVER_ASSIGNED` or `TRIP_IN_PROGRESS` ride cannot be removed. A removed registration number cannot be added again.
+- **History** shows only the last 4 digits of bank account numbers; the full values stay in `crm_driver_edits`.
+- **Status** (activate, suspend, offboard) is separate: see [Driver status](#driver-status-activate-suspend-offboard). Editing a document date does not reactivate a suspended driver.
+
+Apply `crm-design/31_driver_edits.sql` before deploying. Tests:
+```bash
+DATABASE_URL=postgresql://localhost/biharcabs_crm_test npx tsx --test src/tests/driver-edits.integration.ts
+npx tsx --test src/tests/driver-edits.test.ts
+```
+
+## Pausing ride offers, and the driver wallet
+
+**Pause offers** (migration 32): **Drivers → Status → Pause offers**, or `POST /api/drivers/[id]/offers` with `{ paused: true | false, reason }`. Permission: `drivers.manage`.
+- Dispatch refuses a paused driver ("ride offers are paused by staff"), for broadcasts and staff assignment alike. Rides the driver already holds are not affected. Status is unchanged.
+- The pause is its own flag (`crm_drivers.offers_paused`), not `is_available`: settlement, dues payments, incentives and activation set `is_available` back to true, and none of them lifts a pause. Only **Resume offers** does.
+- The driver is told on WhatsApp when offers are paused and when they resume, in the same way as status changes (fixed wording, no staff reason).
+- Pausing and resuming need a reason (5-500 characters) and are recorded in `crm_driver_edits` (`OFFERS_PAUSE`, `OFFERS_RESUME`). The list shows an **Offers paused** badge.
+
+**Wallet**: **Drivers → Wallet**, or `GET /api/drivers/[id]/wallet`. Permission: `ledger.view` (SUPER_ADMIN, FINANCE_MANAGER). Shows the wallet and security reserve balances and the latest 100 ledger entries for the driver.
+- The entries are listed as recorded, **not as a running balance**: they do not add up line by line to the wallet. A trip settlement records its net amount (which already includes any reserve deduction and streak bonus) and also records those two as their own entries, and cash the driver collects from the customer is recorded although it does not move the wallet.
+
+Apply `crm-design/32_driver_offer_pause.sql` before deploying. Tests:
+```bash
+DATABASE_URL=postgresql://localhost/biharcabs_crm_test npx tsx --test src/tests/driver-extras.integration.ts
+```
 
 ## Sign-in attempt limits
 

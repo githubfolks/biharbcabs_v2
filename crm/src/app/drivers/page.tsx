@@ -1,7 +1,32 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { UserCheck, ShieldAlert, Car, PlusCircle, RefreshCw, Wallet, Phone, CheckCircle, Star, AlertTriangle, X, Gift, Award, ShieldCheck } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { UserCheck, ShieldAlert, Car, PlusCircle, RefreshCw, Wallet, Phone, CheckCircle, Star, AlertTriangle, X, Gift, Award, ShieldCheck, Pencil } from 'lucide-react';
+import { allowedActions, DriverStatusAction, REASON_MAX, REASON_MIN } from '@/lib/driver-status-rules';
+import DriverEditDialog, { VEHICLE_CATEGORIES } from '@/components/DriverEditDialog';
+import DriverWalletDialog from '@/components/DriverWalletDialog';
+import { hasPermission } from '@/lib/permissions';
+
+/** Staff-facing line about the WhatsApp message sent after a change (null: none is sent). */
+function noticeMessage(name: string, notice: { sent: boolean; error?: string } | null) {
+  if (!notice) return { ok: true, text: `Saved. ${name} was not messaged (no message is sent for this change).` };
+  return notice.sent
+    ? { ok: true, text: `Saved. ${name} was told on WhatsApp.` }
+    : { ok: false, text: `Saved, but the WhatsApp message to ${name} was not delivered (${notice.error || 'unknown error'}). It is listed under Failed messages on the dispatch board; tell the driver another way.` };
+}
+
+const ACTION_LABEL: Record<DriverStatusAction, string> = { ACTIVATE: 'Activate', SUSPEND: 'Suspend', OFFBOARD: 'Offboard' };
+
+const STATUS_BADGE: Record<string, string> = {
+  APPROVED_ACTIVE: 'bg-emerald-100 text-emerald-800',
+  PENDING_DOCS: 'bg-sky-100 text-sky-800 border border-sky-300',
+  RESTRICTED_DIGITAL_ONLY: 'bg-indigo-100 text-indigo-800 border border-indigo-300',
+  SUSPENDED_UNPAID_DUES: 'bg-rose-100 text-rose-800',
+  SUSPENDED_DOC_EXPIRED: 'bg-rose-100 text-rose-800',
+  SUSPENDED_QUALITY: 'bg-rose-100 text-rose-800',
+  SUSPENDED_MANUAL: 'bg-rose-100 text-rose-800 border border-rose-300',
+  OFFBOARDED: 'bg-slate-200 text-slate-700',
+};
 
 export default function DriversPage() {
   const [drivers, setDrivers] = useState<any[]>([]);
@@ -18,45 +43,105 @@ export default function DriversPage() {
   const [incentiveReason, setIncentiveReason] = useState<string>('Top Partner Milestone Bonus');
   const [submittingIncentive, setSubmittingIncentive] = useState(false);
 
-  const [form, setForm] = useState({
+  // Status dialog (activate / suspend / offboard)
+  const [statusDriver, setStatusDriver] = useState<any | null>(null);
+  const [statusDetail, setStatusDetail] = useState<any | null>(null);
+  const [statusLoadError, setStatusLoadError] = useState<string | null>(null);
+  const [statusAction, setStatusAction] = useState<DriverStatusAction | ''>('');
+  const [statusReason, setStatusReason] = useState('');
+  const [statusLicense, setStatusLicense] = useState('');
+  const [statusVehicles, setStatusVehicles] = useState<any[]>([]);
+  const [statusError, setStatusError] = useState<string | null>(null);
+  const [savingStatus, setSavingStatus] = useState(false);
+  const [offersReason, setOffersReason] = useState('');
+  const [offersError, setOffersError] = useState<string | null>(null);
+  const [savingOffers, setSavingOffers] = useState(false);
+  const [walletDriver, setWalletDriver] = useState<any | null>(null);
+  // What happened to the WhatsApp message after a status change or offer pause.
+  const [noticeFlash, setNoticeFlash] = useState<{ ok: boolean; text: string } | null>(null);
+
+  // Expiry dates start empty: the admin must enter the dates printed on the documents.
+  const emptyForm = {
     full_name: '',
     phone: '',
     whatsapp_phone: '',
     base_city: 'Patna',
     license_number: '',
-    license_expiry: '2028-12-31',
+    license_expiry: '',
     bank_upi_id: '',
     vehicle: {
       wp_vehicle_code: 'sedan',
       registration_no: '',
-      model_name: 'Maruti Suzuki Dzire',
-      insurance_expiry: '2027-12-31',
-      fitness_expiry: '2027-12-31',
-      permit_expiry: '2027-12-31',
+      model_name: '',
+      insurance_expiry: '',
+      fitness_expiry: '',
+      permit_expiry: '',
     },
-  });
+  };
+  const [form, setForm] = useState(emptyForm);
+  const [onboardError, setOnboardError] = useState<string | null>(null);
+  const [onboarding, setOnboarding] = useState(false);
+  const setVehicleField = (field: keyof typeof emptyForm.vehicle, value: string) =>
+    setForm({ ...form, vehicle: { ...form.vehicle, [field]: value } });
+
+  // Search and filters run on the server. A ref keeps the latest filters for reloads triggered from
+  // dialogs, and a request counter drops answers to older requests that arrive late.
+  const [filters, setFilters] = useState({ q: '', city: '', status: '' });
+  const filtersRef = useRef(filters);
+  filtersRef.current = filters;
+  const requestSeq = useRef(0);
+  const [cities, setCities] = useState<string[]>([]);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const filtering = Boolean(filters.q.trim() || filters.city || filters.status);
 
   async function loadDrivers() {
+    const seq = ++requestSeq.current;
+    const params = new URLSearchParams();
+    const f = filtersRef.current;
+    if (f.q.trim()) params.set('q', f.q.trim());
+    if (f.city) params.set('city', f.city);
+    if (f.status) params.set('status', f.status);
     setLoading(true);
     try {
-      const res = await fetch('/api/drivers');
-      const data = await res.json();
-      if (data.success) {
+      const res = await fetch(`/api/drivers${params.toString() ? `?${params}` : ''}`);
+      const data = await res.json().catch(() => ({}));
+      if (seq !== requestSeq.current) return;
+      if (res.ok && data.success) {
         setDrivers(data.drivers);
+        setCities(data.cities || []);
+        setLoadError(null);
+      } else {
+        setLoadError(data.error || `Could not load drivers (HTTP ${res.status})`);
       }
-    } catch (err) {
-      console.error('Failed to load drivers:', err);
+    } catch {
+      if (seq === requestSeq.current) setLoadError('Could not load drivers: network error');
     } finally {
-      setLoading(false);
+      if (seq === requestSeq.current) setLoading(false);
     }
   }
 
+  // Edit dialog; the role only decides what the dialog offers (the API enforces permissions).
+  const [editDriverId, setEditDriverId] = useState<number | null>(null);
+  const [role, setRole] = useState<string | null>(null);
+
   useEffect(() => {
-    loadDrivers();
+    fetch('/api/auth/me')
+      .then((r) => r.json())
+      .then((data) => setRole(data?.user?.role ?? null))
+      .catch(() => setRole(null));
   }, []);
+
+  // Load on open, and again shortly after the filters stop changing.
+  useEffect(() => {
+    const t = setTimeout(loadDrivers, filters.q ? 300 : 0);
+    return () => clearTimeout(t);
+    // loadDrivers reads the filters through filtersRef, so only `filters` is a dependency.
+  }, [filters]);
 
   async function handleOnboardDriver(e: React.FormEvent) {
     e.preventDefault();
+    setOnboarding(true);
+    setOnboardError(null);
     try {
       const res = await fetch('/api/drivers', {
         method: 'POST',
@@ -66,13 +151,21 @@ export default function DriversPage() {
       const data = await res.json();
       if (data.success) {
         setShowModal(false);
+        setForm(emptyForm);
         loadDrivers();
       } else {
-        alert(data.error || 'Failed to onboard driver');
+        setOnboardError(data.error || 'Driver not onboarded');
       }
-    } catch (err: any) {
-      alert('Error onboarding driver: ' + err.message);
+    } catch {
+      setOnboardError('Driver not onboarded: network error');
+    } finally {
+      setOnboarding(false);
     }
+  }
+
+  function closeOnboardModal() {
+    setShowModal(false);
+    setOnboardError(null);
   }
 
   async function openRatingModal(driver: any) {
@@ -115,6 +208,103 @@ export default function DriversPage() {
       }
     } catch (err: any) {
       alert('Error disputing review: ' + err.message);
+    }
+  }
+
+  async function openStatusModal(driver: any) {
+    setStatusDriver(driver);
+    setStatusDetail(null);
+    setStatusLoadError(null);
+    setStatusAction('');
+    setStatusReason('');
+    setStatusError(null);
+    setOffersError(null);
+    setNoticeFlash(null);
+    try {
+      const res = await fetch(`/api/drivers/${driver.id}/status`);
+      const data = await res.json();
+      if (!data.success) {
+        setStatusLoadError(data.error || 'Could not load driver status');
+        return;
+      }
+      setStatusDetail(data);
+      setStatusLicense(data.license_expiry || '');
+      setStatusVehicles(
+        data.vehicles.map((v: any) => ({
+          ...v,
+          insurance_expiry: v.insurance_expiry || '',
+          fitness_expiry: v.fitness_expiry || '',
+          permit_expiry: v.permit_expiry || '',
+        }))
+      );
+    } catch {
+      setStatusLoadError('Could not load driver status: network error');
+    }
+  }
+
+  async function handleOffers(paused: boolean) {
+    if (!statusDriver) return;
+    setSavingOffers(true);
+    setOffersError(null);
+    try {
+      const res = await fetch(`/api/drivers/${statusDriver.id}/offers`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ paused, reason: offersReason }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success) {
+        setOffersReason('');
+        await openStatusModal(statusDriver);
+        setNoticeFlash(noticeMessage(statusDriver.full_name, data.notice));
+        loadDrivers();
+      } else {
+        setOffersError(data.error || 'Not saved');
+      }
+    } catch {
+      setOffersError('Not saved: network error');
+    } finally {
+      setSavingOffers(false);
+    }
+  }
+
+  function setStatusVehicleDate(id: number, field: string, value: string) {
+    setStatusVehicles((vs) => vs.map((v) => (v.id === id ? { ...v, [field]: value } : v)));
+  }
+
+  async function handleStatusChange(e: React.FormEvent) {
+    e.preventDefault();
+    if (!statusDriver || !statusAction) return;
+    setSavingStatus(true);
+    setStatusError(null);
+    const body: any = { action: statusAction, reason: statusReason };
+    if (statusAction === 'ACTIVATE') {
+      body.license_expiry = statusLicense;
+      body.vehicles = statusVehicles.map((v) => ({
+        id: v.id,
+        insurance_expiry: v.insurance_expiry,
+        fitness_expiry: v.fitness_expiry,
+        permit_expiry: v.permit_expiry,
+      }));
+    }
+    try {
+      const res = await fetch(`/api/drivers/${statusDriver.id}/status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setNoticeFlash(noticeMessage(statusDriver.full_name, data.notice));
+        setStatusDriver(null);
+        loadDrivers();
+      } else {
+        setStatusError(data.error || 'Status not changed');
+      }
+    } catch {
+      setStatusError('Status not changed: network error');
+    } finally {
+      setSavingStatus(false);
     }
   }
 
@@ -168,6 +358,71 @@ export default function DriversPage() {
         </div>
       </div>
 
+      <div className="flex flex-col sm:flex-row gap-2">
+        <input
+          type="search"
+          value={filters.q}
+          onChange={(e) => setFilters({ ...filters, q: e.target.value })}
+          placeholder="Search name, phone, licence or vehicle number"
+          aria-label="Search drivers"
+          maxLength={50}
+          className="flex-1 min-w-0 px-3 py-2 border border-slate-300 rounded-md text-sm"
+        />
+        <select
+          value={filters.city}
+          onChange={(e) => setFilters({ ...filters, city: e.target.value })}
+          aria-label="Filter by city"
+          className="px-3 py-2 border border-slate-300 rounded-md text-sm bg-white"
+        >
+          <option value="">All cities</option>
+          {cities.map((c) => (
+            <option key={c} value={c}>{c}</option>
+          ))}
+        </select>
+        <select
+          value={filters.status}
+          onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+          aria-label="Filter by status"
+          className="px-3 py-2 border border-slate-300 rounded-md text-sm bg-white"
+        >
+          <option value="">All statuses</option>
+          {Object.keys(STATUS_BADGE).map((s) => (
+            <option key={s} value={s}>{s === 'RESTRICTED_DIGITAL_ONLY' ? 'DIGITAL ONLY' : s.replace(/_/g, ' ')}</option>
+          ))}
+        </select>
+        {filtering && (
+          <button
+            type="button"
+            onClick={() => setFilters({ q: '', city: '', status: '' })}
+            className="px-3 py-2 text-sm text-slate-600 hover:text-slate-900"
+          >
+            Clear
+          </button>
+        )}
+      </div>
+
+      {noticeFlash && (
+        <div className={`flex items-start justify-between gap-2 p-3 rounded-md text-sm border ${noticeFlash.ok ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-amber-50 border-amber-200 text-amber-800'}`}>
+          <span>{noticeFlash.text}</span>
+          <button type="button" onClick={() => setNoticeFlash(null)} aria-label="Dismiss" className="text-current opacity-60 hover:opacity-100">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+
+      {loadError && (
+        <div className="flex flex-wrap items-center justify-between gap-2 p-3 bg-rose-50 border border-rose-200 rounded-md text-sm text-rose-700">
+          <span className="flex items-center">
+            <AlertTriangle className="h-4 w-4 mr-1.5 flex-shrink-0" />
+            {loadError}
+            {drivers.length > 0 && ' The list below may be out of date.'}
+          </span>
+          <button type="button" onClick={() => loadDrivers()} className="px-3 py-1 bg-white border border-rose-300 rounded text-xs font-semibold hover:bg-rose-100">
+            Retry
+          </button>
+        </div>
+      )}
+
       <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
@@ -186,7 +441,13 @@ export default function DriversPage() {
               {drivers.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-4 py-8 text-center text-slate-400">
-                    No drivers registered yet. Click &quot;Onboard New Driver&quot; to add BiharCabs fleet partners.
+                    {loading
+                      ? 'Loading drivers...'
+                      : loadError
+                      ? 'Drivers could not be loaded.'
+                      : filtering
+                      ? 'No drivers match this search or filter.'
+                      : 'No drivers registered yet. Click "Onboard New Driver" to add BiharCabs fleet partners.'}
                   </td>
                 </tr>
               ) : (
@@ -277,18 +538,49 @@ export default function DriversPage() {
                     </td>
                     <td className="px-4 py-3">
                       <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold uppercase tracking-wide ${
-                        d.onboarding_status === 'APPROVED_ACTIVE'
-                          ? 'bg-emerald-100 text-emerald-800'
-                          : d.onboarding_status === 'RESTRICTED_DIGITAL_ONLY'
-                          ? 'bg-indigo-100 text-indigo-800 border border-indigo-300'
-                          : d.onboarding_status === 'SUSPENDED_UNPAID_DUES'
-                          ? 'bg-rose-100 text-rose-800'
-                          : 'bg-amber-100 text-amber-800'
+                        STATUS_BADGE[d.onboarding_status] || 'bg-amber-100 text-amber-800'
                       }`}>
                         {d.onboarding_status === 'RESTRICTED_DIGITAL_ONLY' ? 'DIGITAL ONLY' : d.onboarding_status.replace(/_/g, ' ')}
                       </span>
+                      {d.offers_paused && (
+                        <div className="mt-1">
+                          <span className="inline-flex px-1.5 py-0.5 rounded text-[10px] font-bold uppercase bg-amber-100 text-amber-800 border border-amber-300" title={d.offers_paused_reason || ''}>
+                            Offers paused
+                          </span>
+                        </div>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-right space-x-1.5 whitespace-nowrap">
+                      {hasPermission(role, 'ledger.view') && (
+                        <button
+                          onClick={() => setWalletDriver(d)}
+                          className="inline-flex items-center px-2 py-1 bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 rounded text-xs font-medium"
+                          title="Wallet ledger entries"
+                        >
+                          <Wallet className="h-3 w-3 mr-1" />
+                          Wallet
+                        </button>
+                      )}
+                      <button
+                        onClick={() => setEditDriverId(d.id)}
+                        className="inline-flex items-center px-2 py-1 bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 rounded text-xs font-medium"
+                        title="Edit details, payout details and vehicles"
+                      >
+                        <Pencil className="h-3 w-3 mr-1" />
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => openStatusModal(d)}
+                        className={`inline-flex items-center px-2 py-1 border rounded text-xs font-semibold ${
+                          d.onboarding_status === 'PENDING_DOCS'
+                            ? 'bg-sky-600 hover:bg-sky-700 border-sky-600 text-white'
+                            : 'bg-white hover:bg-slate-50 border-slate-300 text-slate-700'
+                        }`}
+                        title="Activate, suspend or offboard this driver"
+                      >
+                        <ShieldCheck className="h-3 w-3 mr-1" />
+                        {d.onboarding_status === 'PENDING_DOCS' ? 'Review' : 'Status'}
+                      </button>
                       <button
                         onClick={() => openRatingModal(d)}
                         className="inline-flex items-center px-2 py-1 bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 rounded text-xs font-medium"
@@ -324,7 +616,7 @@ export default function DriversPage() {
           <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full p-6 space-y-4">
             <div className="flex justify-between items-center border-b pb-3">
               <h3 className="text-lg font-bold text-slate-900">Onboard Driver & Vehicle</h3>
-              <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
+              <button onClick={closeOnboardModal} className="text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
             </div>
             <form onSubmit={handleOnboardDriver} className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
@@ -377,6 +669,29 @@ export default function DriversPage() {
                 </div>
               </div>
 
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700">Licence Valid Until</label>
+                  <input
+                    type="date"
+                    required
+                    value={form.license_expiry}
+                    onChange={(e) => setForm({ ...form, license_expiry: e.target.value })}
+                    className="w-full mt-1 px-3 py-1.5 border rounded-md text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700">UPI ID for Payouts (optional)</label>
+                  <input
+                    type="text"
+                    value={form.bank_upi_id}
+                    onChange={(e) => setForm({ ...form, bank_upi_id: e.target.value })}
+                    className="w-full mt-1 px-3 py-1.5 border rounded-md text-sm"
+                    placeholder="e.g. name@okaxis"
+                  />
+                </div>
+              </div>
+
               <div className="pt-2 border-t">
                 <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Vehicle Details</span>
               </div>
@@ -389,10 +704,9 @@ export default function DriversPage() {
                     onChange={(e) => setForm({ ...form, vehicle: { ...form.vehicle, wp_vehicle_code: e.target.value } })}
                     className="w-full mt-1 px-3 py-1.5 border rounded-md text-sm"
                   >
-                    <option value="sedan">Sedan (Dzire / Etios)</option>
-                    <option value="ertiga">Ertiga SUV (6+1)</option>
-                    <option value="innova">Innova Crysta</option>
-                    <option value="tempo">Tempo Traveller</option>
+                    {VEHICLE_CATEGORIES.map((c) => (
+                      <option key={c.code} value={c.code}>{c.label}</option>
+                    ))}
                   </select>
                 </div>
                 <div>
@@ -420,19 +734,43 @@ export default function DriversPage() {
                 />
               </div>
 
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {([
+                  ['insurance_expiry', 'Insurance Valid Until'],
+                  ['fitness_expiry', 'Fitness Valid Until'],
+                  ['permit_expiry', 'Permit Valid Until'],
+                ] as const).map(([field, label]) => (
+                  <div key={field}>
+                    <label className="block text-xs font-semibold text-slate-700">{label}</label>
+                    <input
+                      type="date"
+                      required
+                      value={form.vehicle[field]}
+                      onChange={(e) => setVehicleField(field, e.target.value)}
+                      className="w-full mt-1 px-3 py-1.5 border rounded-md text-sm"
+                    />
+                  </div>
+                ))}
+              </div>
+
+              {onboardError && (
+                <div className="p-2 bg-rose-50 border border-rose-200 rounded text-xs text-rose-700">{onboardError}</div>
+              )}
+
               <div className="flex justify-end space-x-2 pt-4 border-t">
                 <button
                   type="button"
-                  onClick={() => setShowModal(false)}
+                  onClick={closeOnboardModal}
                   className="px-4 py-2 border rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-orange-600 text-white rounded-md text-sm font-medium hover:bg-orange-700"
+                  disabled={onboarding}
+                  className="px-4 py-2 bg-orange-600 text-white rounded-md text-sm font-medium hover:bg-orange-700 disabled:opacity-60"
                 >
-                  Approve & Onboard Driver
+                  {onboarding ? 'Saving...' : 'Approve & Onboard Driver'}
                 </button>
               </div>
             </form>
@@ -611,6 +949,224 @@ export default function DriversPage() {
                 Close Audit
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {walletDriver && <DriverWalletDialog driverId={walletDriver.id} onClose={() => setWalletDriver(null)} />}
+
+      {editDriverId !== null && (
+        <DriverEditDialog
+          driverId={editDriverId}
+          role={role}
+          onClose={() => setEditDriverId(null)}
+          onChanged={loadDrivers}
+        />
+      )}
+
+      {/* Driver Status Modal: activate / suspend / offboard */}
+      {statusDriver && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full p-6 space-y-4">
+            <div className="flex justify-between items-center border-b pb-3">
+              <div>
+                <h3 className="text-lg font-bold text-slate-900 flex items-center">
+                  <ShieldCheck className="h-5 w-5 mr-1.5 text-sky-600" />
+                  Driver Status: {statusDriver.full_name}
+                </h3>
+                <p className="text-xs text-slate-500">{statusDriver.phone} &bull; {statusDriver.base_city}</p>
+              </div>
+              <button onClick={() => setStatusDriver(null)} className="text-slate-400 hover:text-slate-600">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {statusLoadError ? (
+              <div className="p-3 bg-rose-50 border border-rose-200 rounded text-sm text-rose-700">{statusLoadError}</div>
+            ) : !statusDetail ? (
+              <div className="py-10 flex justify-center items-center text-slate-400 text-sm">
+                <RefreshCw className="h-5 w-5 animate-spin mr-2" /> Loading status...
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="text-sm">
+                  Current status:{' '}
+                  <span className={`inline-flex px-2 py-0.5 rounded text-[11px] font-semibold uppercase ${STATUS_BADGE[statusDetail.status] || 'bg-amber-100 text-amber-800'}`}>
+                    {statusDetail.status.replace(/_/g, ' ')}
+                  </span>
+                </div>
+
+                <div className={`p-3 rounded-lg border text-xs space-y-2 ${statusDetail.offers.paused ? 'bg-amber-50 border-amber-200' : 'bg-slate-50 border-slate-200'}`}>
+                  <div className="font-semibold text-slate-800">
+                    Ride offers: {statusDetail.offers.paused ? 'PAUSED' : 'receiving offers'}
+                  </div>
+                  {statusDetail.offers.paused && (
+                    <div className="text-slate-600 break-words">
+                      &quot;{statusDetail.offers.reason}&quot; by {statusDetail.offers.by || 'unknown'},{' '}
+                      {new Date(statusDetail.offers.at).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                    </div>
+                  )}
+                  <p className="text-[11px] text-slate-500">
+                    Pausing stops new ride offers without changing the driver&apos;s status. It lasts until someone resumes it. Rides they already hold are not affected.
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <input
+                      type="text"
+                      value={offersReason}
+                      onChange={(e) => setOffersReason(e.target.value)}
+                      minLength={REASON_MIN}
+                      maxLength={REASON_MAX}
+                      placeholder={statusDetail.offers.paused ? 'Reason for resuming, e.g. Back from leave' : 'Reason, e.g. On leave until 5 Dec'}
+                      className="flex-1 min-w-0 px-2 py-1.5 border rounded text-xs bg-white"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleOffers(!statusDetail.offers.paused)}
+                      disabled={savingOffers || offersReason.trim().length < REASON_MIN}
+                      className="px-3 py-1.5 bg-amber-600 text-white rounded text-xs font-bold hover:bg-amber-700 disabled:opacity-50"
+                    >
+                      {savingOffers ? 'Saving...' : statusDetail.offers.paused ? 'Resume offers' : 'Pause offers'}
+                    </button>
+                  </div>
+                  {offersError && <div className="text-rose-700">{offersError}</div>}
+                  {noticeFlash && <div className={noticeFlash.ok ? 'text-emerald-700' : 'text-amber-800'}>{noticeFlash.text}</div>}
+                </div>
+
+                {allowedActions(statusDetail.status).length === 0 ? (
+                  <p className="text-sm text-slate-500">No manual change is available for this status.</p>
+                ) : (
+                  <form onSubmit={handleStatusChange} className="space-y-3">
+                    <div className="flex flex-wrap gap-2">
+                      {allowedActions(statusDetail.status).map((a) => (
+                        <label
+                          key={a}
+                          className={`px-3 py-1.5 border rounded-md text-xs font-semibold cursor-pointer ${
+                            statusAction === a ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-700 border-slate-300'
+                          }`}
+                        >
+                          <input
+                            type="radio"
+                            name="status-action"
+                            value={a}
+                            checked={statusAction === a}
+                            onChange={() => setStatusAction(a)}
+                            className="sr-only"
+                          />
+                          {ACTION_LABEL[a]}
+                        </label>
+                      ))}
+                    </div>
+                    {['RESTRICTED_DIGITAL_ONLY', 'SUSPENDED_UNPAID_DUES'].includes(statusDetail.status) && (
+                      <p className="text-[11px] text-slate-500">
+                        This driver is restricted for unpaid dues. The account is restored automatically when the dues are paid (Finance).
+                      </p>
+                    )}
+
+                    {statusAction === 'ACTIVATE' && (
+                      <div className="space-y-3 p-3 bg-slate-50 border border-slate-200 rounded-lg">
+                        <p className="text-[11px] text-slate-600">
+                          Check each document and enter the date it is valid until. Activation is refused if any date is missing or past,
+                          and marks the vehicles as verified.
+                        </p>
+                        <div className="max-w-xs">
+                          <label className="block text-xs font-semibold text-slate-700">Licence Valid Until</label>
+                          <input
+                            type="date"
+                            required
+                            value={statusLicense}
+                            onChange={(e) => setStatusLicense(e.target.value)}
+                            className="w-full mt-1 px-3 py-1.5 border rounded-md text-sm bg-white"
+                          />
+                        </div>
+                        {statusVehicles.length === 0 ? (
+                          <p className="text-xs text-rose-700">This driver has no vehicle, so they cannot be activated.</p>
+                        ) : (
+                          statusVehicles.map((v) => (
+                            <div key={v.id}>
+                              <div className="text-xs font-semibold text-slate-800">
+                                {v.registration_no} <span className="font-normal text-slate-500">{v.model_name} [{v.wp_vehicle_code}]</span>
+                              </div>
+                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-1">
+                                {([
+                                  ['insurance_expiry', 'Insurance'],
+                                  ['fitness_expiry', 'Fitness'],
+                                  ['permit_expiry', 'Permit'],
+                                ] as const).map(([field, label]) => (
+                                  <div key={field}>
+                                    <label className="block text-[11px] text-slate-600">{label} valid until</label>
+                                    <input
+                                      type="date"
+                                      required
+                                      value={v[field]}
+                                      onChange={(e) => setStatusVehicleDate(v.id, field, e.target.value)}
+                                      className="w-full mt-0.5 px-2 py-1 border rounded-md text-sm bg-white"
+                                    />
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    )}
+
+                    {statusAction && (
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700">Reason (recorded with your name)</label>
+                        <textarea
+                          rows={2}
+                          required
+                          minLength={REASON_MIN}
+                          maxLength={REASON_MAX}
+                          value={statusReason}
+                          onChange={(e) => setStatusReason(e.target.value)}
+                          placeholder={
+                            statusAction === 'ACTIVATE'
+                              ? 'e.g. Checked original licence, RC, insurance, fitness and permit'
+                              : 'e.g. Customer complaint of misconduct on trip BC-1234, under investigation'
+                          }
+                          className="w-full mt-1 px-3 py-1.5 border rounded-md text-sm"
+                        />
+                      </div>
+                    )}
+
+                    {statusError && (
+                      <div className="p-2 bg-rose-50 border border-rose-200 rounded text-xs text-rose-700">{statusError}</div>
+                    )}
+
+                    <div className="flex justify-end">
+                      <button
+                        type="submit"
+                        disabled={!statusAction || savingStatus || (statusAction === 'ACTIVATE' && statusVehicles.length === 0)}
+                        className="px-4 py-2 bg-slate-900 text-white rounded-md text-xs font-bold hover:bg-slate-800 disabled:opacity-50"
+                      >
+                        {savingStatus ? 'Saving...' : statusAction ? `${ACTION_LABEL[statusAction]} Driver` : 'Choose an action'}
+                      </button>
+                    </div>
+                  </form>
+                )}
+
+                <div className="border-t pt-3">
+                  <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Status History</h4>
+                  {statusDetail.history.length === 0 ? (
+                    <p className="text-xs text-slate-400 italic">No manual status changes recorded.</p>
+                  ) : (
+                    <ul className="space-y-1.5 max-h-48 overflow-y-auto text-xs">
+                      {statusDetail.history.map((h: any) => (
+                        <li key={h.id} className="p-2 bg-slate-50 border border-slate-200 rounded break-words">
+                          <span className="font-semibold">{h.action}</span>: {h.from_status} → {h.to_status}
+                          <span className="text-slate-500">
+                            {' '}by {h.changed_by_name},{' '}
+                            {new Date(h.created_at).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                          <div className="text-slate-600 italic">&quot;{h.reason}&quot;</div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
