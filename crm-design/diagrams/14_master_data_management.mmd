@@ -1,0 +1,41 @@
+flowchart TB
+    ADMIN(["RBAC Authenticated Admin\nsettings.change | catalog.manage | plans.manage"])
+
+    subgraph CONFIG ["1. System & Integration Settings (/settings -> crm_settings)"]
+        direction LR
+        S1["Company & Tax Rules\nGSTIN, 5% Ride GST\n12% Comm, Rs 10 Fee, 18% GST"]
+        S2["External APIs (Masked Keys)\nLocationIQ Maps & Distance\nDaily Fuel Price API Config"]
+        S3["Operational Policies\nMeta WhatsApp, SLA Timers\nReturn Trip & Rating Rules"]
+    end
+
+    subgraph CATALOG ["2. Dynamic Pricing & Fleet Catalog (/catalog)"]
+        direction LR
+        M1["Fuel Prices\ncrm_fuel_prices\nDaily IST Auto-Sync\n+ Manual Override"]
+        M2["Cab Types\ncrm_cab_types\n7 Categories x 3 Fuels\nCML, PDCRG, PHEXCHG, TA"]
+        M3["Booking Packages\ncrm_packages\nOUTSTATION / LOCAL\nRENTAL Plans"]
+        M4["Driver Plans\ncrm_driver_plans\nPrice incl. 18% GST\nPriority & Trip Limits"]
+    end
+
+    DB[("3. Native PostgreSQL — Single Source of Truth\nSecret Masking + Instant Cache Invalidation")]
+
+    subgraph CONSUMERS ["4. Live Downstream Consumers"]
+        direction LR
+        C1["CRM Operator UI\n/bookings/new"]
+        C2["WhatsApp Bot\nQuotes, KYC & Dispatch"]
+        C3["WordPress Website\n/api/public/plans & /bookings"]
+        C4["Billing & Finance\nSettlements & GST Invoices"]
+    end
+
+    ADMIN --> CONFIG
+    ADMIN --> CATALOG
+    CONFIG --> DB
+    CATALOG --> DB
+    DB --> CONSUMERS
+
+    classDef accent fill:#fff7ed,stroke:#ea580c,stroke-width:1.5px,color:#7c2d12
+    classDef db fill:#eff6ff,stroke:#2563eb,stroke-width:1.5px,color:#1e3a8a
+    classDef ok fill:#ecfdf5,stroke:#059669,stroke-width:1.5px,color:#065f46
+
+    class ADMIN,S1,S2,S3,M1,M2,M3,M4 accent
+    class DB db
+    class C1,C2,C3,C4 ok

@@ -1,0 +1,52 @@
+flowchart TB
+    subgraph BASE ["1. Base Package Calculation (Pre-GST)"]
+        direction LR
+        IN["DB Inputs\nKM, Hrs, CML, FP,\nPDCRG, Buffer, TA"]
+        F1["Fuel Cost = (KM/CML) x FP\nCab Time = (PDCRG/12) x (Hrs+Buf)"]
+        F2["Base Pre-GST Fair =\nFuel + Cab Time + Driver TA"]
+        IN --> F1 --> F2
+    end
+
+    subgraph DIST_STEP ["2. Road Distance Adjustment (LocationIQ + PG Cache)"]
+        direction LR
+        CHK{"roadKm >\nincludedKm?"}
+        ADD["extraKm = roadKm - includedKm\nAdd (extraKm x rate) Pre-GST\nbilledKm = roadKm"]
+        KEEP["No Upfront Extra KM\nbilledKm = includedKm"]
+        ADJ["Adjusted Pre-GST Fair (X)\nX = Base Fair + Extra KM"]
+        CHK -- "Yes" --> ADD --> ADJ
+        CHK -- "No" --> KEEP --> ADJ
+    end
+
+    subgraph CA_SPLIT ["3. CA Tax & Commission Split (on Pre-GST Fair X)"]
+        direction LR
+        CUST["Customer Payable\nRide GST (5%) = 5% of X\nTotal Payable = X + Ride GST"]
+        COMP["Company Dues (Z)\nAdmin Comm = 12% of X\nTech Fee = Rs 10\nComm GST = 18% of (Comm+10)\nZ = Ride GST + Comm + Fee + CGST"]
+        DRV["Driver Gross Earnings\nTotal Payable - Z"]
+        CUST --> COMP --> DRV
+    end
+
+    subgraph SETTLE ["4. Trip Completion, Deductions & GST Invoice (billing.ts)"]
+        direction LR
+        ODO["Over-run Charges\nExtra KM = max(0, actual - max(inc, billed))\n+ Extra Hrs (PHEXCHG) + 5% GST + Tolls"]
+        MODE{"Billing\nModel?"}
+        PLAN["PLAN Mode\nDeduct (Comm + Fee + Ride GST)\nfrom Subscription Plan"]
+        WAL["WALLET Mode\nNet = Payable - Z - Cash\n- Reserve + Streak Bonus"]
+        INV[("Ledger & Tax Invoice (TI)\nUpdate Driver Wallet\nCGST/SGST or IGST")]
+        ODO --> MODE
+        MODE -- "PLAN" --> PLAN --> INV
+        MODE -- "WALLET" --> WAL --> INV
+    end
+
+    BASE --> DIST_STEP
+    DIST_STEP --> CA_SPLIT
+    CA_SPLIT --> SETTLE
+
+    classDef accent fill:#fff7ed,stroke:#ea580c,stroke-width:1.5px,color:#7c2d12
+    classDef db fill:#eff6ff,stroke:#2563eb,stroke-width:1.5px,color:#1e3a8a
+    classDef decision fill:#fefce8,stroke:#ca8a04,stroke-width:1.5px,color:#713f12
+    classDef ok fill:#ecfdf5,stroke:#059669,stroke-width:1.5px,color:#065f46
+
+    class IN,F1,F2,ADD,KEEP,ADJ,CUST,COMP,ODO accent
+    class INV db
+    class CHK,MODE decision
+    class DRV,PLAN,WAL ok

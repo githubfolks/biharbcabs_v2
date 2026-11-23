@@ -1,0 +1,54 @@
+flowchart TB
+    START(["Admin opens CRM /catalog (catalog.manage)"])
+
+    subgraph PREREQ ["1. Prerequisite Master Data (Must Exist in DB)"]
+        direction LR
+        FUEL["Fuel Prices\ncrm_fuel_prices\nPETROL / DIESEL / CNG\n(Auto-synced daily, > 0)"]
+        CAB["Cab Types\ncrm_cab_types\nMileage, PDCRG, Buffer\nExtra KM, PHEXCHG, TA"]
+        RULES["Tax & Split Rules\ncrm_settings\n5% Ride GST, 12% Comm\nRs 10 Fee, 18% GST"]
+        FUEL ~~~ CAB ~~~ RULES
+    end
+
+    subgraph SUBMIT ["2. Create Package & Validate (POST /api/catalog/packages)"]
+        direction LR
+        FORM["Package Form\nName, Booking Type,\nCab Type, KM & Hrs"]
+        VAL{"Valid Inputs?\nCab exists &\nKM, Hrs > 0"}
+        ERR["HTTP 400 / 404\nValidation Error"]
+        OK_PASS["Passed\nValidation"]
+        FORM --> VAL
+        VAL -- "No" --> ERR
+        VAL -- "Yes" --> OK_PASS
+    end
+
+    subgraph PERSIST ["3. Save & Live Pricing Hydration"]
+        direction LR
+        DB[("PostgreSQL\nINSERT crm_packages\n(UUID public_id)")]
+        CALC["pricing-engine.ts\nFuel = (KM / CML) x FP\nTime = (PDCRG/12) x (Hrs+Buf)"]
+        TOTAL["Pre-GST Total Fair\n+ 5% Ride GST\n= Total Payable"]
+        DB --> CALC --> TOTAL
+    end
+
+    subgraph CHANNELS ["4. Immediately Live Across All Channels"]
+        direction LR
+        C1["CRM Operator UI\n/bookings/new"]
+        C2["WhatsApp Bot\nInteractive Plan List"]
+        C3["WordPress Website\nGET /api/public/plans"]
+        C1 ~~~ C2 ~~~ C3
+    end
+
+    START --> PREREQ
+    PREREQ --> SUBMIT
+    SUBMIT --> PERSIST
+    PERSIST --> CHANNELS
+
+    classDef accent fill:#fff7ed,stroke:#ea580c,stroke-width:1.5px,color:#7c2d12
+    classDef db fill:#eff6ff,stroke:#2563eb,stroke-width:1.5px,color:#1e3a8a
+    classDef decision fill:#fefce8,stroke:#ca8a04,stroke-width:1.5px,color:#713f12
+    classDef err fill:#fef2f2,stroke:#dc2626,stroke-width:1.5px,color:#991b1b
+    classDef ok fill:#ecfdf5,stroke:#059669,stroke-width:1.5px,color:#065f46
+
+    class START,FUEL,CAB,RULES,FORM,CALC,TOTAL accent
+    class DB db
+    class VAL decision
+    class ERR err
+    class OK_PASS,C1,C2,C3 ok

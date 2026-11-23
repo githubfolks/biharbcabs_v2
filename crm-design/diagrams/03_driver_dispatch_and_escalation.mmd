@@ -1,24 +1,54 @@
-sequenceDiagram
-    autonumber
-    participant Dispatch as CRM Dispatch Engine (PG)
-    actor Drivers as Matched Drivers (WhatsApp)
-    actor Customer as Customer (WhatsApp)
-    actor Admin as Admin Staff (WhatsApp + CRM)
-
-    Dispatch->>Dispatch: Query Active Verified Drivers\n(Match Vehicle Type, Hub City, Docs Valid, Wallet > Min Limit)
-    Dispatch->>Drivers: Broadcast WhatsApp Ride Offer Template\n[Route, Date/Time, Customer Fare, Driver Net Payout, Commission]\nButtons: [ Accept Ride ]  [ Decline ]
-
-    alt Driver Confirms Within SLA Timeout (e.g., 15 Mins)
-        Drivers->>Dispatch: Driver A taps [ Accept Ride ]
-        Dispatch->>Dispatch: Acquire Atomic DB Lock (SELECT FOR UPDATE)\nStatus -> DRIVER_ASSIGNED (Driver A)
-        Dispatch->>Drivers: Confirm Assignment to Driver A + Share Customer Contact & Pickup Pin
-        Dispatch->>Customer: Send WhatsApp Confirmation:\n- Booking ID, Pickup Date/Time/Location\n- Driver Name, Phone, Vehicle Model & Reg No.\n- Confirmed Fare Breakdown
-        opt Another Driver B taps [ Accept Ride ] 2 seconds later
-            Dispatch->>Drivers: Reply to Driver B: "Sorry, Ride #BC-1042 was already accepted."
-        end
-    else No Driver Confirms Before Timeout (SLA Expired)
-        Dispatch->>Dispatch: Timer Fires -> Status: ESCALATED_NO_DRIVER
-        Dispatch->>Admin: High-Priority WA + CRM Alert:\n"Booking #BC-1042 (Patna -> Gaya) has NO driver confirmation after 15m!"\nQuick Actions: [Assign Driver Manually] [Re-Broadcast with Bonus]
-        Dispatch->>Customer: "Your booking #BC-1042 is confirmed! Our dispatch manager is assigning your vehicle and will share driver details shortly."
+flowchart TB
+    subgraph FILTER ["1. Eligible Driver Matching (dispatch-engine.ts)"]
+        direction LR
+        Q1["Hard Filters\nAPPROVED_ACTIVE, City & Cab Match,\nDocs Valid, Rating >= 4.10,\nNot in TRIP_IN_PROGRESS,\nNo Pickup Gap Conflict"]
+        Q2["Priority Ranking\n1. Return-Trip Home Match\n2. Active Subscription Plan\n   (priority_rank)\n3. Rating & Wallet Limit"]
+        Q3["Broadcast WA Offers\nRoute, Date/Time, Cash Due,\nDriver Payout & Buttons:\nAccept Ride | Decline"]
+        Q1 --> Q2 --> Q3
     end
 
+    subgraph ACCEPT ["2. Driver Response & Atomic Assignment"]
+        direction LR
+        RESP{"Driver Accepts\nWithin SLA\n(e.g. 15 mins)?"}
+        LOCK[("Atomic Lock\nSELECT FOR UPDATE\nStatus: DRIVER_ASSIGNED\nReserve Plan or Wallet")]
+        RACE["Late Driver Tap\nReply: Ride Already\nAccepted"]
+        CONF["WA Confirmations\nDriver: Customer Info & Cash Due\nCustomer: Driver, Cab & 4-Digit OTP"]
+        RESP -- "Yes" --> LOCK --> CONF
+        LOCK -. "2nd Driver" .-> RACE
+    end
+
+    subgraph ESCALATE ["3. SLA Timeout Escalation (Cron / n8n)"]
+        direction LR
+        SLA["SLA Timer Expires\nStatus: ESCALATED_NO_DRIVER"]
+        ALERT["High-Priority Admin Alert\nWA + CRM Dispatch Board\nAssign Manually / Re-Broadcast"]
+        CWAIT["Customer Reassurance\nOps Team Assigning Verified Cab"]
+        SLA --> ALERT --> CWAIT
+    end
+
+    subgraph WAKEUP ["4. Pre-Trip Readiness & Start OTP"]
+        direction LR
+        W1["T-2h Wake-up Check\nWA Button: I Am Ready & On Time"]
+        W2{"Confirmed\nby T-60m?"}
+        W_ALERT["Admin Alert\nCall or Reassign Driver"]
+        W_OK(["Pickup & Start Trip\nDriver Enters Customer OTP\nStatus -> TRIP_IN_PROGRESS"])
+        W1 --> W2
+        W2 -- "No" --> W_ALERT
+        W2 -- "Yes" --> W_OK
+    end
+
+    FILTER --> ACCEPT
+    ACCEPT -- "No Response (SLA)" --> ESCALATE
+    ESCALATE -. "Admin Assigns Driver" .-> WAKEUP
+    ACCEPT -- "Driver Accepted" --> WAKEUP
+
+    classDef accent fill:#fff7ed,stroke:#ea580c,stroke-width:1.5px,color:#7c2d12
+    classDef db fill:#eff6ff,stroke:#2563eb,stroke-width:1.5px,color:#1e3a8a
+    classDef decision fill:#fefce8,stroke:#ca8a04,stroke-width:1.5px,color:#713f12
+    classDef err fill:#fef2f2,stroke:#dc2626,stroke-width:1.5px,color:#991b1b
+    classDef ok fill:#ecfdf5,stroke:#059669,stroke-width:1.5px,color:#065f46
+
+    class Q1,Q2,Q3,W1,CWAIT accent
+    class LOCK db
+    class RESP,W2 decision
+    class RACE,SLA,ALERT,W_ALERT err
+    class CONF,W_OK ok

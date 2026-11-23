@@ -1,0 +1,55 @@
+flowchart TB
+    subgraph ENTRY ["1. Onboarding Entry Point"]
+        direction LR
+        WA["WhatsApp Self-Serve\nDriver sends JOIN"]
+        DUP{"Phone Already\nRegistered?"}
+        DUP_MSG["Reject Duplicate\nContact Ops"]
+        CRM["CRM Staff Entry\nPOST /api/drivers"]
+        WA --> DUP
+        DUP -- "Yes" --> DUP_MSG
+        DUP ~~~ CRM
+    end
+
+    subgraph PROFILE ["2. Driver, Vehicle & KYC Details"]
+        direction LR
+        P1["Driver Profile\nFull Name, Phone\nBase City (e.g. Patna)"]
+        P2["Vehicle Details\nDynamic Category from\ncrm_cab_types, Fuel,\nModel & Reg No."]
+        P3["KYC Documents\nDL, RC, Insurance,\nPermit & Expiry Dates"]
+        P1 --> P2 --> P3
+    end
+
+    subgraph REVIEW ["3. Verification & Admin Approval"]
+        direction LR
+        DB[("PostgreSQL\ncrm_drivers +\ncrm_driver_vehicles\nPENDING_KYC")]
+        DEC{"Admin KYC\nReview"}
+        REJ["REJECTED / SUSPENDED\nWA Notice Sent"]
+        APP["APPROVED_ACTIVE\nis_available = true\nInitial Rating = 5.0"]
+        DB --> DEC
+        DEC -- "Reject" --> REJ
+        DEC -- "Approve" --> APP
+    end
+
+    subgraph BILLING_MODE ["4. Billing Model & Live Dispatch"]
+        direction LR
+        PLAN["Optional: Subscription Plan\nRazorpay Link (incl. 18% GST)\nActivates crm_driver_plans"]
+        WALLET["Standard Wallet Mode\nPre-GST Comm + GST\nSettled via Wallet"]
+        LIVE(["Live for Dispatch\nCounted in City Availability\nReceives WA Ride Offers"])
+        PLAN --> LIVE
+        WALLET --> LIVE
+    end
+
+    ENTRY --> PROFILE
+    PROFILE --> REVIEW
+    REVIEW --> BILLING_MODE
+
+    classDef accent fill:#fff7ed,stroke:#ea580c,stroke-width:1.5px,color:#7c2d12
+    classDef db fill:#eff6ff,stroke:#2563eb,stroke-width:1.5px,color:#1e3a8a
+    classDef decision fill:#fefce8,stroke:#ca8a04,stroke-width:1.5px,color:#713f12
+    classDef err fill:#fef2f2,stroke:#dc2626,stroke-width:1.5px,color:#991b1b
+    classDef ok fill:#ecfdf5,stroke:#059669,stroke-width:1.5px,color:#065f46
+
+    class WA,CRM,P1,P2,P3,PLAN,WALLET accent
+    class DB db
+    class DUP,DEC decision
+    class DUP_MSG,REJ err
+    class APP,LIVE ok
