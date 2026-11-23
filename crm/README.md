@@ -106,7 +106,7 @@ Work through these in order. Each feature section below has the detail; this lis
 
 ### 3. External services
 - [ ] **Razorpay webhook** to `https://<crm host>/api/payments/razorpay/webhook`, secret = `RAZORPAY_WEBHOOK_SECRET`, events: `payment_link.paid`, `payment_link.expired`, `payment_link.cancelled`, `refund.processed`, `refund.failed`.
-- [ ] **Meta WhatsApp webhook** to `https://<crm host>/api/whatsapp/webhook`, with the verify token from the `meta_whatsapp_config` setting.
+- [ ] **Meta WhatsApp webhook** to `https://<crm host>/api/whatsapp/webhook`, with the verify token from the `meta_whatsapp_config` setting. Full Meta setup (number, permanent token, webhook, `api_version` v26.0, limits, templates): [`../crm-design/whatsapp_setup.md`](../crm-design/whatsapp_setup.md).
 - [ ] **WhatsApp templates:** submit the 14 templates in [`crm-design/whatsapp_templates.md`](../crm-design/whatsapp_templates.md) to Meta, then put the approved names in the `whatsapp_templates` setting. Until a template is approved, that message fails outside the 24-hour window (it shows under **Failed messages** on the dispatch board). `bc_customer_gst_document` needs a **Document** header; upload any sample PDF when submitting it.
 - [ ] **Rotate the Meta access token** if any deployed CRM ran code from before 3e3e0e9: until then a request with any cookie value could read the settings, token included. Save the new one in `meta_whatsapp_config`.
 - [ ] **WordPress rate card:** fare quotes must be switched on (`public_enabled`). It ships switched off, and then the WhatsApp bot cannot price rides and staff bookings cannot use the rate card.

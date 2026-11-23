@@ -14,7 +14,7 @@ These diagrams show what the code does as of `main` @ 5e692db (2026-11-20), not 
 How a ride moves from enquiry to money and tax documents. Sources: `whatsapp-bot.ts`, `advance-payments.ts`, `dispatch-engine.ts`, `billing.ts`, `gst-delivery.ts`.
 
 ```mermaid
-flowchart LR
+flowchart TD
     subgraph Acquire["1 · Acquire"]
         WEB["Website<br/>(WordPress)"] -->|pre-filled WhatsApp| BOT
         CUST["Customer on<br/>WhatsApp"] --> BOT["WhatsApp bot"]
@@ -63,7 +63,7 @@ Every `booking_status` and what moves a booking between them. Sources: `whatsapp
 
 ```mermaid
 stateDiagram-v2
-    direction LR
+    direction TB
     [*] --> AWAITING_ADVANCE: online advance
     [*] --> AWAITING_DRIVER: full cash, broadcast now
 
@@ -143,7 +143,7 @@ flowchart TD
 Sources: `driver-dues.ts`, `billing.ts`, `settings` → `revenue_protection_policy`.
 
 ```mermaid
-flowchart LR
+flowchart TD
     subgraph Tier["Credit limit by tier"]
         T1["Probation / new<br/>[₹300]"]
         T2["Standard<br/>[≥5 trips, rating ≥4.2 → ₹1,000]"]
@@ -158,7 +158,7 @@ flowchart LR
 ```
 
 ```mermaid
-flowchart LR
+flowchart TD
     C["Trip completed"] --> F{"Fare ≥ streak_min_fare?<br/>[₹700]"}
     F -->|no| N["total_trips +1 only"]
     F -->|yes| Q["streak_qualifying_trips +1"]
@@ -225,7 +225,7 @@ These figures were produced by running the real `splitFare` and `splitGst` code 
 > The fare already contains the GST: 100 parts ride value plus *pct* parts GST. At 5%, GST is 5 of every 105 rupees, so 2,500 × 5 / 105 = ₹119.05. Taking a plain 5% of ₹2,500 (₹125) would charge GST on the GST.
 
 ```mermaid
-flowchart LR
+flowchart TD
     F["Fare<br/>₹2,500.00"] --> RG["Ride GST (5% incl.)<br/>₹119.05"]
     F --> TV["Taxable value<br/>₹2,380.95"]
     F --> C["Commission 3%<br/>₹75.00"]
@@ -280,7 +280,7 @@ flowchart TD
 ### 3d. GST documents and series
 
 ```mermaid
-flowchart LR
+flowchart TD
     subgraph Series["Numbering: SERIES + FY + 6 digits, e.g. TI2627000001 · restarts 1 April · no gaps"]
         RV["RV · Receipt voucher<br/>advance received<br/>18% incl."]
         TI["TI · Tax invoice<br/>trip settled<br/>5% incl."]
@@ -382,7 +382,7 @@ sequenceDiagram
 
 ```mermaid
 stateDiagram-v2
-    direction LR
+    direction TB
     [*] --> Offered: ride alert
     Offered --> Declined: Decline
     Offered --> Assigned: Accept + eligible

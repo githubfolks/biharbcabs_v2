@@ -1,6 +1,6 @@
 # WhatsApp templates to submit to Meta
 
-Generated from `crm/src/lib/wa-templates.ts`; keep the two in sync (a test checks this file).
+Generated from `crm/src/lib/wa-templates.ts`; keep the two in sync (a test checks this file). Setting up Meta itself (app, number, token, webhook) and the template review rules: [whatsapp_setup.md](whatsapp_setup.md).
 
 **Why:** WhatsApp delivers free-form messages only within 24 hours of the recipient's last message to BiharCabs. Outside that window the CRM sends these templates instead. Until a template is **approved**, that notification fails outside the window. Each failure is logged in `crm_whatsapp_logs`.
 
