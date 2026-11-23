@@ -9,13 +9,14 @@ import { Car, Pencil, RefreshCw, Trash2, X } from 'lucide-react';
 import { hasPermission } from '@/lib/permissions';
 import { REASON_MAX, REASON_MIN } from '@/lib/driver-status-rules';
 
-/** Vehicle categories offered in the CRM forms (the same codes the WhatsApp sign-up uses, plus tempo). */
-export const VEHICLE_CATEGORIES = [
-  { code: 'sedan', label: 'Sedan (Dzire / Etios)' },
-  { code: 'ertiga', label: 'Ertiga SUV (6+1)' },
-  { code: 'innova', label: 'Innova Crysta' },
-  { code: 'tempo', label: 'Tempo Traveller' },
-];
+export interface DynamicCabOption {
+  id: number;
+  code: string;
+  category: string;
+  display_name: string;
+  fuel_type: string;
+  is_active: boolean;
+}
 
 const DATE_FIELDS = [
   ['insurance_expiry', 'Insurance'],
@@ -47,19 +48,30 @@ function Message({ msg }: { msg: Msg }) {
   );
 }
 
-function CategorySelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
-  const known = VEHICLE_CATEGORIES.some((c) => c.code === value);
+function CategorySelect({
+  value,
+  options,
+  onChange,
+}: {
+  value: string;
+  options: DynamicCabOption[];
+  onChange: (v: string) => void;
+}) {
+  const known = options.some((c) => c.code.toLowerCase() === String(value || '').toLowerCase());
   return (
-    <select value={value} onChange={(e) => onChange(e.target.value)} className={input}>
-      {!known && value && <option value={value}>{value}</option>}
-      {VEHICLE_CATEGORIES.map((c) => (
-        <option key={c.code} value={c.code}>{c.label}</option>
+    <select value={value} onChange={(e) => onChange(e.target.value)} className={input} required>
+      {!value && <option value="">Select cab category &amp; fuel...</option>}
+      {!known && value && <option value={value}>{value} (legacy)</option>}
+      {options.map((c) => (
+        <option key={c.code} value={c.code}>
+          {c.display_name} [{c.category} / {c.fuel_type}]
+        </option>
       ))}
     </select>
   );
 }
 
-const emptyVehicle = { registration_no: '', wp_vehicle_code: 'sedan', model_name: '', insurance_expiry: '', fitness_expiry: '', permit_expiry: '' };
+const emptyVehicle = { registration_no: '', wp_vehicle_code: '', model_name: '', insurance_expiry: '', fitness_expiry: '', permit_expiry: '' };
 
 async function send(url: string, method: string, body: any): Promise<{ ok: boolean; data: any }> {
   try {
@@ -87,6 +99,18 @@ export default function DriverEditDialog({
   const [details, setDetails] = useState<any>({});
   const [payout, setPayout] = useState<any>({});
   const [vehicles, setVehicles] = useState<any[]>([]);
+  const [cabOptions, setCabOptions] = useState<DynamicCabOption[]>([]);
+
+  useEffect(() => {
+    fetch('/api/catalog/cab-types')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && Array.isArray(data.cabTypes)) {
+          setCabOptions(data.cabTypes);
+        }
+      })
+      .catch(() => {});
+  }, []);
   const [newVehicle, setNewVehicle] = useState<any>(emptyVehicle);
   const [removing, setRemoving] = useState<{ id: number; reason: string } | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -291,7 +315,7 @@ export default function DriverEditDialog({
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     <div>
                       <label className={label}>Category</label>
-                      <CategorySelect value={v.wp_vehicle_code} onChange={(val) => setVehicle(v.id, 'wp_vehicle_code', val)} />
+                      <CategorySelect value={v.wp_vehicle_code} options={cabOptions} onChange={(val) => setVehicle(v.id, 'wp_vehicle_code', val)} />
                     </div>
                     <div>
                       <label className={label}>Model</label>
@@ -361,7 +385,7 @@ export default function DriverEditDialog({
                   </div>
                   <div>
                     <label className={label}>Category</label>
-                    <CategorySelect value={newVehicle.wp_vehicle_code} onChange={(val) => setNewVehicle({ ...newVehicle, wp_vehicle_code: val })} />
+                    <CategorySelect value={newVehicle.wp_vehicle_code} options={cabOptions} onChange={(val) => setNewVehicle({ ...newVehicle, wp_vehicle_code: val })} />
                   </div>
                   <div>
                     <label className={label}>Model</label>

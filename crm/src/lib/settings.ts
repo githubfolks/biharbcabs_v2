@@ -317,6 +317,22 @@ export async function getDriverPlansPolicy(): Promise<DriverPlansPolicy> {
   };
 }
 
+export interface LocationIqConfig {
+  api_key: string;
+  country_codes: string;
+}
+
+/**
+ * LocationIQ API configuration (same provider used by WordPress frontend).
+ * Reads from crm_settings ('locationiq_config') or LOCATIONIQ_API_KEY env var; never hardcoded.
+ */
+export async function getLocationIqConfig(): Promise<LocationIqConfig> {
+  const raw = await getSetting<any>('locationiq_config', {});
+  const apiKey = String(raw?.api_key || process.env.LOCATIONIQ_API_KEY || '').trim();
+  const countryCodes = String(raw?.country_codes || 'in').trim();
+  return { api_key: apiKey, country_codes: countryCodes || 'in' };
+}
+
 /** Return-trip priority and discount settings, validated: incomplete or invalid settings leave the feature off. */
 export async function getReturnTripPolicy(): Promise<ReturnTripPolicyCheck> {
   const raw = await getSetting<any>('return_trip_policy', {});

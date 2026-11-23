@@ -197,14 +197,22 @@ export async function POST(req: NextRequest) {
       let insertedVehicle = null;
       if (vehicle && vehicle.registration_no && vehicle.wp_vehicle_code && docs.vehicle) {
         const regNo = String(vehicle.registration_no).toUpperCase();
+        const cabRes = await client.query(
+          `SELECT id, fuel_type FROM crm_cab_types WHERE UPPER(code) = UPPER($1) LIMIT 1`,
+          [vehicle.wp_vehicle_code]
+        );
+        const cabTypeId = cabRes.rows[0]?.id ?? null;
+        const fuelType = cabRes.rows[0]?.fuel_type ?? null;
         // A registration held by another driver, or removed, is refused, never moved or changed.
         const vRes = await client.query(
           `INSERT INTO crm_driver_vehicles (
-            driver_id, wp_vehicle_code, registration_no, model_name,
+            driver_id, wp_vehicle_code, cab_type_id, fuel_type, registration_no, model_name,
             insurance_expiry, fitness_expiry, permit_expiry, is_verified, created_at, updated_at
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, false, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, false, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
           ON CONFLICT (registration_no) DO UPDATE
           SET wp_vehicle_code = EXCLUDED.wp_vehicle_code,
+              cab_type_id = EXCLUDED.cab_type_id,
+              fuel_type = EXCLUDED.fuel_type,
               model_name = EXCLUDED.model_name,
               insurance_expiry = EXCLUDED.insurance_expiry,
               fitness_expiry = EXCLUDED.fitness_expiry,
@@ -215,6 +223,8 @@ export async function POST(req: NextRequest) {
           [
             driver.id,
             vehicle.wp_vehicle_code,
+            cabTypeId,
+            fuelType,
             regNo,
             vehicle.model_name || vehicle.wp_vehicle_code,
             docs.vehicle.insurance_expiry,

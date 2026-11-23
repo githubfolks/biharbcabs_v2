@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { listPricedPackages } from '@/lib/pricing-engine';
 import { BOOKING_TYPES } from '@/lib/booking-rules';
+import { getCityCabAvailability } from '@/lib/availability';
 
 export const dynamic = 'force-dynamic';
 
@@ -31,6 +32,9 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const rawType = searchParams.get('booking_type');
+    const originCity = searchParams.get('origin_city')?.trim() || '';
+    const pickupDate = searchParams.get('pickup_date');
+    const pickupTime = searchParams.get('pickup_time');
     const bookingType = rawType ? rawType.trim().toUpperCase() : null;
     if (bookingType && !BOOKING_TYPES.includes(bookingType as any)) {
       return NextResponse.json(
@@ -45,37 +49,58 @@ export async function GET(req: NextRequest) {
       skipUnpriceable: true,
     });
 
-    const publicPlans = packages.map((p) => ({
-      public_id: p.public_id,
-      name: p.name,
-      booking_type: p.booking_type,
-      sub_type: p.sub_type,
-      included_km: p.included_km,
-      included_hours: p.included_hours,
-      description: p.description,
-      cab: {
-        public_id: p.cab_type.public_id,
-        code: p.cab_type.code,
-        category: p.cab_type.category,
-        display_name: p.cab_type.display_name,
-        fuel_type: p.cab_type.fuel_type,
-        seating_capacity: p.cab_type.seating_capacity,
-        luggage_bags: p.cab_type.luggage_bags,
-        models_description: p.cab_type.models_description,
-        extra_hour_charge: p.cab_type.extra_hour_charge,
-        extra_km_charge: p.cab_type.extra_km_charge,
-      },
-      pricing: {
-        total_fair_pre_gst: p.pricing.totalFairPreGst,
-        gst_pct: p.pricing.gstPct,
-        gst_charge: p.pricing.gstCharge,
-        total_payment: p.pricing.totalPayment,
-      },
-    }));
+    const availMap = originCity
+      ? await getCityCabAvailability({ originCity, pickupDate, pickupTime })
+      : null;
+
+    const publicPlans = packages
+      .map((p) => {
+        const cat = p.cab_type.category.toUpperCase();
+        const availability = availMap
+          ? (availMap[cat] ?? {
+              city: originCity,
+              category: cat,
+              total_cabs: 0,
+              available_cabs: 0,
+              is_available: false,
+            })
+          : null;
+        return {
+          public_id: p.public_id,
+          name: p.name,
+          booking_type: p.booking_type,
+          sub_type: p.sub_type,
+          included_km: p.included_km,
+          included_hours: p.included_hours,
+          description: p.description,
+          cab: {
+            public_id: p.cab_type.public_id,
+            code: p.cab_type.code,
+            category: p.cab_type.category,
+            display_name: p.cab_type.display_name,
+            fuel_type: p.cab_type.fuel_type,
+            seating_capacity: p.cab_type.seating_capacity,
+            luggage_bags: p.cab_type.luggage_bags,
+            models_description: p.cab_type.models_description,
+            extra_hour_charge: p.cab_type.extra_hour_charge,
+            extra_km_charge: p.cab_type.extra_km_charge,
+          },
+          pricing: {
+            total_fair_pre_gst: p.pricing.totalFairPreGst,
+            gst_pct: p.pricing.gstPct,
+            gst_charge: p.pricing.gstCharge,
+            total_payment: p.pricing.totalPayment,
+          },
+          ...(availability ? { availability } : {}),
+        };
+      })
+      // Hide cab categories that have 0 free cabs in the selected source city (e.g. all cabs on ongoing rides).
+      .filter((p) => !p.availability || p.availability.is_available);
 
     return NextResponse.json({
       success: true,
       booking_types: BOOKING_TYPES,
+      ...(originCity ? { origin_city: originCity } : {}),
       plans: publicPlans,
     });
   } catch (err: any) {

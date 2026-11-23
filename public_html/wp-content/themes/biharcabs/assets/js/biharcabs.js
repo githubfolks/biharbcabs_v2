@@ -229,28 +229,46 @@
      const planSelect = form.querySelector('[data-bc-field="package_public_id"]');
      if (planSelect && !planSelect.dataset.bcPlansLoaded) {
        planSelect.dataset.bcPlansLoaded = '1';
-       const loadPlans = async (bookingType) => {
-         planSelect.innerHTML = '<option value="">Loading cab plans…</option>';
+       let planSeq = 0;
+       const loadPlans = async () => {
+         const seq = ++planSeq;
+         const pickupVal = (field('pickup')?.value || '').trim();
+         const city = pickupVal.split(',')[0].trim();
+         const pDate = field('date')?.value || '';
+         const pTime = field('time')?.value || '';
+         const qs = new URLSearchParams();
+         if (city) qs.set('origin_city', city);
+         if (pDate) qs.set('pickup_date', pDate);
+         if (pTime) qs.set('pickup_time', pTime);
+
+         planSelect.innerHTML = '<option value="">Loading available cab plans…</option>';
          try {
-           const url = config.plansUrl + (bookingType ? '?booking_type=' + encodeURIComponent(bookingType) : '');
+           const url = config.plansUrl + (qs.toString() ? '?' + qs.toString() : '');
            const resp = await fetch(url);
            const data = await resp.json();
+           if (seq !== planSeq) return;
            if (!data || !data.success || !Array.isArray(data.plans) || data.plans.length === 0) {
-             planSelect.innerHTML = '<option value="">No plans available for this booking type</option>';
+             planSelect.innerHTML = '<option value="">' + (city ? 'No cabs currently free in ' + city : 'No plans available') + '</option>';
              return;
            }
-           planSelect.innerHTML = '<option value="">Select a cab &amp; plan…</option>';
+           planSelect.innerHTML = '<option value="">Select an available cab &amp; plan…</option>';
            data.plans.forEach((p) => {
+             if (p.availability && !p.availability.is_available) return;
              const opt = document.createElement('option');
              opt.value = p.public_id;
-             opt.textContent = p.name + ' — ' + p.cab.display_name + ' (₹' + Number(p.pricing.total_payment).toLocaleString('en-IN') + ' incl. GST)';
+             const av = p.availability;
+             const avText = av ? ' — ' + av.available_cabs + ' available in ' + av.city : '';
+             opt.textContent = p.name + ' — ' + p.cab.display_name + ' (₹' + Number(p.pricing.total_payment).toLocaleString('en-IN') + ' incl. GST)' + avText;
              planSelect.appendChild(opt);
            });
          } catch (_) {
-           planSelect.innerHTML = '<option value="">Unable to load plans right now</option>';
+           if (seq === planSeq) planSelect.innerHTML = '<option value="">Unable to load plans right now</option>';
          }
        };
-       loadPlans('');
+       loadPlans();
+       [field('pickup'), field('date'), field('time')].forEach((el) => {
+         if (el) el.addEventListener('change', loadPlans);
+       });
      }
    }
    if(config.locationEnabled&&config.locationKey)setup('',form);

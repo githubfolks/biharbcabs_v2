@@ -9,7 +9,7 @@ import {
   sendWhatsAppList,
   sendWhatsAppDocument,
 } from './whatsapp';
-import { listPricedPackages, getPricedPackageById } from './pricing-engine';
+import { listPricedPackages, getPricedPackageById, listCabTypes } from './pricing-engine';
 import {
   calculateRideSplitWithTaxes,
   broadcastRideToDrivers,
@@ -858,29 +858,56 @@ export async function processIncomingWhatsAppMessage(params: {
     const ctx = { ...conv.context_data, base_city: city };
     await updateConversation(fromPhone, 'DRIVER_ONBOARD_VEHICLE', ctx, 'DRIVER');
 
-    await sendWhatsAppButtons(
-      fromPhone,
-      `Base city set to ${city}.\nWhich type of commercial vehicle do you operate?`,
-      [
-        { id: 'v_sedan', title: 'Sedan (Dzire/Etios)' },
-        { id: 'v_ertiga', title: 'Ertiga SUV (6+1)' },
-        { id: 'v_innova', title: 'Innova Crysta' },
-      ]
-    );
+    const activeCabs = await listCabTypes({ activeOnly: true });
+    if (activeCabs.length > 0) {
+      await sendWhatsAppList(
+        fromPhone,
+        `Base city set to ${city}.\nWhich cab category & fuel type do you operate?`,
+        'Choose Cab Type',
+        [
+          {
+            title: 'Cab Categories',
+            rows: activeCabs.slice(0, 10).map((c) => ({
+              id: `v_cab_${c.code}`,
+              title: c.display_name.slice(0, 24),
+              description: (c.models_description || `${c.category} • ${c.fuel_type}`).slice(0, 72),
+            })),
+          },
+        ],
+        'Vehicle Category'
+      );
+    } else {
+      await sendWhatsAppText(
+        fromPhone,
+        `Base city set to ${city}.\nPlease reply with your cab category (e.g. MICRO, MINI, SEDAN, PRIME_SEDAN, SUV, LUX, BIKE):`
+      );
+    }
     return;
   }
 
   if (conv.state === 'DRIVER_ONBOARD_VEHICLE') {
-    let vCode = 'sedan';
-    if (buttonId === 'v_ertiga' || lowerText.includes('ertiga')) vCode = 'ertiga';
-    else if (buttonId === 'v_innova' || lowerText.includes('innova')) vCode = 'innova';
+    const activeCabs = await listCabTypes({ activeOnly: true });
+    let matchedCab = buttonId?.startsWith('v_cab_')
+      ? activeCabs.find((c) => c.code === buttonId.replace('v_cab_', ''))
+      : activeCabs.find(
+          (c) =>
+            c.code.toLowerCase() === lowerText ||
+            c.category.toLowerCase() === lowerText ||
+            c.display_name.toLowerCase().includes(lowerText)
+        );
+    const vCode = matchedCab ? matchedCab.code : rawText.toUpperCase().trim() || 'SEDAN_PETROL';
 
-    const ctx = { ...conv.context_data, wp_vehicle_code: vCode };
+    const ctx = {
+      ...conv.context_data,
+      wp_vehicle_code: vCode,
+      cab_type_id: matchedCab?.id ?? null,
+      fuel_type: matchedCab?.fuel_type ?? null,
+    };
     await updateConversation(fromPhone, 'DRIVER_ONBOARD_REG', ctx, 'DRIVER');
 
     await sendWhatsAppText(
       fromPhone,
-      `Selected vehicle category: ${vCode.toUpperCase()}.\nPlease enter your Commercial Vehicle Registration Number (e.g. BR-01-PK-1234):`
+      `Selected vehicle category: ${matchedCab ? matchedCab.display_name : vCode}.\nPlease enter your Commercial Vehicle Registration Number (e.g. BR-01-PK-1234):`
     );
     return;
   }
@@ -912,10 +939,10 @@ export async function processIncomingWhatsAppMessage(params: {
 
     const driverId = dRes.rows[0].id;
     await query(
-      `INSERT INTO crm_driver_vehicles (driver_id, wp_vehicle_code, registration_no, model_name, is_verified)
-       VALUES ($1, $2, $3, $4, false)
+      `INSERT INTO crm_driver_vehicles (driver_id, wp_vehicle_code, cab_type_id, fuel_type, registration_no, model_name, is_verified)
+       VALUES ($1, $2, $3, $4, $5, $6, false)
        ON CONFLICT (registration_no) DO NOTHING`,
-      [driverId, ctx.wp_vehicle_code || 'sedan', regNo, `${ctx.wp_vehicle_code?.toUpperCase()} Commercial`]
+      [driverId, ctx.wp_vehicle_code || 'SEDAN_PETROL', ctx.cab_type_id ?? null, ctx.fuel_type ?? null, regNo, `${ctx.wp_vehicle_code?.toUpperCase()} Commercial`]
     );
 
     await resetConversation(fromPhone);

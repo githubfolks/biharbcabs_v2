@@ -38,8 +38,14 @@ class BCGE_Rest {
         if ($base === '') {
             return self::fail('CRM_NOT_CONFIGURED', 'CRM API base URL is not configured.', 503);
         }
-        $type = sanitize_text_field((string) $request->get_param('booking_type'));
-        $url = $base . '/api/public/plans' . ($type !== '' ? '?booking_type=' . rawurlencode($type) : '');
+        $query_args = array();
+        foreach (array('booking_type', 'origin_city', 'pickup_date', 'pickup_time') as $param) {
+            $val = sanitize_text_field((string) $request->get_param($param));
+            if ($val !== '') {
+                $query_args[$param] = $val;
+            }
+        }
+        $url = $base . '/api/public/plans' . ($query_args ? '?' . http_build_query($query_args) : '');
         $response = wp_remote_get($url, array('timeout' => 8, 'headers' => array('Accept' => 'application/json')));
         if (is_wp_error($response)) {
             return self::fail('CRM_UNREACHABLE', 'Unable to load cab plans right now.', 502);

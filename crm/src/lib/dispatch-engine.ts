@@ -149,11 +149,17 @@ async function eligibilityRows(db: Db, q: EligibilityQuery, filter: { sql: strin
                WHEN d.rating >= ($8::numeric) THEN ($9::numeric)
                ELSE ($10::numeric) END) AS credit_limit,
          (SELECT sb.booking_code FROM crm_bookings sb
-          WHERE sb.assigned_driver_id = d.id AND sb.id <> $4::bigint
-            AND sb.booking_status IN ('DRIVER_ASSIGNED', 'TRIP_IN_PROGRESS')
-            AND ABS(EXTRACT(EPOCH FROM (((sb.pickup_date + sb.pickup_time) AT TIME ZONE 'Asia/Kolkata') - $11::timestamptz)))
-                < ($12::numeric) * 3600
-          ORDER BY sb.pickup_date, sb.pickup_time LIMIT 1) AS clashing_booking_code,
+          WHERE (sb.assigned_driver_id = d.id OR (v.id IS NOT NULL AND sb.assigned_vehicle_id = v.id))
+            AND sb.id <> $4::bigint
+            AND (
+              sb.booking_status = 'TRIP_IN_PROGRESS'
+              OR (
+                sb.booking_status = 'DRIVER_ASSIGNED'
+                AND ABS(EXTRACT(EPOCH FROM (((sb.pickup_date + sb.pickup_time) AT TIME ZONE 'Asia/Kolkata') - $11::timestamptz)))
+                    < ($12::numeric) * 3600
+              )
+            )
+          ORDER BY (sb.booking_status = 'TRIP_IN_PROGRESS') DESC, sb.pickup_date, sb.pickup_time LIMIT 1) AS clashing_booking_code,
          ($12::numeric) AS ride_gap_hours
        FROM crm_drivers d
        LEFT JOIN crm_driver_plans dp ON dp.driver_id = d.id AND dp.status = 'ACTIVE'

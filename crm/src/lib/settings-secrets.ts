@@ -8,7 +8,7 @@ export const SECRET_MASK = '********';
 
 export const SECRET_SETTING_FIELDS: Record<string, readonly string[]> = {
   meta_whatsapp_config: ['access_token', 'webhook_verify_token'],
-  biharcabs_wp_api: ['api_key'],
+  locationiq_config: ['api_key'],
 };
 
 export function maskSettingValue(key: string, value: any): any {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { getPricedPackageByPublicId, CatalogError } from '@/lib/pricing-engine';
+import { checkCategoryAvailability } from '@/lib/availability';
 import { insertWithBookingCode } from '@/lib/booking-code';
 import { broadcastRideToDrivers } from '@/lib/dispatch-engine';
 import { notifyOfferedDrivers } from '@/lib/dispatch-notify';
@@ -70,6 +71,25 @@ export async function POST(req: NextRequest) {
     const pkg = await getPricedPackageByPublicId(packagePublicId);
     if (!pkg) {
       return NextResponse.json({ success: false, error: 'Selected plan is no longer available.' }, { status: 404 });
+    }
+
+    // Server-side city availability check: never confirm a public booking when 0 cabs of this category are available.
+    const avail = await checkCategoryAvailability({
+      originCity,
+      category: pkg.cab_type.category,
+      pickupDate,
+      pickupTime,
+    });
+    if (!avail.is_available) {
+      return NextResponse.json(
+        {
+          success: false,
+          code: 'CAB_CATEGORY_UNAVAILABLE',
+          error: `No ${pkg.cab_type.display_name} cab is available in ${originCity} for the selected date and time.`,
+          availability: avail,
+        },
+        { status: 409 }
+      );
     }
 
     const split = pkg.pricing.split;

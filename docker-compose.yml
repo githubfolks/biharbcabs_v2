@@ -94,6 +94,8 @@ services:
       RAZORPAY_KEY_ID: ${RAZORPAY_KEY_ID:-}
       RAZORPAY_KEY_SECRET: ${RAZORPAY_KEY_SECRET:-}
       RAZORPAY_WEBHOOK_SECRET: ${RAZORPAY_WEBHOOK_SECRET:-}
+      # Optional LocationIQ API key (can also be configured in CRM System Settings).
+      LOCATIONIQ_API_KEY: ${LOCATIONIQ_API_KEY:-}
     extra_hosts:
       - "host.docker.internal:host-gateway"
 

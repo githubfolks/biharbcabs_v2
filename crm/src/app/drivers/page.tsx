@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { UserCheck, ShieldAlert, Car, PlusCircle, RefreshCw, Wallet, Phone, CheckCircle, Star, AlertTriangle, X, Gift, Award, ShieldCheck, Pencil } from 'lucide-react';
 import { allowedActions, DriverStatusAction, REASON_MAX, REASON_MIN } from '@/lib/driver-status-rules';
-import DriverEditDialog, { VEHICLE_CATEGORIES } from '@/components/DriverEditDialog';
+import DriverEditDialog, { DynamicCabOption } from '@/components/DriverEditDialog';
 import DriverWalletDialog from '@/components/DriverWalletDialog';
 import { hasPermission } from '@/lib/permissions';
 
@@ -60,17 +60,30 @@ export default function DriversPage() {
   // What happened to the WhatsApp message after a status change or offer pause.
   const [noticeFlash, setNoticeFlash] = useState<{ ok: boolean; text: string } | null>(null);
 
+  const [cabTypes, setCabTypes] = useState<DynamicCabOption[]>([]);
+
+  useEffect(() => {
+    fetch('/api/catalog/cab-types')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && Array.isArray(data.cabTypes)) {
+          setCabTypes(data.cabTypes);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   // Expiry dates start empty: the admin must enter the dates printed on the documents.
   const emptyForm = {
     full_name: '',
     phone: '',
     whatsapp_phone: '',
-    base_city: 'Patna',
+    base_city: '',
     license_number: '',
     license_expiry: '',
     bank_upi_id: '',
     vehicle: {
-      wp_vehicle_code: 'sedan',
+      wp_vehicle_code: '',
       registration_no: '',
       model_name: '',
       insurance_expiry: '',
@@ -698,14 +711,18 @@ export default function DriversPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700">Vehicle Category</label>
+                  <label className="block text-xs font-semibold text-slate-700">Vehicle Category &amp; Fuel *</label>
                   <select
+                    required
                     value={form.vehicle.wp_vehicle_code}
                     onChange={(e) => setForm({ ...form, vehicle: { ...form.vehicle, wp_vehicle_code: e.target.value } })}
                     className="w-full mt-1 px-3 py-1.5 border rounded-md text-sm"
                   >
-                    {VEHICLE_CATEGORIES.map((c) => (
-                      <option key={c.code} value={c.code}>{c.label}</option>
+                    <option value="">Select cab category &amp; fuel...</option>
+                    {cabTypes.map((c) => (
+                      <option key={c.code} value={c.code}>
+                        {c.display_name} [{c.category} / {c.fuel_type}]
+                      </option>
                     ))}
                   </select>
                 </div>

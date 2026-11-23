@@ -8,6 +8,7 @@ import { notify } from '@/lib/wa-notify';
 import { notifyOfferedDrivers } from '@/lib/dispatch-notify';
 import { insertWithBookingCode } from '@/lib/booking-code';
 import { CatalogError, getPricedPackageById } from '@/lib/pricing-engine';
+import { checkCategoryAvailability } from '@/lib/availability';
 import { MIN_OVERRIDE_REASON_LENGTH } from '@/lib/booking-rules';
 
 export const dynamic = 'force-dynamic';
@@ -180,6 +181,27 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         { success: false, error: "This fare does not cover BiharCabs' share and GST; the driver would earn nothing." },
         { status: 400 }
+      );
+    }
+
+    // Enforce live Cab Category availability in the source city (unless explicitly overridden by staff for waitlist/manual dispatch).
+    const allowUnavailable = Boolean(body.allow_unavailable);
+    const cabCategory = pkg ? pkg.cab_type.category : resolvedVehicleCode;
+    const avail = await checkCategoryAvailability({
+      originCity: origin_city,
+      category: cabCategory,
+      pickupDate: pickup_date,
+      pickupTime: pickup_time,
+    });
+    if (!avail.is_available && !allowUnavailable) {
+      return NextResponse.json(
+        {
+          success: false,
+          code: 'CAB_CATEGORY_UNAVAILABLE',
+          error: `No ${pkg ? pkg.cab_type.display_name : cabCategory} cab is currently available in ${origin_city} for ${pickup_date} ${pickup_time}.`,
+          availability: avail,
+        },
+        { status: 409 }
       );
     }
 

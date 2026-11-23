@@ -215,6 +215,54 @@ export default function SettingsPage() {
           </button>
         </div>
 
+        {/* LocationIQ Maps & Distance API */}
+        <div className="bg-white p-5 rounded-lg border border-slate-200 shadow-sm space-y-4 md:col-span-2">
+          <div className="flex items-center space-x-2 border-b pb-3">
+            <Database className="h-5 w-5 text-blue-600" />
+            <div>
+              <h3 className="font-bold text-slate-900">LocationIQ Autocomplete &amp; Driving Distance API</h3>
+              <p className="text-xs text-slate-500">Powers Source/Destination dropdown auto-fill and live road distance calculation in Operator Booking</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700">LocationIQ API Key</label>
+              <input
+                type="password"
+                autoComplete="off"
+                defaultValue={settings.locationiq_config?.api_key ?? ''}
+                id="locationiq_api_key"
+                placeholder="pk.xxxxxxxx..."
+                className="w-full mt-1 px-3 py-1.5 border rounded-md text-sm font-mono"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700">Country Codes (comma-separated)</label>
+              <input
+                type="text"
+                defaultValue={settings.locationiq_config?.country_codes ?? 'in'}
+                id="locationiq_country_codes"
+                className="w-full mt-1 px-3 py-1.5 border rounded-md text-sm font-mono"
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end pt-2">
+            <button
+              onClick={() => {
+                const apiKey = (document.getElementById('locationiq_api_key') as HTMLInputElement).value.trim();
+                const countryCodes = (document.getElementById('locationiq_country_codes') as HTMLInputElement).value.trim() || 'in';
+                handleSaveSetting('locationiq_config', { api_key: apiKey, country_codes: countryCodes });
+              }}
+              disabled={savingKey === 'locationiq_config'}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md text-xs font-semibold hover:bg-blue-700"
+            >
+              Save LocationIQ Settings
+            </button>
+          </div>
+        </div>
+
         {/* Driver Ratings & Quality Assurance Policy */}
         <div className="bg-white p-5 rounded-lg border border-slate-200 shadow-sm space-y-4 md:col-span-2">
           <div className="flex items-center space-x-2 border-b pb-3">

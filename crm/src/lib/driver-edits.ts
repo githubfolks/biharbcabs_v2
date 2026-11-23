@@ -270,13 +270,17 @@ export async function addVehicle(driverId: number, v: Values, adminId: number) {
     const pastDates = VEHICLE_DATES.filter((f) => past.rows[0][f]);
     if (pastDates.length) throw new DriverEditError(`Cannot add a vehicle with a past date: ${pastDates.join(', ')}`, 422);
 
+    const cabRes = await client.query(
+      `SELECT id, fuel_type FROM crm_cab_types WHERE UPPER(code) = UPPER($1) LIMIT 1`,
+      [v.wp_vehicle_code]
+    );
     const ins = await client.query(
-      `INSERT INTO crm_driver_vehicles (driver_id, wp_vehicle_code, registration_no, model_name,
+      `INSERT INTO crm_driver_vehicles (driver_id, wp_vehicle_code, cab_type_id, fuel_type, registration_no, model_name,
          insurance_expiry, fitness_expiry, permit_expiry, is_verified, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
        ON CONFLICT (registration_no) DO NOTHING
        RETURNING id`,
-      [driverId, v.wp_vehicle_code, v.registration_no, v.model_name, v.insurance_expiry, v.fitness_expiry, v.permit_expiry]
+      [driverId, v.wp_vehicle_code, cabRes.rows[0]?.id ?? null, cabRes.rows[0]?.fuel_type ?? null, v.registration_no, v.model_name, v.insurance_expiry, v.fitness_expiry, v.permit_expiry]
     );
     if (ins.rows.length === 0) {
       throw new DriverEditError(`Vehicle ${v.registration_no} is already on file (this or another driver, or removed)`, 409);
@@ -312,6 +316,16 @@ export async function editVehicle(driverId: number, vehicleId: number, v: Values
       `UPDATE crm_driver_vehicles SET ${sql}, updated_at = CURRENT_TIMESTAMP WHERE id = $1`,
       [vehicleId, ...cols.map((c) => changes[c].to)]
     );
+    if (cols.includes('wp_vehicle_code')) {
+      const cabRes = await client.query(
+        `SELECT id, fuel_type FROM crm_cab_types WHERE UPPER(code) = UPPER($1) LIMIT 1`,
+        [changes.wp_vehicle_code.to]
+      );
+      await client.query(
+        `UPDATE crm_driver_vehicles SET cab_type_id = $1, fuel_type = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3`,
+        [cabRes.rows[0]?.id ?? null, cabRes.rows[0]?.fuel_type ?? null, vehicleId]
+      );
+    }
     await record(client, { driverId, vehicleId, action: 'VEHICLE_EDIT', changes, adminId });
     return { changed: cols };
   });
