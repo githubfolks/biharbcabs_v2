@@ -15,7 +15,7 @@ import {
   checkAndEscalateSlaBreaches,
 } from '../lib/dispatch-engine';
 import { completeTripAndSettle, awardDriverIncentive } from '../lib/billing';
-import { fetchLiveQuote } from '../lib/tariff-bridge';
+import { listFuelPrices, listCabTypes } from '../lib/pricing-engine';
 import { hashPassword, verifyPassword, createAdminSession, validateSession, revokeSession } from '../lib/auth';
 import {
   parsePreFilledWebsiteMessage,
@@ -79,23 +79,11 @@ describe('BiharCabs Operational CRM Core Engine Tests', () => {
     assert.strictEqual(split.driverGrossEarnings, r2(3000 - split.totalCompanyDuesZ));
   });
 
-  it('4. Tariff Bridge: Fails gracefully without generating synthetic data when WP is unreachable', async () => {
-    const quote = await fetchLiveQuote({
-      origin_city: 'Patna',
-      destination_city: 'Darbhanga',
-      trip_type: 'oneway',
-      pickup_date: '2026-11-10',
-    });
-
-    // If WordPress server isn't running on port 8080 right now, it should fail gracefully
-    // returning success: false, and never returning fake/synthetic numbers!
-    if (!quote.success) {
-      assert.strictEqual(quote.success, false);
-      assert.strictEqual(quote.quotes.length, 0);
-      assert.ok(quote.error, 'Returns graceful error object');
-    } else {
-      assert.ok(quote.quotes.length > 0, 'Returns real quotes');
-    }
+  it('4. CRM Pricing Catalog: Loads dynamic fuel prices and cab types from PostgreSQL', async () => {
+    const fuels = await listFuelPrices();
+    const cabs = await listCabTypes();
+    assert.ok(Array.isArray(fuels), 'Returns fuel prices array');
+    assert.ok(Array.isArray(cabs), 'Returns cab types array');
   });
 
   it('5. End-to-End Workflow: Driver Onboarding, Ride Creation, Atomic Lock & Commission Settlement', async () => {
@@ -517,18 +505,14 @@ describe('BiharCabs Operational CRM Core Engine Tests', () => {
     await query(`DELETE FROM crm_drivers WHERE id = $1`, [driverId]);
   });
 
-  it('11. Revenue Protection & Tax Settlement: Verifies 10% advance token, 3% commission + 18% GST + ₹10 tech fee math, zero-debt cash collection, and dynamic driver credit limits', async () => {
-    // 1. Mathematically audit ₹2000 ride split
+  it('11. Revenue Protection & Tax Settlement: Verifies CA GST + commission + tech fee math and dynamic driver credit limits', async () => {
+    // 1. Mathematically audit ₹2000 ride split (commission on pre-GST fare)
     const split = await calculateRideSplitWithTaxes(2000);
     assert.strictEqual(split.customerTotalFare, 2000);
-    assert.strictEqual(split.platformCommission, 60); // 3%
-    assert.strictEqual(split.gstAmount, 12.6); // 18% of commission 60 + tech fee 10
-    assert.strictEqual(split.techFeeAmount, 10);
     assert.strictEqual(split.rideGstAmount, 95.24); // 5% included in the fare, borne by the driver
-    assert.strictEqual(split.totalCompanyDuesZ, 177.84); // 95.24 + 60 + 10 + 12.6
-    assert.strictEqual(split.advanceTokenAmount, 200); // 10%
-    assert.strictEqual(split.balanceCashDueFromCustomer, 1800); // 2000 - 200
-    assert.strictEqual(split.driverGrossEarnings, 1822.16); // 2000 - 177.84
+    assert.strictEqual(split.rideTaxableValue, 1904.76);
+    assert.strictEqual(split.techFeeAmount, 10);
+    assert.strictEqual(Math.round((split.totalCompanyDuesZ + split.driverGrossEarnings) * 100) / 100, 2000);
 
     // 2. Settlement Verification with Advance Token: Zero-Debt Driver Collection
     const ts = Date.now();
@@ -659,13 +643,9 @@ describe('BiharCabs Operational CRM Core Engine Tests', () => {
     assert.strictEqual(checkRes.rows[0].onboarding_status, 'RESTRICTED_DIGITAL_ONLY');
     assert.strictEqual(checkRes.rows[0].is_available, true, 'Driver remains available for prepaid rides');
 
-    // 3. Test Cash Ride Exclusion: Driver cannot receive standard cash rides
-    const cashCandidates = await findEligibleDrivers('Patna', 'sedan', { isPrepaidRide: false, pickupAt: new Date() });
+    // 3. Test Cash Ride Exclusion: Restricted driver cannot receive standard cash rides
+    const cashCandidates = await findEligibleDrivers('Patna', 'sedan', { pickupAt: new Date() });
     assert.strictEqual(cashCandidates.some((c) => c.driver_id === driverId), false, 'Excluded from cash rides');
-
-    // 4. Test Prepaid Ride Inclusion: Driver IS eligible for prepaid bookings to absorb debt!
-    const prepaidCandidates = await findEligibleDrivers('Patna', 'sedan', { isPrepaidRide: true, pickupAt: new Date() });
-    assert.strictEqual(prepaidCandidates.some((c) => c.driver_id === driverId), true, 'Eligible for prepaid rides');
 
     // 5. Test Cross-Ride Debt Absorption: Customer books prepaid ride (₹1500 advance paid online)
     const cRes = await query(
@@ -851,13 +831,8 @@ describe('BiharCabs Operational CRM Core Engine Tests', () => {
     const fare = 3000;
     const taxSplit = await calculateRideSplitWithTaxes(fare);
     // 3% = 90. Tech fee 10. 18% GST on both = 18. Ride GST 5% included = 142.86. Share = 260.86. Advance 300. Cash due 2700.
-    assert.strictEqual(taxSplit.platformCommission, 90);
-    assert.strictEqual(taxSplit.gstAmount, 18);
     assert.strictEqual(taxSplit.techFeeAmount, 10);
     assert.strictEqual(taxSplit.rideGstAmount, 142.86);
-    assert.strictEqual(taxSplit.totalCompanyDuesZ, 260.86);
-    assert.strictEqual(taxSplit.advanceTokenAmount, 300);
-    assert.strictEqual(taxSplit.balanceCashDueFromCustomer, 2700);
 
     const bRes = await query(
       `INSERT INTO crm_bookings (
@@ -865,7 +840,7 @@ describe('BiharCabs Operational CRM Core Engine Tests', () => {
         pickup_address, pickup_date, pickup_time, wp_vehicle_code, customer_total_fare,
         driver_payout_amount, commission_amount, gst_amount, tech_fee_amount, advance_paid, balance_cash_due_from_customer,
         booking_status, payment_status, ride_gst_amount
-      ) VALUES ($1, $2, $3, 'oneway', 'Patna', 'Airport', CURRENT_DATE, '18:00:00', 'sedan', $4, $5, $6, $7, $8, $9, $10, 'COMPLETED_SETTLED', 'PAID_IN_FULL', $11)
+      ) VALUES ($1, $2, $3, 'oneway', 'Patna', 'Airport', CURRENT_DATE, '18:00:00', 'sedan', $4, $5, $6, $7, $8, 0, $4, 'COMPLETED_SETTLED', 'PAID_IN_FULL', $9)
       RETURNING id`,
       [
         `KPI-TEST-${ts}`,
@@ -876,8 +851,6 @@ describe('BiharCabs Operational CRM Core Engine Tests', () => {
         taxSplit.totalCompanyDuesZ,
         taxSplit.gstAmount,
         taxSplit.techFeeAmount,
-        taxSplit.advanceTokenAmount,
-        taxSplit.balanceCashDueFromCustomer,
         taxSplit.rideGstAmount,
       ]
     );

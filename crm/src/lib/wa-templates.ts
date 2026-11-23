@@ -100,17 +100,11 @@ export const TEMPLATE_DEFS = {
       { label: '3 stars or less', action: 'rate_trip_{ref}_low' },
     ],
   },
-  customer_payment_link: {
-    title: 'Advance payment link (customer)',
-    category: 'UTILITY',
-    body: 'Pay the {{1}} advance to confirm BiharCabs booking {{2}}: {{3}} . The link is valid for {{4}} minutes. Balance payable to the driver at drop: {{5}}.',
-    params: ['advance amount', 'booking code', 'payment link', 'minutes valid', 'balance payable to driver'],
-  },
   customer_booking_update: {
     title: 'Booking update (customer)',
     category: 'UTILITY',
     body: 'BiharCabs booking {{1}}: {{2}}',
-    params: ['booking code', 'update (advance received, not confirmed, confirmed without advance)'],
+    params: ['booking code', 'booking status update'],
   },
   customer_gst_document: {
     title: 'GST document (customer)',

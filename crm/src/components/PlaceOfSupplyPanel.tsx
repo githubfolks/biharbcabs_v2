@@ -91,7 +91,7 @@ export default function PlaceOfSupplyPanel() {
       <div className="px-4 py-3 border-b bg-amber-50">
         <h3 className="text-xs font-bold uppercase tracking-wider text-amber-800">GST Documents Waiting for Place of Supply ({invoices.length})</h3>
         <p className="text-[11px] text-amber-800 mt-0.5">
-          The pickup city is not in the city list, or the customer's GSTIN is not valid, so the CGST/SGST or IGST split is not known.
+          The pickup city is not in the city list, or the customer&apos;s GSTIN is not valid, so the CGST/SGST or IGST split is not known.
           Choose the state where the passenger was picked up (or, for a registered customer, the state in their GSTIN).
         </p>
       </div>

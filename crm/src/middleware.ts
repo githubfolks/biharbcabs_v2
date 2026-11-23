@@ -6,10 +6,11 @@ const SESSION_COOKIE_NAME = 'biharcabs_crm_session';
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // Allow static files, Next internals, auth endpoints, and WhatsApp webhook
+  // Allow static files, Next internals, auth endpoints, public website APIs, and webhooks
   if (
     pathname.startsWith('/_next') ||
     pathname.startsWith('/api/auth') ||
+    pathname.startsWith('/api/public/') ||
     pathname.startsWith('/api/whatsapp/webhook') ||
     pathname === '/api/payments/razorpay/webhook' ||
     pathname.startsWith('/api/dispatch/cron') ||

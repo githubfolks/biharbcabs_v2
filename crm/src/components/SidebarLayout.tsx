@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { 
-  Car, MessageSquare, Users, Wallet, Sliders, LogOut, User, Database, ChevronRight, Menu, X,
+  Car, MessageSquare, Users, Wallet, Sliders, LogOut, User, Database, ChevronRight, Menu, X, Package, PlusCircle,
 } from 'lucide-react';
 import { Permission, hasPermission } from '@/lib/permissions';
 
@@ -135,6 +135,20 @@ export default function SidebarLayout({ children }: SidebarLayoutProps) {
       icon: Car,
       active: pathname === '/',
       permission: 'bookings.view',
+    },
+    {
+      href: '/bookings/new',
+      label: 'New Booking',
+      icon: PlusCircle,
+      active: pathname === '/bookings/new',
+      permission: 'bookings.create',
+    },
+    {
+      href: '/catalog',
+      label: 'Cabs, Fuel & Plans',
+      icon: Package,
+      active: pathname.startsWith('/catalog'),
+      permission: 'catalog.view',
     },
     {
       href: '/inbox',

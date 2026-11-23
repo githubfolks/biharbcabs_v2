@@ -59,7 +59,7 @@ async function ride(c: string, date: string, time: string, over: { driverId?: nu
   return r.rows[0];
 }
 const eligibleFor = async (b: any) =>
-  (await findEligibleDrivers(b.origin_city, 'sedan', { isPrepaidRide: true, bookingId: Number(b.id), pickupAt: bookingPickupAt(b) })).map((d) => Number(d.driver_id));
+  (await findEligibleDrivers(b.origin_city, 'sedan', { bookingId: Number(b.id), pickupAt: bookingPickupAt(b) })).map((d) => Number(d.driver_id));
 const offer = (bookingId: number, driverId: number) =>
   query(`INSERT INTO crm_dispatch_offers (booking_id, driver_id, offered_driver_fare, offer_status) VALUES ($1, $2, 1, 'PENDING')`, [bookingId, driverId]);
 const forceAssign = async (bookingId: number, driverId: number) => {

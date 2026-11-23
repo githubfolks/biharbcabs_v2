@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getRazorpayWebhookSecret, verifyRazorpaySignature } from '@/lib/razorpay';
-import { processRazorpayEvent } from '@/lib/advance-payments';
+import { processRazorpayEvent } from '@/lib/razorpay-webhook';
 
 export const dynamic = 'force-dynamic';
 

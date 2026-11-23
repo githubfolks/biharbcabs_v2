@@ -25,6 +25,7 @@ class BCGE_Rate_Card {
         };
         return array(
             'public_enabled' => false,
+            'crm_api_base_url' => '',
             'toll_tax_text'  => 'Toll and parking extra',
             'server_key'     => '',
             // Names exactly as LocationIQ reverse geocoding returns them. An empty list means no limit.
@@ -78,6 +79,7 @@ class BCGE_Rate_Card {
         $base = self::defaults();
         $card = array(
             'public_enabled' => !empty($post['public_enabled']),
+            'crm_api_base_url' => esc_url_raw(trim((string) ($post['crm_api_base_url'] ?? ''))),
             'toll_tax_text'  => mb_substr(sanitize_text_field($post['toll_tax_text'] ?? ''), 0, 120),
             'server_key'     => sanitize_text_field($post['server_key'] ?? ''),
             'service_states' => array(),

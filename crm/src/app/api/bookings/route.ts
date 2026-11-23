@@ -3,19 +3,14 @@ import { query } from '@/lib/db';
 import { calculateRideSplitWithTaxes, broadcastRideToDrivers } from '@/lib/dispatch-engine';
 import { requireAdmin } from '@/lib/auth';
 import { hasPermission } from '@/lib/permissions';
-import { getAdvanceCollectionPolicy } from '@/lib/settings';
-import { MIN_WAIVER_REASON_LENGTH, advanceLinkMessage, isAdvanceRequired, requestAdvancePayment } from '@/lib/advance-payments';
 import { sendWhatsAppText } from '@/lib/whatsapp';
 import { notify } from '@/lib/wa-notify';
 import { notifyOfferedDrivers } from '@/lib/dispatch-notify';
 import { insertWithBookingCode } from '@/lib/booking-code';
-import { FareError, resolveStaffFare } from '@/lib/staff-fare';
+import { CatalogError, getPricedPackageById } from '@/lib/pricing-engine';
+import { MIN_OVERRIDE_REASON_LENGTH } from '@/lib/booking-rules';
 
 export const dynamic = 'force-dynamic';
-
-/** How staff settle the advance on a booking they create. */
-const ADVANCE_MODES = ['PAYMENT_LINK', 'FULL_CASH', 'WAIVED'] as const;
-type AdvanceMode = (typeof ADVANCE_MODES)[number];
 
 export async function GET(req: NextRequest) {
   const auth = await requireAdmin(req, 'bookings.view');
@@ -34,11 +29,13 @@ export async function GET(req: NextRequest) {
         d.phone AS driver_phone,
         d.onboarding_status AS driver_status,
         v.model_name AS vehicle_model,
-        v.registration_no AS vehicle_reg
+        v.registration_no AS vehicle_reg,
+        p.name AS package_name
       FROM crm_bookings b
       JOIN crm_customers c ON c.id = b.customer_id
       LEFT JOIN crm_drivers d ON d.id = b.assigned_driver_id
       LEFT JOIN crm_driver_vehicles v ON v.id = b.assigned_vehicle_id
+      LEFT JOIN crm_packages p ON p.id = b.package_id
     `;
 
     const params: any[] = [];
@@ -66,6 +63,8 @@ export async function POST(req: NextRequest) {
     const {
       customer_phone,
       customer_name,
+      customer_email,
+      package_id,
       trip_type,
       origin_city,
       destination_city,
@@ -76,177 +75,213 @@ export async function POST(req: NextRequest) {
       wp_vehicle_code,
       distance_km,
       customer_total_fare,
-      auto_broadcast,
-      advance_mode,
-      advance_waiver_reason,
+      auto_broadcast = true,
       fare_override_reason,
+      special_notes,
     } = body;
 
-    if (!customer_phone || !origin_city || !pickup_date || !pickup_time || !wp_vehicle_code) {
+    if (!customer_phone || !origin_city || !pickup_date || !pickup_time) {
       return NextResponse.json(
-        { success: false, error: 'Missing mandatory booking fields' },
+        { success: false, error: 'Missing mandatory booking fields (customer_phone, origin_city, pickup_date, pickup_time).' },
         { status: 400 }
       );
     }
 
-    if (!ADVANCE_MODES.includes(advance_mode)) {
+    // Resolve pricing server-side from the selected CRM package (or super-admin custom fare override).
+    let pkg = null;
+    if (package_id !== undefined && package_id !== null && String(package_id).trim() !== '') {
+      const pkgId = Number(package_id);
+      if (!Number.isInteger(pkgId) || pkgId <= 0) {
+        return NextResponse.json({ success: false, error: 'Invalid package_id.' }, { status: 400 });
+      }
+      pkg = await getPricedPackageById(pkgId);
+      if (!pkg) {
+        return NextResponse.json({ success: false, error: 'Selected package not found.' }, { status: 404 });
+      }
+    }
+
+    let fare: number;
+    let resolvedDistanceKm: number;
+    let resolvedTripType: string;
+    let resolvedVehicleCode: string;
+    let fareSource: 'RATE_CARD' | 'OVERRIDE' = 'RATE_CARD';
+    let rateCardFare: number | null = null;
+    let overrideReason: string | null = null;
+    let taxSplit;
+
+    const requestedFare =
+      customer_total_fare === undefined || customer_total_fare === null || String(customer_total_fare).trim() === ''
+        ? null
+        : Number(customer_total_fare);
+
+    if (pkg) {
+      rateCardFare = pkg.pricing.totalPayment;
+      resolvedDistanceKm = pkg.included_km;
+      resolvedTripType = pkg.booking_type;
+      resolvedVehicleCode = pkg.cab_type.code;
+
+      const isOverride = requestedFare !== null && Math.abs(requestedFare - rateCardFare) >= 0.005;
+      if (isOverride) {
+        if (!hasPermission(admin.role, 'bookings.override_fare')) {
+          return NextResponse.json(
+            { success: false, error: `Package fare is ₹${rateCardFare.toLocaleString('en-IN')}. Only the super admin can override it.` },
+            { status: 403 }
+          );
+        }
+        const reason = String(fare_override_reason || '').trim();
+        if (reason.length < MIN_OVERRIDE_REASON_LENGTH) {
+          return NextResponse.json(
+            { success: false, error: `A fare override needs a reason of at least ${MIN_OVERRIDE_REASON_LENGTH} characters.` },
+            { status: 400 }
+          );
+        }
+        if (!(requestedFare! > 0)) {
+          return NextResponse.json({ success: false, error: 'Fare must be positive.' }, { status: 400 });
+        }
+        fare = requestedFare!;
+        fareSource = 'OVERRIDE';
+        overrideReason = reason;
+        taxSplit = await calculateRideSplitWithTaxes(fare);
+      } else {
+        fare = rateCardFare;
+        taxSplit = pkg.pricing.split;
+      }
+    } else {
+      // No package selected: super-admin custom fare only
+      if (!wp_vehicle_code) {
+        return NextResponse.json({ success: false, error: 'Select a booking package or provide wp_vehicle_code.' }, { status: 400 });
+      }
+      if (!hasPermission(admin.role, 'bookings.override_fare')) {
+        return NextResponse.json(
+          { success: false, error: 'Please select a configured package. Only the super admin can create a custom-fare booking.' },
+          { status: 403 }
+        );
+      }
+      if (!requestedFare || !(requestedFare > 0)) {
+        return NextResponse.json({ success: false, error: 'Custom booking requires a positive fare.' }, { status: 400 });
+      }
+      const reason = String(fare_override_reason || '').trim();
+      if (reason.length < MIN_OVERRIDE_REASON_LENGTH) {
+        return NextResponse.json(
+          { success: false, error: `A custom fare needs a reason of at least ${MIN_OVERRIDE_REASON_LENGTH} characters.` },
+          { status: 400 }
+        );
+      }
+      fare = requestedFare;
+      resolvedDistanceKm = Number(distance_km) > 0 ? Number(distance_km) : 0;
+      resolvedTripType = String(trip_type || 'OUTSTATION').toUpperCase();
+      resolvedVehicleCode = String(wp_vehicle_code);
+      fareSource = 'OVERRIDE';
+      overrideReason = reason;
+      taxSplit = await calculateRideSplitWithTaxes(fare);
+    }
+
+    if (!(taxSplit.driverGrossEarnings > 0)) {
       return NextResponse.json(
-        { success: false, error: `advance_mode must be one of: ${ADVANCE_MODES.join(', ')}` },
-        { status: 400 }
-      );
-    }
-    const mode = advance_mode as AdvanceMode;
-    const waiverReason = typeof advance_waiver_reason === 'string' ? advance_waiver_reason.trim() : '';
-    if (mode === 'WAIVED' && !hasPermission(admin.role, 'bookings.waive_advance')) {
-      console.warn(`[Auth] Admin #${admin.id} (${admin.role}) denied bookings.waive_advance`);
-      return NextResponse.json({ success: false, error: 'Your role cannot waive the customer advance' }, { status: 403 });
-    }
-    if (mode === 'WAIVED' && waiverReason.length < MIN_WAIVER_REASON_LENGTH) {
-      return NextResponse.json(
-        { success: false, error: `A waiver needs a reason of at least ${MIN_WAIVER_REASON_LENGTH} characters.` },
-        { status: 400 }
-      );
-    }
-    // The fare comes from the rate card, not the request; only the super admin may book a different one.
-    let priced;
-    try {
-      priced = await resolveStaffFare({
-        originCity: origin_city,
-        destinationCity: destination_city,
-        tripType: trip_type || 'oneway',
-        pickupDate: pickup_date,
-        pickupTime: pickup_time,
-        vehicleCode: wp_vehicle_code,
-        requestedFare: customer_total_fare,
-        overrideReason: fare_override_reason,
-        requestedDistanceKm: distance_km,
-        role: admin.role,
-      });
-    } catch (err: any) {
-      if (err instanceof FareError) return NextResponse.json({ success: false, error: err.message }, { status: err.status });
-      throw err;
-    }
-    const fareInput = priced.fare;
-    const advancePolicy = await getAdvanceCollectionPolicy();
-    const required = isAdvanceRequired(advancePolicy, trip_type || 'oneway', fareInput);
-    if (mode === 'FULL_CASH' && required) {
-      return NextResponse.json(
-        { success: false, error: 'This ride needs the advance online. Send a payment link, or waive it with a reason.' },
+        { success: false, error: "This fare does not cover BiharCabs' share and GST; the driver would earn nothing." },
         { status: 400 }
       );
     }
 
     // 1. Upsert customer
-    const cleanPhone = customer_phone.replace(/\D/g, '');
+    const cleanPhone = String(customer_phone).replace(/\D/g, '');
     const custRes = await query(
-      `INSERT INTO crm_customers (phone, full_name, created_at, updated_at)
-       VALUES ($1, $2, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+      `INSERT INTO crm_customers (phone, full_name, email, created_at, updated_at)
+       VALUES ($1, $2, $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
        ON CONFLICT (phone) DO UPDATE
        SET full_name = COALESCE(EXCLUDED.full_name, crm_customers.full_name),
+           email = COALESCE(EXCLUDED.email, crm_customers.email),
            updated_at = CURRENT_TIMESTAMP
        RETURNING id, full_name, phone`,
-      [cleanPhone, customer_name || 'Customer']
+      [cleanPhone, customer_name || 'Customer', customer_email || null]
     );
     const customer = custRes.rows[0];
 
-    // 2. Calculate dynamic commission, statutory GST, tech fee, advance token and driver payout
-    const fare = fareInput;
-    const taxSplit = await calculateRideSplitWithTaxes(fare);
-    if (!(taxSplit.driverGrossEarnings > 0)) {
-      return NextResponse.json({ success: false, error: 'This fare does not cover BiharCabs\' share and GST; the driver would earn nothing.' }, { status: 400 });
-    }
+    const initialStatus = auto_broadcast ? 'AWAITING_DRIVER' : 'CONFIRMED_AWAITING_DRIVER';
 
-    // advance_paid stays 0 until Razorpay confirms the money; a link booking waits for it.
-    const viaLink = mode === 'PAYMENT_LINK';
-    const advanceDue = viaLink ? taxSplit.advanceTokenAmount : 0;
-    const balanceDue = Math.max(0, fare - advanceDue);
-    const readyStatus = auto_broadcast ? 'AWAITING_DRIVER' : 'CONFIRMED_AWAITING_DRIVER';
-    const initialStatus = viaLink ? 'AWAITING_ADVANCE' : readyStatus;
-    const advanceStatus = viaLink ? 'PENDING' : mode === 'WAIVED' ? 'WAIVED' : 'NOT_REQUIRED';
-
-    // 4. Insert booking with revenue protection & tax fields
-    // A fresh, unguessable code; retried in the rare case it is already taken.
-    const bookRes = await insertWithBookingCode((bookingCode) => query(
-      `INSERT INTO crm_bookings (
-        booking_code, customer_id, trip_type, origin_city, destination_city,
-        pickup_address, drop_address, pickup_date, pickup_time, wp_vehicle_code,
-        distance_km, customer_total_fare, driver_payout_amount, commission_amount,
-        gst_amount, tech_fee_amount, advance_paid, balance_cash_due_from_customer,
-        booking_status, payment_status, payment_mode, advance_due_amount, advance_status,
-        advance_waived_by, advance_waiver_reason, ride_gst_amount, platform_commission_amount,
-        fare_source, rate_card_fare, fare_override_by, fare_override_reason, created_at, updated_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, 0, $17, $18, 'PENDING', $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-      RETURNING *`,
-      [
-        bookingCode,
-        customer.id,
-        trip_type || 'oneway',
-        origin_city,
-        destination_city || null,
-        pickup_address || `${origin_city} Central`,
-        drop_address || destination_city || null,
-        pickup_date,
-        pickup_time,
-        wp_vehicle_code,
-        priced.distanceKm,
-        fare,
-        taxSplit.driverGrossEarnings,
-        taxSplit.totalCompanyDuesZ,
-        taxSplit.gstAmount,
-        taxSplit.techFeeAmount,
-        balanceDue,
-        initialStatus,
-        viaLink ? 'ADVANCE_ONLINE' : 'FULL_CASH',
-        advanceDue,
-        advanceStatus,
-        mode === 'WAIVED' ? admin.id : null,
-        mode === 'WAIVED' ? waiverReason : null,
-        taxSplit.rideGstAmount,
-        taxSplit.platformCommission,
-        priced.source,
-        priced.rateCardFare,
-        priced.source === 'OVERRIDE' ? admin.id : null,
-        priced.overrideReason,
-      ]
-    ));
-    const bookingCode: string = bookRes.rows[0].booking_code;
+    // 2. Insert booking with snapshotted package & cab rates (no advance payment)
+    const bookRes = await insertWithBookingCode((bookingCode) =>
+      query(
+        `INSERT INTO crm_bookings (
+          booking_code, customer_id, trip_type, origin_city, destination_city,
+          pickup_address, drop_address, pickup_date, pickup_time, wp_vehicle_code,
+          distance_km, customer_total_fare, driver_payout_amount, commission_amount,
+          gst_amount, tech_fee_amount, advance_paid, balance_cash_due_from_customer,
+          booking_status, payment_status, payment_mode, advance_due_amount, advance_status,
+          ride_gst_amount, platform_commission_amount,
+          fare_source, rate_card_fare, fare_override_by, fare_override_reason,
+          package_id, cab_type_id, fuel_type, included_km, included_hours,
+          base_fare_pre_gst, applied_gst_pct, applied_commission_pct,
+          applied_extra_hour_charge, applied_extra_km_charge, special_notes, booking_source,
+          created_at, updated_at
+        ) VALUES (
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+          $11, $12, $13, $14, $15, $16, 0, $12,
+          $17, 'UNPAID', 'FULL_CASH', 0, 'NOT_REQUIRED',
+          $18, $19, $20, $21, $22, $23,
+          $24, $25, $26, $27, $28,
+          $29, $30, $31, $32, $33, $34, 'CRM',
+          CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+        )
+        RETURNING *`,
+        [
+          bookingCode,
+          customer.id,
+          resolvedTripType,
+          origin_city,
+          destination_city || null,
+          pickup_address || `${origin_city} Central`,
+          drop_address || destination_city || null,
+          pickup_date,
+          pickup_time,
+          resolvedVehicleCode,
+          resolvedDistanceKm,
+          fare,
+          taxSplit.driverGrossEarnings,
+          taxSplit.totalCompanyDuesZ,
+          taxSplit.gstAmount,
+          taxSplit.techFeeAmount,
+          initialStatus,
+          taxSplit.rideGstAmount,
+          taxSplit.platformCommission,
+          fareSource,
+          rateCardFare,
+          fareSource === 'OVERRIDE' ? admin.id : null,
+          overrideReason,
+          pkg?.id ?? null,
+          pkg?.cab_type.id ?? null,
+          pkg?.cab_type.fuel_type ?? null,
+          pkg?.included_km ?? null,
+          pkg?.included_hours ?? null,
+          taxSplit.rideTaxableValue,
+          pkg?.pricing.gstPct ?? null,
+          pkg?.pricing.commissionPct ?? null,
+          pkg?.cab_type.extra_hour_charge ?? null,
+          pkg?.cab_type.extra_km_charge ?? null,
+          special_notes || null,
+        ]
+      )
+    );
 
     const booking = bookRes.rows[0];
+    const bookingCode: string = booking.booking_code;
 
-    if (mode === 'WAIVED') {
-      console.info(`[Bookings] Advance waived on ${bookingCode} by admin #${admin.id} (advance was ${required ? 'required' : 'optional'}).`);
-    }
-
-    if (viaLink) {
-      // Drivers see this booking only after the payment webhook confirms the advance.
-      try {
-        const request = await requestAdvancePayment(Number(booking.id));
-        // Staff bookings: the customer may never have messaged us, so outside the window this is a template.
-        const linkText = await advanceLinkMessage(bookingCode, request, balanceDue);
-        await notify(cleanPhone, 'customer_payment_link', {
-          params: [
-            `₹${request.amount.toLocaleString('en-IN')}`,
-            `#${bookingCode}`,
-            request.shortUrl,
-            Math.max(1, Math.round((request.expireBy.getTime() - Date.now()) / 60000)),
-            `₹${balanceDue.toLocaleString('en-IN')}`,
-          ],
-          freeform: () => sendWhatsAppText(cleanPhone, linkText),
-        });
-        return NextResponse.json({ success: true, booking, payment_link_url: request.shortUrl, dispatch: null });
-      } catch (err: any) {
-        return NextResponse.json(
-          { success: false, error: `Booking ${bookingCode} saved but the payment link failed: ${err.message}`, booking_code: bookingCode },
-          { status: 502 }
-        );
-      }
-    }
-
+    // 3. Trigger WhatsApp workflow: notify customer & broadcast to matching verified drivers
     let dispatchResult = null;
     if (auto_broadcast) {
-      dispatchResult = await broadcastRideToDrivers(booking.id);
+      dispatchResult = await broadcastRideToDrivers(Number(booking.id));
       await notifyOfferedDrivers(Number(booking.id), dispatchResult);
     }
+
+    const customerText =
+      `Booking #${bookingCode} confirmed (${resolvedTripType}${pkg ? ` — ${pkg.name}` : ''}). ` +
+      `Cab: ${pkg ? pkg.cab_type.display_name : resolvedVehicleCode.toUpperCase()}. ` +
+      `Total Payable at drop: ₹${fare.toLocaleString('en-IN')} (incl. GST). We are assigning your verified driver now.`;
+
+    await notify(cleanPhone, 'customer_booking_update', {
+      params: [`#${bookingCode}`, customerText],
+      freeform: () => sendWhatsAppText(cleanPhone, `🎉 ${customerText}`),
+    }).catch((err) => console.error(`[Bookings] Customer WA notification failed for ${bookingCode}:`, err?.message));
 
     return NextResponse.json({
       success: true,
@@ -254,6 +289,7 @@ export async function POST(req: NextRequest) {
       dispatch: dispatchResult,
     });
   } catch (err: any) {
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+    const status = err instanceof CatalogError ? err.status : 500;
+    return NextResponse.json({ success: false, error: err.message }, { status });
   }
 }

@@ -83,6 +83,7 @@ class BCGE_Admin {
                 <h2>Publishing</h2>
                 <table class="form-table" role="presentation">
                     <tr><th scope="row">Fare estimates</th><td><label><input type="checkbox" name="public_enabled" value="1" <?php checked(!empty($card['public_enabled'])); ?>> Show estimates on the website and provide them to the CRM</label></td></tr>
+                    <tr><th scope="row"><label for="bcge_crm_url">CRM API Base URL</label></th><td><input id="bcge_crm_url" type="url" class="regular-text" name="crm_api_base_url" value="<?php echo esc_attr($card['crm_api_base_url'] ?? ''); ?>" placeholder="https://crm.biharcabs.com"><p class="description">CRM server URL used to fetch live cabs &amp; plans and submit direct bookings.</p></td></tr>
                     <tr><th scope="row"><label for="bcge_toll">Toll note</label></th><td><input id="bcge_toll" type="text" class="regular-text" name="toll_tax_text" value="<?php echo esc_attr($card['toll_tax_text']); ?>"><p class="description">Shown next to every estimate.</p></td></tr>
                     <tr><th scope="row"><label for="bcge_states">Service area</label></th><td>
                         <textarea id="bcge_states" name="service_states" rows="5" class="regular-text"><?php echo esc_textarea(implode("\n", $card['service_states'])); ?></textarea>

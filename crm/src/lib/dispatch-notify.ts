@@ -36,8 +36,7 @@ export async function notifyOfferedDrivers(
     '',
     '💵 Fare Details:',
     `Total Fare: ${rupees(b.customer_total_fare)}`,
-    `Advance Token: ${rupees(b.advance_paid)}`,
-    `👉 COLLECT CASH AT DROP: ${rupees(b.balance_cash_due_from_customer)}`,
+    `👉 COLLECT CASH AT DROP: ${rupees(b.customer_total_fare)}`,
     `Your Net Earnings: ${rupees(dispatch.offeredDriverFare)}`,
     '',
     'First to tap Accept gets the ride!',
@@ -101,14 +100,14 @@ export async function notifyAssignment(bookingId: number, startOtp: string | und
   if (!b) return;
   const at = pickupMoment(b.pickup_date, b.pickup_time);
   const when = at ? formatPickup(at) : `${b.pickup_date} ${b.pickup_time}`;
-  const cash = rupees(Math.max(0, Number(b.customer_total_fare) - Number(b.advance_paid || 0)));
+  const cash = rupees(Number(b.customer_total_fare || 0));
   const cab = `${String(b.wp_vehicle_code).toUpperCase()}${b.registration_no ? ` ${b.registration_no}` : ''}`;
 
   if (b.customer_phone) {
     const confirmation =
       `✅ Booking Confirmed (#${b.booking_code})!\nYour cab for ${b.origin_city} to ${b.destination_city || 'destination'} is locked.\n\n` +
       `Driver: ${b.driver_name}\nDriver Phone: ${b.driver_phone}\nCab: ${cab}\nPickup Location: ${b.pickup_address}\nScheduled: ${when}\n` +
-      `Advance Paid: ${rupees(b.advance_paid || 0)}\nBalance to pay driver: ${cash}\n\nYour driver will arrive 10 minutes prior to pickup.`;
+      `Total Fare (payable to driver at drop): ${cash}\n\nYour driver will arrive 10 minutes prior to pickup.`;
     await notify(b.customer_phone, 'customer_driver_assigned', {
       params: [`#${b.booking_code}`, b.driver_name, b.driver_phone, cab, b.pickup_address, when, cash, startOtp || 'reply OTP to get it'],
       freeform: async () => {

@@ -11,7 +11,7 @@ import assert from 'node:assert';
 import crypto from 'crypto';
 import { NextRequest } from 'next/server';
 import { query, getDbPool } from '../lib/db';
-import { reconcileStalePaymentLinks } from '../lib/advance-payments';
+import { reconcileStalePaymentLinks } from '../lib/razorpay-webhook';
 import { executeFrequentCronTasks } from '../lib/cron-service';
 import { POST as razorpayWebhookPOST } from '../app/api/payments/razorpay/webhook/route';
 

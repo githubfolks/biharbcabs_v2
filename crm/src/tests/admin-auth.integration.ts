@@ -20,9 +20,7 @@ import { middleware } from '../middleware';
 
 import * as bookings from '../app/api/bookings/route';
 import * as bookingDispatch from '../app/api/bookings/[id]/dispatch/route';
-import * as bookingAdvance from '../app/api/bookings/[id]/advance/route';
 import * as bookingCancel from '../app/api/bookings/[id]/cancel/route';
-import * as refundsApi from '../app/api/finance/refunds/route';
 import * as drivers from '../app/api/drivers/route';
 import * as driverIncentives from '../app/api/drivers/[id]/incentives/route';
 import * as driverRatings from '../app/api/drivers/[id]/ratings/route';
@@ -36,7 +34,6 @@ import * as driverVehicle from '../app/api/drivers/[id]/vehicles/[vehicleId]/rou
 import * as ledger from '../app/api/finance/ledger/route';
 import * as payouts from '../app/api/finance/payouts/route';
 import * as duesPayments from '../app/api/finance/dues-payments/route';
-import * as quote from '../app/api/pricing/quote/route';
 import * as settings from '../app/api/settings/route';
 import * as messages from '../app/api/whatsapp/messages/route';
 import * as notificationFailures from '../app/api/notifications/failures/route';
@@ -61,6 +58,8 @@ const PUBLIC_ROUTES = new Set([
   'payments/razorpay/webhook', // Razorpay X-Razorpay-Signature
   'dispatch/cron',             // Bearer CRON_SECRET
   'dispatch/cron/daily',       // Bearer CRON_SECRET
+  'public/plans',              // Public website catalog API (UUID-only, rate-limited)
+  'public/bookings',           // Public website booking API (server-priced, rate-limited)
 ]);
 
 type Handler = (req: NextRequest, ctx?: any) => Promise<Response>;
@@ -71,11 +70,8 @@ const PROTECTED: ProtectedRoute[] = [
   { name: 'GET /api/bookings', method: 'GET', handler: bookings.GET, permission: 'bookings.view' },
   { name: 'POST /api/bookings', method: 'POST', handler: bookings.POST, permission: 'bookings.create', body: {} },
   { name: 'POST /api/bookings/[id]/dispatch', method: 'POST', handler: bookingDispatch.POST, permission: 'dispatch.manage', body: { action: 'none' }, ctx: NONE },
-  { name: 'POST /api/bookings/[id]/advance', method: 'POST', handler: bookingAdvance.POST, permission: 'bookings.waive_advance', body: { action: 'none' }, ctx: NONE },
   { name: 'GET /api/bookings/[id]/cancel', method: 'GET', handler: bookingCancel.GET, permission: 'bookings.cancel', ctx: NONE },
   { name: 'POST /api/bookings/[id]/cancel', method: 'POST', handler: bookingCancel.POST, permission: 'bookings.cancel', body: {}, ctx: NONE },
-  { name: 'GET /api/finance/refunds', method: 'GET', handler: refundsApi.GET, permission: 'ledger.view' },
-  { name: 'POST /api/finance/refunds', method: 'POST', handler: refundsApi.POST, permission: 'refunds.manage', body: {} },
   { name: 'GET /api/drivers', method: 'GET', handler: drivers.GET, permission: 'drivers.view' },
   { name: 'POST /api/drivers', method: 'POST', handler: drivers.POST, permission: 'drivers.manage', body: {} },
   { name: 'POST /api/drivers/[id]/incentives', method: 'POST', handler: driverIncentives.POST, permission: 'incentives.award', body: { amount: -1 }, ctx: NONE },
@@ -97,7 +93,6 @@ const PROTECTED: ProtectedRoute[] = [
   { name: 'POST /api/finance/payouts', method: 'POST', handler: payouts.POST, permission: 'payouts.record', body: {} },
   { name: 'GET /api/finance/dues-payments', method: 'GET', handler: duesPayments.GET, permission: 'ledger.view' },
   { name: 'POST /api/finance/dues-payments', method: 'POST', handler: duesPayments.POST, permission: 'dues.record', body: {} },
-  { name: 'POST /api/pricing/quote', method: 'POST', handler: quote.POST, permission: 'pricing.quote', body: {} },
   { name: 'GET /api/settings', method: 'GET', handler: settings.GET, permission: 'settings.view' },
   { name: 'POST /api/settings', method: 'POST', handler: settings.POST, permission: 'settings.change', body: {} },
   { name: 'GET /api/whatsapp/messages', method: 'GET', handler: messages.GET, permission: 'inbox.use' },
@@ -232,7 +227,7 @@ describe('every admin route checks the session and the role', () => {
     assert.strictEqual(allowed('dues.record'), 'SUPER_ADMIN,FINANCE_MANAGER');
     assert.strictEqual(allowed('bookings.override_fare'), 'SUPER_ADMIN');
     assert.strictEqual(allowed('incentives.award'), 'SUPER_ADMIN,FINANCE_MANAGER');
-    assert.strictEqual(allowed('bookings.waive_advance'), 'SUPER_ADMIN,FINANCE_MANAGER');
+    assert.strictEqual(allowed('catalog.manage'), 'SUPER_ADMIN');
     assert.strictEqual(allowed('dispatch.manage'), 'SUPER_ADMIN,DISPATCHER');
     assert.strictEqual(allowed('inbox.use'), 'SUPER_ADMIN,DISPATCHER');
     assert.strictEqual(allowed('bookings.view'), 'SUPER_ADMIN,DISPATCHER,FINANCE_MANAGER');

@@ -119,7 +119,7 @@ describe('recording', () => {
   });
 
   it('the booking code is read from the template\'s booking code param only', () => {
-    assert.strictEqual(bookingCodeIn('customer_payment_link', ['₹500', '#BC-AB12CD', 'https://rzp.io/x', 30, '₹2,000']), 'BC-AB12CD');
+    assert.strictEqual(bookingCodeIn('customer_booking_update', ['#BC-AB12CD', 'Confirmed']), 'BC-AB12CD');
     assert.strictEqual(bookingCodeIn('driver_account_notice', ['Trip #BC-AB12CD cancelled']), null);
     assert.strictEqual(bookingCodeIn('customer_trip_started', ['no code']), null);
   });
@@ -132,9 +132,9 @@ describe('admin summary', () => {
   it('one summary lists the failures, each reported only once', async () => {
     const a = phone();
     const b = phone();
-    await withoutTemplate('customer_payment_link', async () => {
-      await notify(a, 'customer_payment_link', { params: ['₹500', '#BC-SUM001', 'https://rzp.io/x', 30, '₹2,000'] });
-      await notify(b, 'customer_payment_link', { params: ['₹500', '#BC-SUM002', 'https://rzp.io/y', 30, '₹2,000'] });
+    await withoutTemplate('customer_booking_update', async () => {
+      await notify(a, 'customer_booking_update', { params: ['#BC-SUM001', 'Confirmed'] });
+      await notify(b, 'customer_booking_update', { params: ['#BC-SUM002', 'Confirmed'] });
     });
     assert.strictEqual(await runFailedMessageDigest(), 2);
     const sent = await summariesMentioning(a);

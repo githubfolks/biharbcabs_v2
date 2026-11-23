@@ -1,9 +1,10 @@
 import { query, withTransaction } from './db';
 import { getCompanyBillingInfo, getRevenueProtectionPolicy, getSplitRules } from './settings';
-import { gstIncluded, round2 } from './fare-split';
+import { gstIncluded, gstOnTop, round2 } from './fare-split';
 import { nextDocumentNumber } from './gst-documents';
 import { documentTaxSplit, taxColumns } from './place-of-supply';
 import { creditLimitFor } from './driver-dues';
+import { deductPlanOnTripCompletion, planDeductionForRide } from './driver-plans';
 import { PoolClient } from 'pg';
 
 export interface FinalBillingInput {
@@ -73,30 +74,95 @@ export async function completeTripAndSettle(
     const tollParking = Number(input.tollParking || 0);
     const cashCollected = Number(input.cashCollectedByDriver || 0);
 
-    // Extra km / hours calculations if applicable
-    let extraKmCharges = 0;
-    if (input.closingKm && b.opening_km) {
-      const actualKm = input.closingKm - b.opening_km;
-      const billedKm = Number(b.distance_km || 0);
-      if (actualKm > billedKm) {
-        extraKmCharges = (actualKm - billedKm) * 14.0;
+    // Resolve dynamic PHEXCHG (extra hour rate) and extra KM rate from booking snapshot or cab catalog.
+    let extraKmRate = b.applied_extra_km_charge !== null && b.applied_extra_km_charge !== undefined
+      ? Number(b.applied_extra_km_charge)
+      : null;
+    let extraHourRate = b.applied_extra_hour_charge !== null && b.applied_extra_hour_charge !== undefined
+      ? Number(b.applied_extra_hour_charge)
+      : null;
+
+    if (extraKmRate === null || extraHourRate === null) {
+      const cabRes = b.cab_type_id
+        ? await client.query(`SELECT extra_km_charge, extra_hour_charge FROM crm_cab_types WHERE id = $1`, [b.cab_type_id])
+        : await client.query(
+            `SELECT extra_km_charge, extra_hour_charge FROM crm_cab_types
+             WHERE UPPER(code) = UPPER($1) OR UPPER(category) = UPPER($1)
+             ORDER BY is_active DESC, id ASC LIMIT 1`,
+            [b.wp_vehicle_code]
+          );
+      if (cabRes.rows[0]) {
+        if (extraKmRate === null) extraKmRate = Number(cabRes.rows[0].extra_km_charge);
+        if (extraHourRate === null) extraHourRate = Number(cabRes.rows[0].extra_hour_charge);
       }
     }
 
-    const extraHourCharges = (input.extraHours || 0) * 150.0;
-    const totalCustomerPayable = baseFare + extraKmCharges + extraHourCharges + tollParking;
+    // Extra km & extra hour calculations using dynamic cab rates (zero hardcoded values)
+    let extraKmCharges = 0;
+    if (input.closingKm && b.opening_km) {
+      const actualKm = input.closingKm - b.opening_km;
+      const billedKm = Number(b.included_km ?? b.distance_km ?? 0);
+      if (actualKm > billedKm) {
+        if (extraKmRate === null) {
+          throw new Error(`Extra KM rate is not configured for cab type ${b.wp_vehicle_code}.`);
+        }
+        extraKmCharges = round2((actualKm - billedKm) * extraKmRate);
+      }
+    }
 
-    // Ride GST is BiharCabs' liability (Sec 9(5)), borne by the driver. The share fixed at booking covers the
-    // quoted fare; the GST included in any extra km/hour charges is added to it here.
+    let extraHourCharges = 0;
+    if (input.extraHours && input.extraHours > 0) {
+      if (extraHourRate === null) {
+        throw new Error(`Extra hour charge (PHEXCHG) is not configured for cab type ${b.wp_vehicle_code}.`);
+      }
+      extraHourCharges = round2(input.extraHours * extraHourRate);
+    }
+
     const splitRules = await getSplitRules();
-    const commission = round2(bookedShare + gstIncluded(extraKmCharges + extraHourCharges, splitRules.ride_fare_gst_pct));
-    const balanceCustomerDue = Math.max(0, totalCustomerPayable - advancePaid - cashCollected);
+    const rideGstPct = b.applied_gst_pct !== null && b.applied_gst_pct !== undefined
+      ? Number(b.applied_gst_pct)
+      : splitRules.ride_fare_gst_pct;
+    const commPct = b.applied_commission_pct !== null && b.applied_commission_pct !== undefined
+      ? Number(b.applied_commission_pct)
+      : splitRules.platform_commission_pct;
+
+    const extraSubtotal = round2(extraKmCharges + extraHourCharges);
+    const extraRideGst = extraSubtotal > 0 ? gstOnTop(extraSubtotal, rideGstPct) : 0;
+    const extraCommission = extraSubtotal > 0 ? round2((extraSubtotal * commPct) / 100) : 0;
+    const extraCommissionGst = extraCommission > 0 ? gstOnTop(extraCommission, splitRules.gst_on_commission_pct) : 0;
+
+    const totalCustomerPayable = round2(baseFare + extraSubtotal + extraRideGst + tollParking);
+
+    // Recalculate BiharCabs' total share with extra charges (CA rules: ride GST + commission + tech fee + GST on comm+fee)
+    const commission = round2(bookedShare + extraRideGst + extraCommission + extraCommissionGst);
+    const balanceCustomerDue = Math.max(0, round2(totalCustomerPayable - advancePaid - cashCollected));
 
     const revPolicy = await getRevenueProtectionPolicy();
     const currentReserve = Number(b.security_reserve_balance || 0);
     const targetReserve = Number(revPolicy.target_security_reserve || 500);
-    const driverGrossEarnings = parseFloat((totalCustomerPayable - commission).toFixed(2));
-    const baseNetSettlement = parseFloat((driverGrossEarnings - cashCollected).toFixed(2));
+    const driverGrossEarnings = round2(totalCustomerPayable - commission);
+
+    // If the ride was accepted under a Driver Subscription Plan, deduct pre-GST commission + tech fee + ride GST from the plan.
+    let planDeducted = 0;
+    let walletCompanyShare = commission;
+    if (b.billing_model === 'PLAN' && b.driver_plan_id) {
+      const basePlanDeduction = planDeductionForRide({
+        platformCommission: Number(b.platform_commission_amount || 0) + extraCommission,
+        techFeeAmount: Number(b.tech_fee_amount || 0),
+        rideGstAmount: Number(b.ride_gst_amount || 0) + extraRideGst,
+      });
+      const planResult = await deductPlanOnTripCompletion(
+        client,
+        input.bookingId,
+        Number(b.driver_plan_id),
+        Number(b.plan_amount_reserved || 0),
+        basePlanDeduction
+      );
+      planDeducted = planResult.deductedFromPlan;
+      walletCompanyShare = planResult.walletOverflow;
+    }
+
+    const baseNetSettlement = round2(totalCustomerPayable - walletCompanyShare - cashCollected);
 
     // Rolling Reserve Float: Incrementally deduct up to ₹100 per trip towards ₹500 float
     // ONLY deducted when BiharCabs holds positive payout funds from customer advance (baseNetSettlement > 0)

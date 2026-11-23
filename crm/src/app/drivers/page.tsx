@@ -899,7 +899,7 @@ export default function DriversPage() {
                           </div>
 
                           {rev.customerComment && (
-                            <p className="mt-1.5 text-slate-600 italic">"{rev.customerComment}"</p>
+                            <p className="mt-1.5 text-slate-600 italic">&ldquo;{rev.customerComment}&rdquo;</p>
                           )}
 
                           {activeDisputeReviewId === rev.id && (

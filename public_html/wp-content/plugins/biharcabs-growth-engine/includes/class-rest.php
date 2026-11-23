@@ -19,6 +19,67 @@ class BCGE_Rest {
             'callback'            => array(__CLASS__, 'quote'),
             'permission_callback' => '__return_true', // Public by design: visitors see these estimates.
         ));
+        register_rest_route('biharcabs/v1', '/plans', array(
+            'methods'             => 'GET',
+            'callback'            => array(__CLASS__, 'plans'),
+            'permission_callback' => '__return_true',
+        ));
+        register_rest_route('biharcabs/v1', '/book', array(
+            'methods'             => 'POST',
+            'callback'            => array(__CLASS__, 'book'),
+            'permission_callback' => '__return_true',
+        ));
+    }
+
+    /** Proxy live cabs and plans from the CRM public API (no hardcoded URLs or synthetic fallbacks). */
+    public static function plans(WP_REST_Request $request) {
+        $card = BCGE_Rate_Card::get();
+        $base = rtrim((string) ($card['crm_api_base_url'] ?? ''), '/');
+        if ($base === '') {
+            return self::fail('CRM_NOT_CONFIGURED', 'CRM API base URL is not configured.', 503);
+        }
+        $type = sanitize_text_field((string) $request->get_param('booking_type'));
+        $url = $base . '/api/public/plans' . ($type !== '' ? '?booking_type=' . rawurlencode($type) : '');
+        $response = wp_remote_get($url, array('timeout' => 8, 'headers' => array('Accept' => 'application/json')));
+        if (is_wp_error($response)) {
+            return self::fail('CRM_UNREACHABLE', 'Unable to load cab plans right now.', 502);
+        }
+        $status = (int) wp_remote_retrieve_response_code($response);
+        $body = json_decode(wp_remote_retrieve_body($response), true);
+        if (!is_array($body)) {
+            return self::fail('CRM_INVALID_RESPONSE', 'Invalid response from pricing service.', 502);
+        }
+        return new WP_REST_Response($body, $status > 0 ? $status : 200);
+    }
+
+    /** Proxy a visitor plan booking to the CRM public booking API (triggers WhatsApp dispatch). */
+    public static function book(WP_REST_Request $request) {
+        if (!self::within_rate_limit()) {
+            return self::fail('RATE_LIMITED', 'Too many requests. Please try again shortly.', 429);
+        }
+        $card = BCGE_Rate_Card::get();
+        $base = rtrim((string) ($card['crm_api_base_url'] ?? ''), '/');
+        if ($base === '') {
+            return self::fail('CRM_NOT_CONFIGURED', 'CRM API base URL is not configured.', 503);
+        }
+        $params = $request->get_json_params();
+        if (!is_array($params)) {
+            return self::fail('INVALID_REQUEST', 'Invalid booking payload.', 400);
+        }
+        $response = wp_remote_post($base . '/api/public/bookings', array(
+            'timeout' => 12,
+            'headers' => array('Content-Type' => 'application/json', 'Accept' => 'application/json'),
+            'body'    => wp_json_encode($params),
+        ));
+        if (is_wp_error($response)) {
+            return self::fail('CRM_UNREACHABLE', 'Unable to confirm booking right now. Please call us.', 502);
+        }
+        $status = (int) wp_remote_retrieve_response_code($response);
+        $body = json_decode(wp_remote_retrieve_body($response), true);
+        if (!is_array($body)) {
+            return self::fail('CRM_INVALID_RESPONSE', 'Invalid response from booking service.', 502);
+        }
+        return new WP_REST_Response($body, $status > 0 ? $status : 200);
     }
 
     private static function fail($code, $message, $status = 200) {

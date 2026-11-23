@@ -172,17 +172,87 @@
       instructions, source: 'Hero / Section Booking Form'
     });
 
-    // 2. Prepare WhatsApp payload
+    // 2. If a CRM plan was selected and direct booking API is configured, book directly via CRM API (triggers WA workflow)
+    const selectedPlanId = form.querySelector('[data-bc-field="package_public_id"]')?.value?.trim() || '';
+    if (selectedPlanId && config.bookUrl) {
+      const submitBtn = form.querySelector('[type=submit]');
+      const oldLabel = submitBtn ? submitBtn.textContent : '';
+      if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Confirming booking…'; }
+      fetch(config.bookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          package_public_id: selectedPlanId,
+          customer_name: name || 'Website Customer',
+          customer_phone: phone,
+          origin_city: pickup,
+          destination_city: drop,
+          pickup_address: pickup,
+          drop_address: drop,
+          pickup_date: date,
+          pickup_time: time,
+          special_notes: instructions
+        })
+      })
+        .then(r => r.json())
+        .then(res => {
+          let box = form.querySelector('.bc-next-step');
+          if (!box) { box = document.createElement('div'); box.className = 'bc-next-step'; box.setAttribute('role', 'status'); form.appendChild(box); }
+          if (res && res.success) {
+            box.textContent = 'Booking #' + res.booking_code + ' confirmed (' + res.plan_name + ' — ₹' + Number(res.total_payment).toLocaleString('en-IN') + '). WhatsApp confirmation & driver details are on their way!';
+            form.reset();
+          } else {
+            box.textContent = (res && (res.error || res.message)) || 'Unable to confirm booking right now. Please call us.';
+          }
+          box.scrollIntoView({ block: 'nearest' });
+        })
+        .catch(() => {
+          alert('Unable to reach booking server. Please try again or call us.');
+        })
+        .finally(() => {
+          if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = oldLabel; }
+        });
+      return;
+    }
+
+    // 3. Fallback: Prepare WhatsApp handoff when no CRM plan is selected
     const lines=['BiharCabs booking enquiry','Pickup: '+pickup,'Drop: '+drop,'Date: '+date,'Time: '+time];
     [['name','Name'],['phone','Phone'],['passengers','Passengers'],['category','Trip type'],['instructions','Instructions']].forEach(([role,label])=>{const value=field(role)?.value.trim();if(value)lines.push(label+': '+value);});
     if(selected) lines.push('Trip type: '+selected.textContent.trim());
     if(estimate&&estimate!=='-')lines.push('Estimated distance: '+estimate);
     lines.push('Please confirm availability and fare.');
 
-    // 3. Open WhatsApp
     window.open('https://wa.me/'+number+'?text='+encodeURIComponent(lines.join('\n')),'_blank','noopener,noreferrer');
     showNextStep(form);
    });
+   if(config.plansUrl) {
+     const planSelect = form.querySelector('[data-bc-field="package_public_id"]');
+     if (planSelect && !planSelect.dataset.bcPlansLoaded) {
+       planSelect.dataset.bcPlansLoaded = '1';
+       const loadPlans = async (bookingType) => {
+         planSelect.innerHTML = '<option value="">Loading cab plans…</option>';
+         try {
+           const url = config.plansUrl + (bookingType ? '?booking_type=' + encodeURIComponent(bookingType) : '');
+           const resp = await fetch(url);
+           const data = await resp.json();
+           if (!data || !data.success || !Array.isArray(data.plans) || data.plans.length === 0) {
+             planSelect.innerHTML = '<option value="">No plans available for this booking type</option>';
+             return;
+           }
+           planSelect.innerHTML = '<option value="">Select a cab &amp; plan…</option>';
+           data.plans.forEach((p) => {
+             const opt = document.createElement('option');
+             opt.value = p.public_id;
+             opt.textContent = p.name + ' — ' + p.cab.display_name + ' (₹' + Number(p.pricing.total_payment).toLocaleString('en-IN') + ' incl. GST)';
+             planSelect.appendChild(opt);
+           });
+         } catch (_) {
+           planSelect.innerHTML = '<option value="">Unable to load plans right now</option>';
+         }
+       };
+       loadPlans('');
+     }
+   }
    if(config.locationEnabled&&config.locationKey)setup('',form);
   });
 

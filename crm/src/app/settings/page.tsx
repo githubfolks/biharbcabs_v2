@@ -52,7 +52,6 @@ export default function SettingsPage() {
   const slaTimeout = settings.dispatch_sla_timeout_minutes?.value ?? 15;
   const returnPolicy = settings.return_trip_policy ?? { enabled: false, discount_type: 'PERCENT', discount_value: null, exclusive_window_minutes: 10, return_status_hours: null };
   const wakeupHours = settings.driver_wakeup_check_hours_before?.value ?? 2;
-  const wpApi = settings.biharcabs_wp_api ?? { base_url: 'http://localhost:8080', quote_endpoint: '/wp-json/biharcabs/v1/quote' };
   const ratingPolicy = settings.driver_rating_policy ?? {
     default_initial_rating: 5.0,
     min_dispatch_rating: 4.10,
@@ -216,49 +215,6 @@ export default function SettingsPage() {
           </button>
         </div>
 
-        {/* Live Tariff Bridge & WordPress API Connector */}
-        <div className="bg-white p-5 rounded-lg border border-slate-200 shadow-sm space-y-4 md:col-span-2">
-          <div className="flex items-center space-x-2 border-b pb-3">
-            <Database className="h-5 w-5 text-blue-600" />
-            <h3 className="font-bold text-slate-900">BiharCabs.com Live Pricing Tariff Bridge</h3>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-slate-700">WordPress Base URL</label>
-              <input
-                type="text"
-                defaultValue={wpApi.base_url}
-                id="wp_base_url"
-                className="w-full mt-1 px-3 py-1.5 border rounded-md text-sm font-mono"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-700">Quote Endpoint</label>
-              <input
-                type="text"
-                defaultValue={wpApi.quote_endpoint}
-                id="wp_quote_endpoint"
-                className="w-full mt-1 px-3 py-1.5 border rounded-md text-sm font-mono"
-              />
-            </div>
-          </div>
-
-          <div className="flex justify-end pt-2">
-            <button
-              onClick={() => {
-                const base = (document.getElementById('wp_base_url') as HTMLInputElement).value;
-                const endpoint = (document.getElementById('wp_quote_endpoint') as HTMLInputElement).value;
-                handleSaveSetting('biharcabs_wp_api', { ...wpApi, base_url: base, quote_endpoint: endpoint });
-              }}
-              disabled={savingKey === 'biharcabs_wp_api'}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md text-xs font-semibold hover:bg-blue-700"
-            >
-              Update Pricing Connector
-            </button>
-          </div>
-        </div>
-
         {/* Driver Ratings & Quality Assurance Policy */}
         <div className="bg-white p-5 rounded-lg border border-slate-200 shadow-sm space-y-4 md:col-span-2">
           <div className="flex items-center space-x-2 border-b pb-3">
@@ -378,54 +334,44 @@ export default function SettingsPage() {
           </div>
 
           <div className="space-y-4">
-            {/* Row 1: Universal Advance Token & Tax Split */}
+            {/* Row 1: Platform Take-Rate, Statutory GST & Payment Link Window */}
             <div className="bg-slate-50 p-3.5 rounded-lg border border-slate-200/80">
               <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-2 flex items-center">
                 <DollarSign className="h-4 w-4 mr-1 text-emerald-600" />
-                Customer Advance Token, Platform Take-Rate &amp; Statutory GST (CGST Sec 9(5))
+                Admin Commission (ACP), Statutory GST &amp; Driver Payment Link Window
               </h4>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-700">Customer Advance Token (%)</label>
-                  <p className="text-[10px] text-slate-400 mb-1">Upfront token to eliminate credit risk</p>
+                  <label className="block text-[11px] font-semibold text-slate-700">Admin Commission Percentage (ACP %)</label>
+                  <p className="text-[10px] text-slate-400 mb-1">Commission on pre-GST Total Fair (e.g. 12%)</p>
                   <input
                     type="number"
                     step="0.5"
-                    defaultValue={revPolicy.advance_token_percentage}
-                    id="rev_advance_token"
-                    className="w-full px-2.5 py-1.5 border rounded-md text-sm font-mono"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-700">Min Advance Token Amount (₹)</label>
-                  <p className="text-[10px] text-slate-400 mb-1">Minimum upfront token payable</p>
-                  <input
-                    type="number"
-                    step="50"
-                    defaultValue={revPolicy.min_advance_amount ?? 200.0}
-                    id="rev_min_advance"
-                    className="w-full px-2.5 py-1.5 border rounded-md text-sm font-mono"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-700">Platform Facilitation / Take-Rate (%)</label>
-                  <p className="text-[10px] text-slate-400 mb-1">Company commission on total fare (e.g. 10%)</p>
-                  <input
-                    type="number"
-                    step="0.5"
-                    defaultValue={revPolicy.platform_commission_pct ?? revPolicy.platform_facilitation_percentage ?? 10.0}
+                    defaultValue={revPolicy.platform_commission_pct ?? 12.0}
                     id="rev_platform_fee"
                     className="w-full px-2.5 py-1.5 border rounded-md text-sm font-mono font-bold text-indigo-700"
                   />
                 </div>
                 <div>
                   <label className="block text-[11px] font-semibold text-slate-700">GST on Commission + Tech Fee (%)</label>
-                  <p className="text-[10px] text-slate-400 mb-1">18% GST on commission + tech fee together, added on top (per CA)</p>
+                  <p className="text-[10px] text-slate-400 mb-1">18% GST on commission + tech fee together (per CA)</p>
                   <input
                     type="number"
                     step="0.5"
-                    defaultValue={revPolicy.gst_on_commission_pct ?? revPolicy.statutory_gst_percentage ?? 18.0}
+                    defaultValue={revPolicy.gst_on_commission_pct ?? 18.0}
                     id="rev_gst_percentage"
+                    className="w-full px-2.5 py-1.5 border rounded-md text-sm font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700">Driver Payment Link Expiry (Minutes)</label>
+                  <p className="text-[10px] text-slate-400 mb-1">Razorpay expiry window for driver dues &amp; plan links</p>
+                  <input
+                    type="number"
+                    min="15"
+                    step="5"
+                    defaultValue={revPolicy.payment_link_window_minutes ?? 30}
+                    id="rev_payment_link_window"
                     className="w-full px-2.5 py-1.5 border rounded-md text-sm font-mono"
                   />
                 </div>
@@ -658,10 +604,9 @@ export default function SettingsPage() {
           <div className="flex justify-end pt-2">
             <button
               onClick={() => {
-                const advToken = parseFloat((document.getElementById('rev_advance_token') as HTMLInputElement).value);
-                const minAdvance = parseFloat((document.getElementById('rev_min_advance') as HTMLInputElement).value);
                 const platFee = parseFloat((document.getElementById('rev_platform_fee') as HTMLInputElement).value);
                 const gstRate = parseFloat((document.getElementById('rev_gst_percentage') as HTMLInputElement).value);
+                const linkWindow = parseInt((document.getElementById('rev_payment_link_window') as HTMLInputElement).value, 10);
                 const techFee = parseFloat((document.getElementById('rev_tech_fee') as HTMLInputElement).value);
                 const convenienceFee = parseFloat((document.getElementById('rev_convenience_fee') as HTMLInputElement).value);
                 const nightSurcharge = parseFloat((document.getElementById('rev_night_surcharge') as HTMLInputElement).value);
@@ -682,25 +627,18 @@ export default function SettingsPage() {
                 const softMode = (document.getElementById('rev_soft_mode') as HTMLInputElement).checked;
 
                 const payload = {
-                  advance_token_percentage: advToken,
-                  min_advance_amount: minAdvance,
                   platform_commission_pct: platFee,
-                  platform_facilitation_percentage: platFee,
                   gst_on_commission_pct: gstRate,
-                  statutory_gst_percentage: gstRate,
+                  payment_link_window_minutes: Number.isInteger(linkWindow) && linkWindow >= 15 ? linkWindow : 30,
                   tech_fee_amount: techFee,
-                  flat_tech_fee: techFee,
                   customer_convenience_fee: convenienceFee,
                   night_surcharge: nightSurcharge,
-                  roof_luggage_carrier_fee: 150.0,
+                  roof_luggage_carrier_fee: revPolicy.roof_luggage_carrier_fee ?? 150.0,
                   dynamic_credit_limits: {
                     probation_or_new: probLimit,
                     standard: stdLimit,
                     elite: eliteLimit,
                   },
-                  probation_limit: probLimit,
-                  standard_limit: stdLimit,
-                  elite_limit: eliteLimit,
                   standard_min_trips: stdTrips,
                   elite_min_trips: eliteTrips,
                   standard_min_rating: stdRating,

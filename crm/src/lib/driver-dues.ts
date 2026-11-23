@@ -2,7 +2,7 @@ import crypto from 'crypto';
 import { PoolClient } from 'pg';
 import { query, withTransaction } from './db';
 import { createPaymentLink } from './razorpay';
-import { getAdvanceCollectionPolicy, getRevenueProtectionPolicy, RevenueProtectionPolicyConfig } from './settings';
+import { getRevenueProtectionPolicy, RevenueProtectionPolicyConfig } from './settings';
 
 /**
  * Money a driver pays BiharCabs toward their dues (a negative wallet_balance). A payment writes a
@@ -146,8 +146,8 @@ export async function requestDuesPaymentLink(driverId: number): Promise<{ shortU
   );
   if (open.rows[0]) return { shortUrl: open.rows[0].short_url, amount: owed, expireBy: new Date(open.rows[0].expire_by) };
 
-  const { payment_window_minutes } = await getAdvanceCollectionPolicy();
-  const expireBy = new Date(Date.now() + payment_window_minutes * 60 * 1000);
+  const { payment_link_window_minutes } = await getRevenueProtectionPolicy();
+  const expireBy = new Date(Date.now() + payment_link_window_minutes * 60 * 1000);
   const referenceId = `DUES-${driverId}-${crypto.randomBytes(4).toString('hex')}`;
   const contact = String(d.whatsapp_phone || d.phone || '').replace(/\D/g, '');
   const link = await createPaymentLink({

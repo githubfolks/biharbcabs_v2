@@ -35,12 +35,6 @@ export interface CompanyBillingInfo {
   hsn_sac: string;
 }
 
-export interface BiharCabsWpApiConfig {
-  base_url: string;
-  quote_endpoint: string;
-  api_key?: string;
-}
-
 export interface WhatsAppIntentsConfig {
   greetings: {
     keywords: string[];
@@ -184,14 +178,6 @@ export async function getAdminContacts(): Promise<AdminEscalationContact[]> {
   return getSetting<AdminEscalationContact[]>('admin_escalation_contacts', []);
 }
 
-export async function getWpApiConfig(): Promise<BiharCabsWpApiConfig> {
-  const baseFromEnv = process.env.WP_API_BASE_URL || 'http://localhost:8080';
-  return getSetting<BiharCabsWpApiConfig>('biharcabs_wp_api', {
-    base_url: baseFromEnv,
-    quote_endpoint: '/wp-json/biharcabs/v1/quote',
-  });
-}
-
 export interface DriverRatingPolicyConfig {
   default_initial_rating: number;
   min_dispatch_rating: number;
@@ -223,8 +209,6 @@ export async function getDriverRatingPolicy(): Promise<DriverRatingPolicyConfig>
 }
 
 export interface RevenueProtectionPolicyConfig {
-  advance_token_percentage: number;
-  min_advance_amount: number;
   platform_commission_pct: number;
   gst_on_commission_pct: number;
   tech_fee_amount: number;
@@ -250,8 +234,8 @@ export interface RevenueProtectionPolicyConfig {
   streak_bonus_amount: number;
   /** Trips below this fare do not count toward the streak bonus; null or invalid: no bonus is paid. */
   streak_min_fare: number | null;
-  /** GST on a customer advance when received (18%: rate not determinable at receipt, per CA). */
-  advance_gst_pct: number;
+  /** Minutes a Razorpay payment link (driver dues / driver plans) stays open. */
+  payment_link_window_minutes: number;
 }
 
 export async function getRevenueProtectionPolicy(): Promise<RevenueProtectionPolicyConfig> {
@@ -263,10 +247,10 @@ export async function getRevenueProtectionPolicy(): Promise<RevenueProtectionPol
     elite: Number(raw.elite_limit ?? 2500.0),
   };
 
+  const windowMins = Number(raw.payment_link_window_minutes);
+
   return {
-    advance_token_percentage: Number(raw.advance_token_percentage ?? 10.0),
-    min_advance_amount: Number(raw.min_advance_amount ?? 200.0),
-    platform_commission_pct: Number(raw.platform_commission_pct ?? raw.platform_facilitation_percentage ?? 10.0),
+    platform_commission_pct: Number(raw.platform_commission_pct ?? raw.platform_facilitation_percentage ?? 12.0),
     gst_on_commission_pct: Number(raw.gst_on_commission_pct ?? raw.statutory_gst_percentage ?? 18.0),
     tech_fee_amount: Number(raw.tech_fee_amount ?? raw.flat_tech_fee ?? 10.0),
     customer_convenience_fee: Number(raw.customer_convenience_fee ?? 39.0),
@@ -283,14 +267,14 @@ export async function getRevenueProtectionPolicy(): Promise<RevenueProtectionPol
     standard_min_trips: Number(raw.standard_min_trips ?? 5),
     company_upi_vpa: String(raw.company_upi_vpa || 'biharcabs@icici'),
     company_upi_name: String(raw.company_upi_name || 'BiharCabs Private Limited'),
-    enable_digital_only_soft_mode: Boolean(raw.enable_digital_only_soft_mode ?? true),
+    enable_digital_only_soft_mode: Boolean(raw.enable_digital_only_soft_mode ?? false),
     min_dues_for_micro_recharge: Number(raw.min_dues_for_micro_recharge ?? 50.0),
     target_security_reserve: Number(raw.target_security_reserve ?? 500.0),
     reserve_deduction_per_trip: Number(raw.reserve_deduction_per_trip ?? 100.0),
     streak_bonus_target_trips: Number(raw.streak_bonus_target_trips ?? 5),
     streak_bonus_amount: Number(raw.streak_bonus_amount ?? 150.0),
     streak_min_fare: Number.isFinite(Number(raw.streak_min_fare)) && Number(raw.streak_min_fare) > 0 ? Number(raw.streak_min_fare) : null,
-    advance_gst_pct: Number(raw.advance_gst_pct ?? 18.0),
+    payment_link_window_minutes: Number.isInteger(windowMins) && windowMins >= 15 ? windowMins : 30,
   };
 }
 
@@ -306,48 +290,31 @@ export async function getSplitRules(): Promise<SplitRules> {
     gst_on_commission_pct: policy.gst_on_commission_pct,
     ride_fare_gst_pct: Number(billing.tax_percentage),
     tech_fee_amount: policy.tech_fee_amount,
-    advance_token_percentage: policy.advance_token_percentage,
-    min_advance_amount: policy.min_advance_amount,
   };
   // A missing value must not count as 0% (Number(null) is 0), so the raw ride rate is checked too.
   const rawRide = billing.tax_percentage;
   const present = rawRide !== null && rawRide !== undefined && String(rawRide).trim() !== '';
   const pct = (n: number) => Number.isFinite(n) && n >= 0 && n <= 28;
-  if (!present || !pct(rules.ride_fare_gst_pct) || !pct(rules.gst_on_commission_pct) || !pct(policy.advance_gst_pct)) {
-    throw new Error('[Settings] GST rates are missing or invalid (company_billing_info.tax_percentage, gst_on_commission_pct, advance_gst_pct).');
+  if (!present || !pct(rules.ride_fare_gst_pct) || !pct(rules.gst_on_commission_pct)) {
+    throw new Error('[Settings] GST rates are missing or invalid (company_billing_info.tax_percentage, gst_on_commission_pct).');
   }
   return rules;
 }
 
-
-
-
-export interface AdvanceCollectionPolicy {
-  /** Trip types that always need the advance paid online before drivers see the ride. */
-  required_trip_types: string[];
-  /** Any ride at or above this fare needs the advance online. null: no fare rule. */
-  required_above_fare: number | null;
-  /** Minutes the customer has to pay; Razorpay requires at least 15. */
-  payment_window_minutes: number;
+export interface DriverPlansPolicy {
+  /** When true, outstation rides are offered only to drivers with an active subscription plan. */
+  plan_only_rides_enabled: boolean;
+  /** GST % applied on driver subscription plan purchases (confirmed by CA: 18%). */
+  plan_gst_pct: number;
 }
 
-/**
- * Advance collection rules, validated. Missing or invalid settings fail safe: every ride needs
- * the advance online, so a configuration mistake never sends unpaid rides to drivers.
- */
-export async function getAdvanceCollectionPolicy(): Promise<AdvanceCollectionPolicy> {
-  const raw = await getSetting<any>('advance_collection_policy', {});
-  const types = Array.isArray(raw.required_trip_types)
-    ? raw.required_trip_types.filter((t: unknown) => typeof t === 'string').map((t: string) => t.toLowerCase())
-    : null;
-  const fare = raw.required_above_fare === null ? null : Number(raw.required_above_fare);
-  const windowMins = Number(raw.payment_window_minutes);
-  const valid = types !== null && (fare === null || (Number.isFinite(fare) && fare >= 0)) && Number.isInteger(windowMins) && windowMins >= 15;
-  if (!valid) {
-    console.error('[Settings] advance_collection_policy is missing or invalid; requiring the advance online for every ride.');
-    return { required_trip_types: [], required_above_fare: 0, payment_window_minutes: 30 };
-  }
-  return { required_trip_types: types, required_above_fare: fare, payment_window_minutes: windowMins };
+export async function getDriverPlansPolicy(): Promise<DriverPlansPolicy> {
+  const raw = await getSetting<any>('driver_plans_policy', {});
+  const gst = Number(raw.plan_gst_pct ?? 18.0);
+  return {
+    plan_only_rides_enabled: Boolean(raw.plan_only_rides_enabled ?? false),
+    plan_gst_pct: Number.isFinite(gst) && gst >= 0 && gst <= 28 ? gst : 18.0,
+  };
 }
 
 /** Return-trip priority and discount settings, validated: incomplete or invalid settings leave the feature off. */

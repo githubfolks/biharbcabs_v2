@@ -1,0 +1,84 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { listPricedPackages } from '@/lib/pricing-engine';
+import { BOOKING_TYPES } from '@/lib/booking-rules';
+
+export const dynamic = 'force-dynamic';
+
+// Simple per-IP in-memory rate limiter (60 requests per 10 minutes)
+const hits = new Map<string, { count: number; resetAt: number }>();
+function checkRateLimit(ip: string, limit = 60, windowMs = 10 * 60 * 1000): boolean {
+  const now = Date.now();
+  const entry = hits.get(ip);
+  if (!entry || entry.resetAt <= now) {
+    hits.set(ip, { count: 1, resetAt: now + windowMs });
+    return true;
+  }
+  if (entry.count >= limit) return false;
+  entry.count++;
+  return true;
+}
+
+/**
+ * Public read-only endpoint consumed by the WordPress frontend to display
+ * configured cabs and booking plans. Never exposes internal integer IDs.
+ */
+export async function GET(req: NextRequest) {
+  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+  if (!checkRateLimit(ip)) {
+    return NextResponse.json({ success: false, error: 'Too many requests. Please try again shortly.' }, { status: 429 });
+  }
+
+  try {
+    const { searchParams } = new URL(req.url);
+    const rawType = searchParams.get('booking_type');
+    const bookingType = rawType ? rawType.trim().toUpperCase() : null;
+    if (bookingType && !BOOKING_TYPES.includes(bookingType as any)) {
+      return NextResponse.json(
+        { success: false, error: `booking_type must be one of: ${BOOKING_TYPES.join(', ')}` },
+        { status: 400 }
+      );
+    }
+
+    const packages = await listPricedPackages({
+      activeOnly: true,
+      bookingType,
+      skipUnpriceable: true,
+    });
+
+    const publicPlans = packages.map((p) => ({
+      public_id: p.public_id,
+      name: p.name,
+      booking_type: p.booking_type,
+      sub_type: p.sub_type,
+      included_km: p.included_km,
+      included_hours: p.included_hours,
+      description: p.description,
+      cab: {
+        public_id: p.cab_type.public_id,
+        code: p.cab_type.code,
+        category: p.cab_type.category,
+        display_name: p.cab_type.display_name,
+        fuel_type: p.cab_type.fuel_type,
+        seating_capacity: p.cab_type.seating_capacity,
+        luggage_bags: p.cab_type.luggage_bags,
+        models_description: p.cab_type.models_description,
+        extra_hour_charge: p.cab_type.extra_hour_charge,
+        extra_km_charge: p.cab_type.extra_km_charge,
+      },
+      pricing: {
+        total_fair_pre_gst: p.pricing.totalFairPreGst,
+        gst_pct: p.pricing.gstPct,
+        gst_charge: p.pricing.gstCharge,
+        total_payment: p.pricing.totalPayment,
+      },
+    }));
+
+    return NextResponse.json({
+      success: true,
+      booking_types: BOOKING_TYPES,
+      plans: publicPlans,
+    });
+  } catch (err: any) {
+    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+  }
+}

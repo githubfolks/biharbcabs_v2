@@ -17,7 +17,7 @@ import { query, getDbPool } from '../lib/db';
 import { NextRequest } from 'next/server';
 import { createAdminSession, hashPassword, SESSION_COOKIE_NAME } from '../lib/auth';
 import { getAllSettings, updateSetting } from '../lib/settings';
-import { processRazorpayEvent } from '../lib/advance-payments';
+import { processRazorpayEvent } from '../lib/razorpay-webhook';
 import { setDocumentPlaceOfSupply } from '../lib/place-of-supply';
 import { listGstDocuments, sendPendingGstDocuments } from '../lib/gst-delivery';
 import * as pdfRoute from '../app/api/finance/gst-documents/[kind]/[id]/pdf/route';

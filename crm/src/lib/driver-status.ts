@@ -5,6 +5,7 @@
  */
 import { query, withTransaction } from './db';
 import { isIsoDate } from './driver-onboarding';
+import { syncDriverPlanSuspension } from './driver-plans';
 import {
   ACTION_TARGET,
   DRIVER_STATUS_ACTIONS,
@@ -139,6 +140,9 @@ export async function changeDriverStatus(driverId: number, change: StatusChangeR
       [driverId, change.action, fromStatus, toStatus, change.reason, adminId]
     );
     return { driverId, fromStatus, toStatus };
+  }).then(async (res) => {
+    await syncDriverPlanSuspension(driverId, change.action === 'ACTIVATE');
+    return res;
   });
 }
 

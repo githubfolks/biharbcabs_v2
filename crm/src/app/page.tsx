@@ -1,30 +1,23 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { 
   Car, Clock, AlertTriangle, CheckCircle, RefreshCw, Send, UserCheck, 
-  PlusCircle, Phone, MapPin, DollarSign, Calendar
+  PlusCircle, Phone, MapPin, Calendar
 } from 'lucide-react';
 import { hasPermission } from '@/lib/permissions';
 import FailedMessagesPanel from '@/components/FailedMessagesPanel';
-import { CANCELLABLE_STATUSES, MIN_WAIVER_REASON_LENGTH, WAIVABLE_STATUSES } from '@/lib/advance-rules';
+import { CANCELLABLE_STATUSES } from '@/lib/booking-rules';
 
 export default function DispatchBoard() {
   const [bookings, setBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
-  const [showNewModal, setShowNewModal] = useState(false);
   const [actionLoading, setActionLoading] = useState<number | null>(null);
 
-  // Advance waiver on bookings waiting for their advance (finance / super admin only; the API enforces it)
   const [role, setRole] = useState<string | null>(null);
-  const [waiveBooking, setWaiveBooking] = useState<any | null>(null);
-  const [waiveReason, setWaiveReason] = useState('');
-  const [waiveError, setWaiveError] = useState<string | null>(null);
-  const [waiving, setWaiving] = useState(false);
-  const canWaive = hasPermission(role, 'bookings.waive_advance');
   const canCancel = hasPermission(role, 'bookings.cancel');
-  const canOverrideFare = hasPermission(role, 'bookings.override_fare');
 
   // Cancelling a booking (staff): who is at fault decides the refund; the outcome is shown before confirming.
   const [cancelTarget, setCancelTarget] = useState<any | null>(null);
@@ -87,52 +80,6 @@ export default function DispatchBoard() {
       .catch(() => setRole(null));
   }, []);
 
-  async function handleWaive(e: React.FormEvent) {
-    e.preventDefault();
-    if (!waiveBooking) return;
-    setWaiving(true);
-    setWaiveError(null);
-    try {
-      const res = await fetch(`/api/bookings/${waiveBooking.id}/advance`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'waive', reason: waiveReason }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setWaiveBooking(null);
-        alert(data.message);
-        loadBookings();
-      } else {
-        setWaiveError(data.error || 'Advance not waived');
-      }
-    } catch {
-      setWaiveError('Advance not waived: network error');
-    } finally {
-      setWaiving(false);
-    }
-  }
-
-  // New Booking Form State
-  const [newBooking, setNewBooking] = useState({
-    customer_name: '',
-    customer_phone: '',
-    origin_city: 'Patna',
-    destination_city: 'Darbhanga',
-    pickup_address: 'Patna Junction / Airport',
-    pickup_date: new Date().toISOString().split('T')[0],
-    pickup_time: '10:00',
-    trip_type: 'oneway',
-    wp_vehicle_code: 'sedan',
-    distance_km: 145,
-    // Empty: the server uses the rate-card fare. A different fare needs the super admin and a reason.
-    customer_total_fare: '' as string | number,
-    fare_override_reason: '',
-    auto_broadcast: true,
-    advance_mode: 'PAYMENT_LINK',
-    advance_waiver_reason: '',
-  });
-
   async function loadBookings() {
     setLoading(true);
     try {
@@ -152,26 +99,6 @@ export default function DispatchBoard() {
   useEffect(() => {
     loadBookings();
   }, [statusFilter]);
-
-  async function handleCreateBooking(e: React.FormEvent) {
-    e.preventDefault();
-    try {
-      const res = await fetch('/api/bookings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newBooking),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setShowNewModal(false);
-        loadBookings();
-      } else {
-        alert(data.error || 'Failed to create booking');
-      }
-    } catch (err: any) {
-      alert('Error creating booking: ' + err.message);
-    }
-  }
 
   async function handleBroadcast(bookingId: number) {
     setActionLoading(bookingId);
@@ -216,13 +143,13 @@ export default function DispatchBoard() {
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             Refresh
           </button>
-          <button
-            onClick={() => setShowNewModal(true)}
+          <Link
+            href="/bookings/new"
             className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-orange-600 hover:bg-orange-700"
           >
             <PlusCircle className="h-4 w-4 mr-2" />
-            New Ride Dispatch
-          </button>
+            New Booking &amp; Dispatch
+          </Link>
         </div>
       </div>
 
@@ -269,7 +196,7 @@ export default function DispatchBoard() {
 
       {/* Filter Tabs */}
       <div className="border-b border-slate-200 flex space-x-2">
-        {['ALL', 'AWAITING_ADVANCE', 'AWAITING_DRIVER', 'ESCALATED_NO_DRIVER', 'DRIVER_ASSIGNED', 'COMPLETED_SETTLED'].map((st) => (
+        {['ALL', 'AWAITING_DRIVER', 'ESCALATED_NO_DRIVER', 'DRIVER_ASSIGNED', 'COMPLETED_SETTLED'].map((st) => (
           <button
             key={st}
             onClick={() => setStatusFilter(st)}
@@ -303,7 +230,7 @@ export default function DispatchBoard() {
               {bookings.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-4 py-8 text-center text-slate-400">
-                    No bookings found in this view. Click "New Ride Dispatch" to create one.
+                    No bookings found in this view. Click &ldquo;New Booking &amp; Dispatch&rdquo; to create one.
                   </td>
                 </tr>
               ) : (
@@ -335,7 +262,7 @@ export default function DispatchBoard() {
                         {b.wp_vehicle_code} &bull; Payout: ₹{Number(b.driver_payout_amount).toLocaleString('en-IN')}
                       </div>
                       <div className="text-[10px] text-slate-400 mt-0.5">
-                        Advance: ₹{Number(b.advance_paid || 0)} &bull; Cash Due: ₹{Number(b.balance_cash_due_from_customer || (b.customer_total_fare - (b.advance_paid || 0)))}
+                        {b.package_name ? `${b.package_name} • ` : ''}Cash Payable at Drop: ₹{Number(b.customer_total_fare).toLocaleString('en-IN')}
                       </div>
                     </td>
                     <td className="px-4 py-3">
@@ -380,17 +307,6 @@ export default function DispatchBoard() {
                         >
                           <Send className="h-3 w-3 mr-1" />
                           {actionLoading === b.id ? 'Broadcasting...' : 'Broadcast'}
-                        </button>
-                      ) : canWaive && WAIVABLE_STATUSES.includes(b.booking_status) ? (
-                        <button
-                          onClick={() => {
-                            setWaiveBooking(b);
-                            setWaiveReason('');
-                            setWaiveError(null);
-                          }}
-                          className="inline-flex items-center px-2.5 py-1.5 border border-slate-300 text-xs font-medium rounded text-slate-700 bg-white hover:bg-slate-50"
-                        >
-                          Waive advance
                         </button>
                       ) : !(canCancel && CANCELLABLE_STATUSES.includes(b.booking_status)) ? (
                         <span className="text-xs text-slate-400">&mdash;</span>
@@ -451,233 +367,6 @@ export default function DispatchBoard() {
               </button>
             </div>
           </form>
-        </div>
-      )}
-
-      {/* Modal: Waive Advance */}
-      {waiveBooking && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <form onSubmit={handleWaive} className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 space-y-3">
-            <h3 className="text-base font-bold text-slate-900">Waive advance on #{waiveBooking.booking_code}</h3>
-            <p className="text-xs text-slate-500">
-              The payment link is cancelled, the customer pays the full fare of ₹
-              {Number(waiveBooking.customer_total_fare).toLocaleString('en-IN')} in cash to the driver, and the ride goes to
-              drivers now. BiharCabs&apos; share is then collected from the driver.
-            </p>
-            <div>
-              <label className="block text-xs font-semibold text-slate-700">Reason (recorded with your name)</label>
-              <textarea
-                required
-                minLength={MIN_WAIVER_REASON_LENGTH}
-                value={waiveReason}
-                onChange={(e) => setWaiveReason(e.target.value)}
-                placeholder="e.g. Customer has no UPI; regular customer, confirmed by phone"
-                className="w-full mt-1 px-3 py-1.5 border rounded-md text-sm"
-              />
-            </div>
-            {waiveError && <div className="text-sm text-rose-600">{waiveError}</div>}
-            <div className="flex justify-end space-x-2 pt-2 border-t">
-              <button
-                type="button"
-                onClick={() => setWaiveBooking(null)}
-                className="px-4 py-2 border rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={waiving}
-                className="px-4 py-2 rounded-md text-sm font-semibold bg-orange-600 text-white hover:bg-orange-700 disabled:opacity-50"
-              >
-                {waiving ? 'Waiving…' : 'Waive and dispatch'}
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-
-      {/* Modal: New Ride Dispatch */}
-      {showNewModal && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full p-6 space-y-4">
-            <div className="flex justify-between items-center border-b pb-3">
-              <h3 className="text-lg font-bold text-slate-900">New Ride Booking & Dispatch</h3>
-              <button onClick={() => setShowNewModal(false)} className="text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
-            </div>
-            <form onSubmit={handleCreateBooking} className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700">Customer Name</label>
-                  <input
-                    type="text"
-                    required
-                    value={newBooking.customer_name}
-                    onChange={(e) => setNewBooking({ ...newBooking, customer_name: e.target.value })}
-                    className="w-full mt-1 px-3 py-1.5 border rounded-md text-sm"
-                    placeholder="e.g. Ramesh Kumar"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700">Customer Phone (WhatsApp)</label>
-                  <input
-                    type="text"
-                    required
-                    value={newBooking.customer_phone}
-                    onChange={(e) => setNewBooking({ ...newBooking, customer_phone: e.target.value })}
-                    className="w-full mt-1 px-3 py-1.5 border rounded-md text-sm"
-                    placeholder="e.g. 919876543210"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700">Origin City</label>
-                  <input
-                    type="text"
-                    required
-                    value={newBooking.origin_city}
-                    onChange={(e) => setNewBooking({ ...newBooking, origin_city: e.target.value })}
-                    className="w-full mt-1 px-3 py-1.5 border rounded-md text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700">Destination City</label>
-                  <input
-                    type="text"
-                    required
-                    value={newBooking.destination_city}
-                    onChange={(e) => setNewBooking({ ...newBooking, destination_city: e.target.value })}
-                    className="w-full mt-1 px-3 py-1.5 border rounded-md text-sm"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700">Pickup Landmark Address</label>
-                <input
-                  type="text"
-                  required
-                  value={newBooking.pickup_address}
-                  onChange={(e) => setNewBooking({ ...newBooking, pickup_address: e.target.value })}
-                  className="w-full mt-1 px-3 py-1.5 border rounded-md text-sm"
-                />
-              </div>
-
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700">Pickup Date</label>
-                  <input
-                    type="date"
-                    required
-                    value={newBooking.pickup_date}
-                    onChange={(e) => setNewBooking({ ...newBooking, pickup_date: e.target.value })}
-                    className="w-full mt-1 px-3 py-1.5 border rounded-md text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700">Pickup Time</label>
-                  <input
-                    type="time"
-                    required
-                    value={newBooking.pickup_time}
-                    onChange={(e) => setNewBooking({ ...newBooking, pickup_time: e.target.value })}
-                    className="w-full mt-1 px-3 py-1.5 border rounded-md text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700">Vehicle Category</label>
-                  <select
-                    value={newBooking.wp_vehicle_code}
-                    onChange={(e) => setNewBooking({ ...newBooking, wp_vehicle_code: e.target.value })}
-                    className="w-full mt-1 px-3 py-1.5 border rounded-md text-sm"
-                  >
-                    <option value="sedan">Sedan (Dzire/Etios)</option>
-                    <option value="ertiga">Ertiga SUV (6+1)</option>
-                    <option value="innova">Innova Crysta</option>
-                    <option value="tempo">Tempo Traveller</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700">Fare (₹)</label>
-                  <input
-                    type="number"
-                    min="1"
-                    placeholder="Rate card"
-                    disabled={!canOverrideFare}
-                    value={newBooking.customer_total_fare}
-                    onChange={(e) => setNewBooking({ ...newBooking, customer_total_fare: e.target.value === '' ? '' : Number(e.target.value) })}
-                    className="w-full mt-1 px-3 py-1.5 border rounded-md text-sm disabled:bg-slate-50"
-                  />
-                  <p className="text-[10px] text-slate-500 mt-0.5">
-                    {canOverrideFare ? 'Leave empty for the rate-card fare.' : 'Priced from the rate card. Only the super admin can set a different fare.'}
-                  </p>
-                  {canOverrideFare && newBooking.customer_total_fare !== '' && (
-                    <input
-                      minLength={10}
-                      placeholder="Why a different fare? (recorded)"
-                      value={newBooking.fare_override_reason}
-                      onChange={(e) => setNewBooking({ ...newBooking, fare_override_reason: e.target.value })}
-                      className="w-full mt-1 px-3 py-1.5 border rounded-md text-sm"
-                    />
-                  )}
-                </div>
-                <div className="flex items-center pt-5">
-                  <label className="flex items-center space-x-2 text-xs font-semibold text-slate-700 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={newBooking.auto_broadcast}
-                      onChange={(e) => setNewBooking({ ...newBooking, auto_broadcast: e.target.checked })}
-                      className="rounded text-orange-600 focus:ring-orange-500"
-                    />
-                    <span>Broadcast ride to matching drivers immediately</span>
-                  </label>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700">Customer Advance</label>
-                <select
-                  value={newBooking.advance_mode}
-                  onChange={(e) => setNewBooking({ ...newBooking, advance_mode: e.target.value })}
-                  className="w-full mt-1 px-3 py-1.5 border rounded-md text-sm"
-                >
-                  <option value="PAYMENT_LINK">Send Razorpay payment link (drivers see the ride after payment)</option>
-                  <option value="FULL_CASH">Full cash to driver (only where advance is optional)</option>
-                  <option value="WAIVED">Waive advance (reason required, logged)</option>
-                </select>
-                {newBooking.advance_mode === 'WAIVED' && (
-                  <textarea
-                    required
-                    minLength={10}
-                    placeholder="Why is the advance waived?"
-                    value={newBooking.advance_waiver_reason}
-                    onChange={(e) => setNewBooking({ ...newBooking, advance_waiver_reason: e.target.value })}
-                    className="w-full mt-2 px-3 py-1.5 border rounded-md text-sm"
-                  />
-                )}
-              </div>
-
-              <div className="flex justify-end space-x-2 pt-4 border-t">
-                <button
-                  type="button"
-                  onClick={() => setShowNewModal(false)}
-                  className="px-4 py-2 border rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-orange-600 text-white rounded-md text-sm font-medium hover:bg-orange-700"
-                >
-                  Create & Launch Dispatch
-                </button>
-              </div>
-            </form>
-          </div>
         </div>
       )}
     </div>

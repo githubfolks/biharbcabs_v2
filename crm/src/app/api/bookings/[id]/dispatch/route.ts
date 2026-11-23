@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth';
-import { ASSIGNABLE_STATUSES, broadcastRideToDrivers, assertAdvanceSettled, checkDriverEligibility } from '@/lib/dispatch-engine';
+import { ASSIGNABLE_STATUSES, broadcastRideToDrivers, checkDriverEligibility } from '@/lib/dispatch-engine';
+import { releasePlanReservation, reservePlanForBookingIfApplicable } from '@/lib/driver-plans';
 import { notify } from '@/lib/wa-notify';
 import { sendWhatsAppText } from '@/lib/whatsapp';
 import { query, withTransaction } from '@/lib/db';
@@ -43,7 +44,6 @@ export async function POST(
         const locked = await client.query('SELECT * FROM crm_bookings WHERE id = $1 FOR UPDATE', [bookingId]);
         const booking = locked.rows[0];
         if (!booking) return { error: 'Booking not found', status: 404 } as const;
-        assertAdvanceSettled(booking);
         const reassigning = booking.booking_status === 'DRIVER_ASSIGNED';
         if (!reassigning && !ASSIGNABLE_STATUSES.includes(booking.booking_status)) {
           return { error: `Booking #${booking.booking_code} cannot be assigned (status ${booking.booking_status}).`, status: 409 } as const;
@@ -58,7 +58,11 @@ export async function POST(
           return { error: `Driver #${driverId} cannot take this ride: ${eligibility.reasons.join('; ')}.`, status: 409 } as const;
         }
 
+        if (reassigning) {
+          await releasePlanReservation(client, bookingId, `Booking #${booking.booking_code} reassigned to driver #${driverId}`);
+        }
         await settleReturnDiscountFunding(client, booking, driverId);
+        await reservePlanForBookingIfApplicable(client, driverId, booking);
         await client.query(
           `UPDATE crm_bookings
            SET assigned_driver_id = $1,

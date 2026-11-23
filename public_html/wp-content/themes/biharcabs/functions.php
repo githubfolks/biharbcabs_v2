@@ -102,7 +102,9 @@ function bc_assets() {
         'whatsapp'        => bc_setting('whatsapp'),
         'phone'           => bc_phone(bc_setting('phone')),
         'phoneLabel'      => bc_setting('phone_label'),
-        'quoteUrl'        => function_exists('bcge_public_quote_url') ? bcge_public_quote_url() : ''
+        'quoteUrl'        => function_exists('bcge_public_quote_url') ? bcge_public_quote_url() : '',
+        'plansUrl'        => function_exists('bcge_public_plans_url') ? bcge_public_plans_url() : '',
+        'bookUrl'         => function_exists('bcge_public_book_url') ? bcge_public_book_url() : ''
     );
     wp_localize_script('bc-main', 'biharcabs', $js_vars);
     wp_localize_script('biharcabs', 'biharcabs', $js_vars);

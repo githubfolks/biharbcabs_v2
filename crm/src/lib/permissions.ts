@@ -17,10 +17,12 @@ const MONEY: readonly Role[] = ['SUPER_ADMIN', 'FINANCE_MANAGER'];
 export const PERMISSIONS = {
   'bookings.view': ALL,
   'bookings.create': OPS,
-  'bookings.waive_advance': MONEY,
   'bookings.cancel': ALL,
   'bookings.override_fare': SUPER,
-  'refunds.manage': MONEY,
+  'catalog.view': ALL,
+  'catalog.manage': SUPER,
+  'plans.view': ALL,
+  'plans.manage': SUPER,
   'dispatch.manage': OPS,
   'drivers.view': ALL,
   'drivers.manage': OPS,
@@ -36,7 +38,6 @@ export const PERMISSIONS = {
   'settings.view': ALL,
   'settings.change': SUPER,
   'inbox.use': OPS,
-  'pricing.quote': ALL,
   'gst_documents.manage': MONEY,
   'notifications.resolve': ALL,
 } as const satisfies Record<string, readonly Role[]>;

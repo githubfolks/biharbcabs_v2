@@ -1,0 +1,504 @@
+import { query } from './db';
+import { getSplitRules } from './settings';
+import { FareSplit, SplitRules, round2, splitPreGstFare } from './fare-split';
+import { BOOKING_TYPES, CAB_CATEGORIES, FUEL_TYPES } from './booking-rules';
+
+/**
+ * Dynamic CRM Pricing Engine (Single Source of Truth for CRM Operator UI, WhatsApp Bot & WordPress).
+ * Implements the confirmed Biharcabs Cab Plans.xlsx formula + CA GST/Commission split rules.
+ * Zero hardcoded pricing values: all inputs come from crm_fuel_prices, crm_cab_types, crm_packages, and crm_settings.
+ */
+
+export class CatalogError extends Error {
+  constructor(message: string, readonly status: number) {
+    super(message);
+  }
+}
+
+export interface FuelPriceRow {
+  fuel_type: string;
+  price_per_unit: number;
+  unit: string;
+  updated_by: number | null;
+  updated_at: string;
+}
+
+export interface CabTypeRow {
+  id: number;
+  public_id: string;
+  code: string;
+  category: string;
+  display_name: string;
+  fuel_type: string;
+  mileage_kmpl: number;
+  per_day_charge: number;
+  base_buffer_minutes: number;
+  extra_hour_charge: number;
+  extra_km_charge: number;
+  driver_ta: number;
+  seating_capacity: number;
+  luggage_bags: number;
+  models_description: string | null;
+  is_active: boolean;
+}
+
+export interface PackageRow {
+  id: number;
+  public_id: string;
+  name: string;
+  booking_type: string;
+  sub_type: string | null;
+  cab_type_id: number;
+  included_km: number;
+  included_hours: number;
+  description: string | null;
+  is_active: boolean;
+  sort_order: number;
+}
+
+export interface PackagePriceBreakdown {
+  fuelLitres: number;
+  fuelCost: number;
+  cabTimeCharge: number;
+  driverTa: number;
+  /** Pre-GST fare (Total Fair) = fuelCost + cabTimeCharge + driverTa */
+  totalFairPreGst: number;
+  gstPct: number;
+  gstCharge: number;
+  /** Total customer payable = totalFairPreGst + gstCharge */
+  totalPayment: number;
+  commissionPct: number;
+  adminCommission: number;
+  techFeeAmount: number;
+  gstOnCommissionAndTechFee: number;
+  totalCompanyDuesZ: number;
+  driverGrossEarnings: number;
+  split: FareSplit;
+}
+
+export interface PricedPackage extends PackageRow {
+  cab_type: CabTypeRow;
+  fuel_price_per_unit: number;
+  pricing: PackagePriceBreakdown;
+}
+
+/**
+ * Pure package fare calculation matching Biharcabs Cab Plans.xlsx + CA rules.
+ * Throws if fuelPricePerUnit <= 0 or mileageKmpl <= 0 (never silently prices with zero fuel cost).
+ */
+export function calculatePackagePricing(input: {
+  includedKm: number;
+  includedHours: number;
+  mileageKmpl: number;
+  fuelPricePerUnit: number;
+  perDayCharge: number;
+  baseBufferMinutes: number;
+  driverTa: number;
+  splitRules: SplitRules;
+}): PackagePriceBreakdown {
+  const {
+    includedKm,
+    includedHours,
+    mileageKmpl,
+    fuelPricePerUnit,
+    perDayCharge,
+    baseBufferMinutes,
+    driverTa,
+    splitRules,
+  } = input;
+
+  if (!(includedKm > 0) || !(includedHours > 0)) {
+    throw new CatalogError('Package KM and Hours must be positive numbers.', 400);
+  }
+  if (!(mileageKmpl > 0)) {
+    throw new CatalogError('Cab mileage (CML) must be greater than zero.', 400);
+  }
+  if (!(fuelPricePerUnit > 0)) {
+    throw new CatalogError('Fuel price (FP) must be configured and greater than zero.', 409);
+  }
+
+  const fuelLitres = includedKm / mileageKmpl;
+  const fuelCost = round2(fuelLitres * fuelPricePerUnit);
+  const hourlyBaseRate = perDayCharge / 12;
+  const bufferHours = Math.max(0, baseBufferMinutes) / 60;
+  const cabTimeCharge = round2(hourlyBaseRate * (includedHours + bufferHours));
+  const ta = round2(Math.max(0, driverTa));
+
+  const totalFairPreGst = round2(fuelCost + cabTimeCharge + ta);
+  const split = splitPreGstFare(totalFairPreGst, splitRules);
+
+  return {
+    fuelLitres: round2(fuelLitres),
+    fuelCost,
+    cabTimeCharge,
+    driverTa: ta,
+    totalFairPreGst: split.rideTaxableValue,
+    gstPct: splitRules.ride_fare_gst_pct,
+    gstCharge: split.rideGstAmount,
+    totalPayment: split.customerTotalFare,
+    commissionPct: splitRules.platform_commission_pct,
+    adminCommission: split.platformCommission,
+    techFeeAmount: split.techFeeAmount,
+    gstOnCommissionAndTechFee: split.gstAmount,
+    totalCompanyDuesZ: split.totalCompanyDuesZ,
+    driverGrossEarnings: split.driverGrossEarnings,
+    split,
+  };
+}
+
+function mapCab(r: any): CabTypeRow {
+  return {
+    id: Number(r.id),
+    public_id: String(r.public_id),
+    code: String(r.code),
+    category: String(r.category),
+    display_name: String(r.display_name),
+    fuel_type: String(r.fuel_type),
+    mileage_kmpl: Number(r.mileage_kmpl),
+    per_day_charge: Number(r.per_day_charge),
+    base_buffer_minutes: Number(r.base_buffer_minutes),
+    extra_hour_charge: Number(r.extra_hour_charge),
+    extra_km_charge: Number(r.extra_km_charge),
+    driver_ta: Number(r.driver_ta),
+    seating_capacity: Number(r.seating_capacity),
+    luggage_bags: Number(r.luggage_bags),
+    models_description: r.models_description ?? null,
+    is_active: Boolean(r.is_active),
+  };
+}
+
+export async function listFuelPrices(): Promise<FuelPriceRow[]> {
+  const res = await query(`SELECT * FROM crm_fuel_prices ORDER BY fuel_type ASC`);
+  return res.rows.map((r) => ({
+    fuel_type: String(r.fuel_type),
+    price_per_unit: Number(r.price_per_unit),
+    unit: String(r.unit),
+    updated_by: r.updated_by ? Number(r.updated_by) : null,
+    updated_at: r.updated_at,
+  }));
+}
+
+export async function updateFuelPrice(
+  fuelType: string,
+  pricePerUnit: number,
+  adminId: number,
+  unit?: string
+): Promise<FuelPriceRow> {
+  const ft = String(fuelType || '').trim().toUpperCase();
+  if (!FUEL_TYPES.includes(ft as any)) {
+    throw new CatalogError(`Fuel type must be one of: ${FUEL_TYPES.join(', ')}`, 400);
+  }
+  if (!Number.isFinite(pricePerUnit) || pricePerUnit < 0) {
+    throw new CatalogError('Fuel price must be a non-negative number.', 400);
+  }
+  const res = await query(
+    `INSERT INTO crm_fuel_prices (fuel_type, price_per_unit, unit, updated_by, updated_at)
+     VALUES ($1, $2, COALESCE($3, 'LITRE'), $4, CURRENT_TIMESTAMP)
+     ON CONFLICT (fuel_type) DO UPDATE
+     SET price_per_unit = EXCLUDED.price_per_unit,
+         unit = COALESCE($3, crm_fuel_prices.unit),
+         updated_by = EXCLUDED.updated_by,
+         updated_at = CURRENT_TIMESTAMP
+     RETURNING *`,
+    [ft, round2(pricePerUnit), unit || null, adminId]
+  );
+  const r = res.rows[0];
+  return {
+    fuel_type: String(r.fuel_type),
+    price_per_unit: Number(r.price_per_unit),
+    unit: String(r.unit),
+    updated_by: r.updated_by ? Number(r.updated_by) : null,
+    updated_at: r.updated_at,
+  };
+}
+
+export async function listCabTypes(opts?: { activeOnly?: boolean }): Promise<CabTypeRow[]> {
+  const sql = opts?.activeOnly
+    ? `SELECT * FROM crm_cab_types WHERE is_active = true ORDER BY per_day_charge ASC, id ASC`
+    : `SELECT * FROM crm_cab_types ORDER BY per_day_charge ASC, id ASC`;
+  const res = await query(sql);
+  return res.rows.map(mapCab);
+}
+
+export async function createCabType(input: {
+  category: string;
+  fuel_type: string;
+  display_name?: string;
+  mileage_kmpl: number;
+  per_day_charge: number;
+  base_buffer_minutes?: number;
+  extra_hour_charge: number;
+  extra_km_charge: number;
+  driver_ta?: number;
+  seating_capacity?: number;
+  luggage_bags?: number;
+  models_description?: string | null;
+  is_active?: boolean;
+}): Promise<CabTypeRow> {
+  const category = String(input.category || '').trim().toUpperCase();
+  const fuelType = String(input.fuel_type || '').trim().toUpperCase();
+  if (!CAB_CATEGORIES.includes(category as any)) {
+    throw new CatalogError(`category must be one of: ${CAB_CATEGORIES.join(', ')}`, 400);
+  }
+  if (!FUEL_TYPES.includes(fuelType as any)) {
+    throw new CatalogError(`fuel_type must be one of: ${FUEL_TYPES.join(', ')}`, 400);
+  }
+  const mileage = Number(input.mileage_kmpl);
+  const pdcrg = Number(input.per_day_charge);
+  const phexchg = Number(input.extra_hour_charge);
+  const extraKm = Number(input.extra_km_charge);
+  const bufferMins = input.base_buffer_minutes !== undefined ? Number(input.base_buffer_minutes) : 30;
+  const driverTa = input.driver_ta !== undefined ? Number(input.driver_ta) : 0;
+  const seats = input.seating_capacity !== undefined ? Number(input.seating_capacity) : 4;
+  const bags = input.luggage_bags !== undefined ? Number(input.luggage_bags) : 2;
+
+  if (!(mileage > 0) || !(pdcrg >= 0) || !(phexchg >= 0) || !(extraKm >= 0) || !(driverTa >= 0)) {
+    throw new CatalogError('Mileage must be > 0 and all charges must be >= 0.', 400);
+  }
+  const code = `${category}_${fuelType}`;
+  const displayName = String(input.display_name || `${category.replace(/_/g, ' ')} (${fuelType})`).trim();
+
+  try {
+    const res = await query(
+      `INSERT INTO crm_cab_types (
+         code, category, display_name, fuel_type, mileage_kmpl, per_day_charge,
+         base_buffer_minutes, extra_hour_charge, extra_km_charge, driver_ta,
+         seating_capacity, luggage_bags, models_description, is_active
+       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+       RETURNING *`,
+      [
+        code, category, displayName, fuelType, round2(mileage), round2(pdcrg),
+        Math.round(bufferMins), round2(phexchg), round2(extraKm), round2(driverTa),
+        Math.round(seats), Math.round(bags), input.models_description || null, input.is_active ?? true,
+      ]
+    );
+    return mapCab(res.rows[0]);
+  } catch (err: any) {
+    if (err?.code === '23505') {
+      throw new CatalogError(`Cab type ${category} with fuel ${fuelType} already exists.`, 409);
+    }
+    throw err;
+  }
+}
+
+export async function updateCabType(id: number, input: Partial<CabTypeRow>): Promise<CabTypeRow> {
+  const existingRes = await query(`SELECT * FROM crm_cab_types WHERE id = $1`, [id]);
+  const e = existingRes.rows[0];
+  if (!e) throw new CatalogError('Cab type not found.', 404);
+
+  const displayName = input.display_name !== undefined ? String(input.display_name).trim() : e.display_name;
+  const mileage = input.mileage_kmpl !== undefined ? Number(input.mileage_kmpl) : Number(e.mileage_kmpl);
+  const pdcrg = input.per_day_charge !== undefined ? Number(input.per_day_charge) : Number(e.per_day_charge);
+  const bufferMins = input.base_buffer_minutes !== undefined ? Number(input.base_buffer_minutes) : Number(e.base_buffer_minutes);
+  const phexchg = input.extra_hour_charge !== undefined ? Number(input.extra_hour_charge) : Number(e.extra_hour_charge);
+  const extraKm = input.extra_km_charge !== undefined ? Number(input.extra_km_charge) : Number(e.extra_km_charge);
+  const driverTa = input.driver_ta !== undefined ? Number(input.driver_ta) : Number(e.driver_ta);
+  const seats = input.seating_capacity !== undefined ? Number(input.seating_capacity) : Number(e.seating_capacity);
+  const bags = input.luggage_bags !== undefined ? Number(input.luggage_bags) : Number(e.luggage_bags);
+  const models = input.models_description !== undefined ? input.models_description : e.models_description;
+  const isActive = input.is_active !== undefined ? Boolean(input.is_active) : Boolean(e.is_active);
+
+  if (!(mileage > 0) || !(pdcrg >= 0) || !(phexchg >= 0) || !(extraKm >= 0) || !(driverTa >= 0)) {
+    throw new CatalogError('Mileage must be > 0 and all charges must be >= 0.', 400);
+  }
+
+  const res = await query(
+    `UPDATE crm_cab_types
+     SET display_name = $1, mileage_kmpl = $2, per_day_charge = $3, base_buffer_minutes = $4,
+         extra_hour_charge = $5, extra_km_charge = $6, driver_ta = $7, seating_capacity = $8,
+         luggage_bags = $9, models_description = $10, is_active = $11, updated_at = CURRENT_TIMESTAMP
+     WHERE id = $12
+     RETURNING *`,
+    [displayName, round2(mileage), round2(pdcrg), Math.round(bufferMins), round2(phexchg), round2(extraKm), round2(driverTa), Math.round(seats), Math.round(bags), models, isActive, id]
+  );
+  return mapCab(res.rows[0]);
+}
+
+export async function createPackage(input: {
+  name: string;
+  booking_type: string;
+  sub_type?: string | null;
+  cab_type_id: number;
+  included_km: number;
+  included_hours: number;
+  description?: string | null;
+  is_active?: boolean;
+  sort_order?: number;
+}): Promise<PackageRow> {
+  const name = String(input.name || '').trim();
+  const bookingType = String(input.booking_type || '').trim().toUpperCase();
+  const cabTypeId = Number(input.cab_type_id);
+  const km = Number(input.included_km);
+  const hours = Number(input.included_hours);
+
+  if (!name) throw new CatalogError('Package name is required.', 400);
+  if (!BOOKING_TYPES.includes(bookingType as any)) {
+    throw new CatalogError(`booking_type must be one of: ${BOOKING_TYPES.join(', ')}`, 400);
+  }
+  if (!Number.isInteger(cabTypeId) || cabTypeId <= 0) throw new CatalogError('Valid cab_type_id is required.', 400);
+  if (!(km > 0) || !(hours > 0)) throw new CatalogError('included_km and included_hours must be greater than zero.', 400);
+
+  const cabCheck = await query(`SELECT id FROM crm_cab_types WHERE id = $1`, [cabTypeId]);
+  if (cabCheck.rows.length === 0) throw new CatalogError('Selected cab type does not exist.', 404);
+
+  const res = await query(
+    `INSERT INTO crm_packages (name, booking_type, sub_type, cab_type_id, included_km, included_hours, description, is_active, sort_order)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+     RETURNING *`,
+    [name, bookingType, input.sub_type || null, cabTypeId, round2(km), round2(hours), input.description || null, input.is_active ?? true, Number(input.sort_order || 0)]
+  );
+  const r = res.rows[0];
+  return {
+    ...r,
+    id: Number(r.id),
+    cab_type_id: Number(r.cab_type_id),
+    included_km: Number(r.included_km),
+    included_hours: Number(r.included_hours),
+    sort_order: Number(r.sort_order),
+  };
+}
+
+export async function updatePackage(id: number, input: Partial<PackageRow>): Promise<PackageRow> {
+  const existingRes = await query(`SELECT * FROM crm_packages WHERE id = $1`, [id]);
+  const e = existingRes.rows[0];
+  if (!e) throw new CatalogError('Package not found.', 404);
+
+  const name = input.name !== undefined ? String(input.name).trim() : e.name;
+  const bookingType = input.booking_type !== undefined ? String(input.booking_type).trim().toUpperCase() : e.booking_type;
+  const subType = input.sub_type !== undefined ? input.sub_type : e.sub_type;
+  const cabTypeId = input.cab_type_id !== undefined ? Number(input.cab_type_id) : Number(e.cab_type_id);
+  const km = input.included_km !== undefined ? Number(input.included_km) : Number(e.included_km);
+  const hours = input.included_hours !== undefined ? Number(input.included_hours) : Number(e.included_hours);
+  const description = input.description !== undefined ? input.description : e.description;
+  const isActive = input.is_active !== undefined ? Boolean(input.is_active) : Boolean(e.is_active);
+  const sortOrder = input.sort_order !== undefined ? Number(input.sort_order) : Number(e.sort_order);
+
+  if (!name || !BOOKING_TYPES.includes(bookingType as any) || !(km > 0) || !(hours > 0)) {
+    throw new CatalogError('Invalid package fields.', 400);
+  }
+
+  const res = await query(
+    `UPDATE crm_packages
+     SET name = $1, booking_type = $2, sub_type = $3, cab_type_id = $4, included_km = $5,
+         included_hours = $6, description = $7, is_active = $8, sort_order = $9, updated_at = CURRENT_TIMESTAMP
+     WHERE id = $10
+     RETURNING *`,
+    [name, bookingType, subType, cabTypeId, round2(km), round2(hours), description, isActive, sortOrder, id]
+  );
+  const r = res.rows[0];
+  return {
+    ...r,
+    id: Number(r.id),
+    cab_type_id: Number(r.cab_type_id),
+    included_km: Number(r.included_km),
+    included_hours: Number(r.included_hours),
+    sort_order: Number(r.sort_order),
+  };
+}
+
+async function hydratePricedPackages(rows: any[], skipUnpriceable: boolean): Promise<PricedPackage[]> {
+  const splitRules = await getSplitRules();
+  const result: PricedPackage[] = [];
+
+  for (const r of rows) {
+    const fuelPrice = Number(r.fuel_price_per_unit);
+    if (!(fuelPrice > 0)) {
+      if (skipUnpriceable) continue;
+      throw new CatalogError(`Fuel price for ${r.cab_fuel_type} is not configured (> 0).`, 409);
+    }
+    const cab: CabTypeRow = {
+      id: Number(r.cab_id),
+      public_id: String(r.cab_public_id),
+      code: String(r.cab_code),
+      category: String(r.cab_category),
+      display_name: String(r.cab_display_name),
+      fuel_type: String(r.cab_fuel_type),
+      mileage_kmpl: Number(r.mileage_kmpl),
+      per_day_charge: Number(r.per_day_charge),
+      base_buffer_minutes: Number(r.base_buffer_minutes),
+      extra_hour_charge: Number(r.extra_hour_charge),
+      extra_km_charge: Number(r.extra_km_charge),
+      driver_ta: Number(r.driver_ta),
+      seating_capacity: Number(r.seating_capacity),
+      luggage_bags: Number(r.luggage_bags),
+      models_description: r.models_description ?? null,
+      is_active: Boolean(r.cab_is_active),
+    };
+    const pricing = calculatePackagePricing({
+      includedKm: Number(r.included_km),
+      includedHours: Number(r.included_hours),
+      mileageKmpl: cab.mileage_kmpl,
+      fuelPricePerUnit: fuelPrice,
+      perDayCharge: cab.per_day_charge,
+      baseBufferMinutes: cab.base_buffer_minutes,
+      driverTa: cab.driver_ta,
+      splitRules,
+    });
+    result.push({
+      id: Number(r.id),
+      public_id: String(r.public_id),
+      name: String(r.name),
+      booking_type: String(r.booking_type),
+      sub_type: r.sub_type ?? null,
+      cab_type_id: Number(r.cab_type_id),
+      included_km: Number(r.included_km),
+      included_hours: Number(r.included_hours),
+      description: r.description ?? null,
+      is_active: Boolean(r.is_active),
+      sort_order: Number(r.sort_order),
+      cab_type: cab,
+      fuel_price_per_unit: fuelPrice,
+      pricing,
+    });
+  }
+  return result;
+}
+
+const PACKAGE_SELECT = `
+  SELECT
+    p.id, p.public_id, p.name, p.booking_type, p.sub_type, p.cab_type_id,
+    p.included_km, p.included_hours, p.description, p.is_active, p.sort_order,
+    c.id AS cab_id, c.public_id AS cab_public_id, c.code AS cab_code, c.category AS cab_category,
+    c.display_name AS cab_display_name, c.fuel_type AS cab_fuel_type, c.mileage_kmpl,
+    c.per_day_charge, c.base_buffer_minutes, c.extra_hour_charge, c.extra_km_charge,
+    c.driver_ta, c.seating_capacity, c.luggage_bags, c.models_description, c.is_active AS cab_is_active,
+    f.price_per_unit AS fuel_price_per_unit
+  FROM crm_packages p
+  JOIN crm_cab_types c ON c.id = p.cab_type_id
+  JOIN crm_fuel_prices f ON f.fuel_type = c.fuel_type
+`;
+
+export async function listPricedPackages(opts?: {
+  activeOnly?: boolean;
+  bookingType?: string | null;
+  skipUnpriceable?: boolean;
+}): Promise<PricedPackage[]> {
+  const where: string[] = [];
+  const params: any[] = [];
+
+  if (opts?.activeOnly) {
+    where.push(`p.is_active = true AND c.is_active = true`);
+  }
+  if (opts?.bookingType) {
+    params.push(String(opts.bookingType).trim().toUpperCase());
+    where.push(`p.booking_type = $${params.length}`);
+  }
+
+  const sql = `${PACKAGE_SELECT} ${where.length ? 'WHERE ' + where.join(' AND ') : ''} ORDER BY p.booking_type ASC, p.sort_order ASC, c.per_day_charge ASC, p.id ASC`;
+  const res = await query(sql, params);
+  return hydratePricedPackages(res.rows, Boolean(opts?.skipUnpriceable));
+}
+
+export async function getPricedPackageById(id: number): Promise<PricedPackage | null> {
+  const res = await query(`${PACKAGE_SELECT} WHERE p.id = $1`, [id]);
+  if (res.rows.length === 0) return null;
+  const list = await hydratePricedPackages(res.rows, false);
+  return list[0] ?? null;
+}
+
+export async function getPricedPackageByPublicId(publicId: string): Promise<PricedPackage | null> {
+  const res = await query(`${PACKAGE_SELECT} WHERE p.public_id = $1 AND p.is_active = true AND c.is_active = true`, [publicId]);
+  if (res.rows.length === 0) return null;
+  const list = await hydratePricedPackages(res.rows, false);
+  return list[0] ?? null;
+}

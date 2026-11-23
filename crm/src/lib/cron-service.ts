@@ -1,7 +1,7 @@
 import { query } from './db';
 import { purgeOldLoginAttempts } from './login-security';
-import { issuePendingCancellationDocuments } from './cancellation-charges';
-import { reconcileStalePaymentLinks } from './advance-payments';
+import { reconcileStalePaymentLinks } from './razorpay-webhook';
+import { syncDriverPlanSuspension } from './driver-plans';
 import { runFailedMessageDigest } from './notification-failures';
 import { sendPendingGstDocuments } from './gst-delivery';
 import {
@@ -160,6 +160,7 @@ export async function runExpiredDocumentSuspensions(): Promise<number> {
        WHERE id = $1`,
       [d.id]
     );
+    await syncDriverPlanSuspension(Number(d.id), false);
 
     const targetPhone = d.whatsapp_phone || d.phone;
     if (targetPhone) {
@@ -254,6 +255,7 @@ export async function runUnpaidDuesGuardrails(): Promise<number> {
        WHERE id = $3`,
       [newStatus, isAvail, d.id]
     );
+    await syncDriverPlanSuspension(Number(d.id), false);
 
     const targetPhone = d.whatsapp_phone || d.phone;
     const unpaidAmount = Math.abs(Number(d.wallet_balance)).toFixed(2);
@@ -350,11 +352,7 @@ export async function executeDailyCronTasks(): Promise<DailyCronResult> {
   return {
     documentsExpiringWarned: await runDocumentExpiryWarnings(),
     loginAttemptsPurged: await purgeOldLoginAttempts(),
-    // A bad rate setting must not stop the other daily jobs.
-    cancellationDocumentsIssued: await issuePendingCancellationDocuments().catch((err) => {
-      console.error('[Cron] Cancellation charge documents not issued:', err?.message);
-      return 0;
-    }),
+    cancellationDocumentsIssued: 0,
   };
 }
 
