@@ -101,7 +101,8 @@ export async function completeTripAndSettle(
     let extraKmCharges = 0;
     if (input.closingKm && b.opening_km) {
       const actualKm = input.closingKm - b.opening_km;
-      const billedKm = Number(b.included_km ?? b.distance_km ?? 0);
+      // Compare against max(included_km, distance_km) so upfront road-distance extra KM is never billed twice
+      const billedKm = Math.max(Number(b.included_km || 0), Number(b.distance_km || 0));
       if (actualKm > billedKm) {
         if (extraKmRate === null) {
           throw new Error(`Extra KM rate is not configured for cab type ${b.wp_vehicle_code}.`);

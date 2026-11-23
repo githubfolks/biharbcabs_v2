@@ -9,7 +9,14 @@ import {
   sendWhatsAppList,
   sendWhatsAppDocument,
 } from './whatsapp';
-import { listPricedPackages, getPricedPackageById, listCabTypes } from './pricing-engine';
+import {
+  listPricedPackages,
+  getPricedPackageById,
+  listCabTypes,
+  calculateDistanceAdjustedPricing,
+  resolveRouteDistanceSafely,
+  pricePackageForRoute,
+} from './pricing-engine';
 import {
   calculateRideSplitWithTaxes,
   broadcastRideToDrivers,
@@ -200,7 +207,14 @@ async function quoteAndOfferVehicles(phone: string, ctx: Record<string, any>): P
     rawType === 'LOCAL' || rawType === 'AIRPORT' || rawType === 'RAILWAY_STATION' ? 'LOCAL' :
     'OUTSTATION';
 
-  const packages = await listPricedPackages({ activeOnly: true, bookingType, skipUnpriceable: true });
+  const [packages, routeDistance, splitRules] = await Promise.all([
+    listPricedPackages({ activeOnly: true, bookingType, skipUnpriceable: true }),
+    resolveRouteDistanceSafely(
+      { originText: ctx.origin || null, destinationText: ctx.destination || null },
+      'WhatsApp Quote'
+    ),
+    getSplitRules(),
+  ]);
 
   if (packages.length === 0) {
     await updateConversation(phone, 'IDLE', {});
@@ -220,8 +234,16 @@ async function quoteAndOfferVehicles(phone: string, ctx: Record<string, any>): P
   }
 
   const rows = packages.slice(0, 10).map((p) => {
-    const fare = p.pricing.totalPayment;
-    const notes = `${p.cab_type.display_name} • ${p.included_km} km / ${p.included_hours} hr • Extra ₹${p.cab_type.extra_hour_charge}/hr`;
+    const adjusted = calculateDistanceAdjustedPricing(
+      p.pricing,
+      p.included_km,
+      p.cab_type.extra_km_charge,
+      routeDistance?.distance_km ?? null,
+      splitRules
+    );
+    const fare = adjusted.totalPayment;
+    const kmLabel = adjusted.extraKm > 0 ? `${adjusted.billedKm} km` : `${p.included_km} km`;
+    const notes = `${p.cab_type.display_name} • ${kmLabel} / ${p.included_hours} hr • Extra ₹${p.cab_type.extra_hour_charge}/hr`;
     return {
       id: `sel_pkg_${p.id}`,
       title: `${p.name} (₹${fare.toLocaleString('en-IN')})`.slice(0, 24),
@@ -232,11 +254,13 @@ async function quoteAndOfferVehicles(phone: string, ctx: Record<string, any>): P
   await updateConversation(phone, 'AWAITING_VEHICLE_CHOICE', {
     ...ctx,
     trip_type: bookingType,
+    road_distance_km: routeDistance?.distance_km ?? null,
   });
 
+  const distLine = routeDistance ? `\nEst. Distance: ${routeDistance.distance_km} km (${routeDistance.duration_text})` : '';
   await sendWhatsAppList(
     phone,
-    `🚖 ${bookingType} Plans: ${ctx.origin}${ctx.destination ? ` → ${ctx.destination}` : ''}\nPickup: ${formatPickup(new Date(ctx.pickup_at))}\n\nAll prices include GST. Tap below to select your plan:`,
+    `🚖 ${bookingType} Plans: ${ctx.origin}${ctx.destination ? ` → ${ctx.destination}` : ''}${distLine}\nPickup: ${formatPickup(new Date(ctx.pickup_at))}\n\nAll prices include GST. Tap below to select your plan:`,
     'Choose Plan',
     [{ title: 'Available Cab Plans', rows }],
     'BiharCabs Live Plans'
@@ -1052,19 +1076,33 @@ export async function processIncomingWhatsAppMessage(params: {
       return;
     }
 
+    const { pricing: adjusted } = await pricePackageForRoute(
+      pkg,
+      {
+        originText: conv.context_data.origin || null,
+        destinationText: conv.context_data.destination || null,
+      },
+      'WhatsApp Select'
+    );
+
     const ctx: Record<string, any> = {
       ...conv.context_data,
       package_id: pkg.id,
       package_name: pkg.name,
       selected_vehicle: pkg.cab_type.code,
       cab_display_name: pkg.cab_type.display_name,
-      total_fare: pkg.pricing.totalPayment,
+      total_fare: adjusted.totalPayment,
+      billed_km: adjusted.billedKm,
     };
+
+    const kmInfo = adjusted.extraKm > 0
+      ? `${adjusted.billedKm} km (${pkg.included_km} km base + ${adjusted.extraKm} km road distance)`
+      : `${pkg.included_km} km`;
 
     await updateConversation(fromPhone, 'AWAITING_LANDMARK', ctx);
     await sendWhatsAppText(
       fromPhone,
-      `Selected: *${pkg.name}* — ${pkg.cab_type.display_name}\nTotal Payment: ₹${pkg.pricing.totalPayment.toLocaleString('en-IN')} (incl. ${pkg.pricing.gstPct}% GST)\nIncludes: ${pkg.included_km} km / ${pkg.included_hours} hrs (Extra: ₹${pkg.cab_type.extra_hour_charge}/hr, ₹${pkg.cab_type.extra_km_charge}/km)\n\nPlease reply with your exact Pickup Landmark & Address in ${ctx.origin || 'your city'}:`
+      `Selected: *${pkg.name}* — ${pkg.cab_type.display_name}\nTotal Payment: ₹${adjusted.totalPayment.toLocaleString('en-IN')} (incl. ${adjusted.gstPct}% GST)\nIncludes: ${kmInfo} / ${pkg.included_hours} hrs (Extra: ₹${pkg.cab_type.extra_hour_charge}/hr, ₹${pkg.cab_type.extra_km_charge}/km)\n\nPlease reply with your exact Pickup Landmark & Address in ${ctx.origin || 'your city'}:`
     );
     return;
   }
@@ -1121,8 +1159,17 @@ async function createCustomerBooking(
   );
   const customerId = custRes.rows[0].id;
 
-  const split = pkg.pricing.split;
+  const { pricing: adjusted } = await pricePackageForRoute(
+    pkg,
+    {
+      originText: ctx.origin || null,
+      destinationText: ctx.destination || null,
+    },
+    'WhatsApp Booking'
+  );
+  const split = adjusted.split;
   const totalFare = split.customerTotalFare;
+  const billedKm = adjusted.billedKm;
 
   const bookRes = await insertWithBookingCode((bookingCode) =>
     query(
@@ -1155,7 +1202,7 @@ async function createCustomerBooking(
         ctx.pickup_date,
         ctx.pickup_time,
         pkg.cab_type.code,
-        pkg.included_km,
+        billedKm,
         totalFare,
         split.driverGrossEarnings,
         split.totalCompanyDuesZ,

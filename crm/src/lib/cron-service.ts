@@ -4,6 +4,7 @@ import { reconcileStalePaymentLinks } from './razorpay-webhook';
 import { syncDriverPlanSuspension } from './driver-plans';
 import { runFailedMessageDigest } from './notification-failures';
 import { sendPendingGstDocuments } from './gst-delivery';
+import { syncFuelPricesFromApi } from './fuel-price-sync';
 import {
   getDriverWakeupCheckHours,
   getWakeupUnconfirmedAlertMinutes,
@@ -35,6 +36,7 @@ export interface DailyCronResult {
   documentsExpiringWarned: number;
   loginAttemptsPurged: number;
   cancellationDocumentsIssued: number;
+  fuelPricesSynced: boolean;
 }
 
 /**
@@ -349,10 +351,15 @@ export async function executeFrequentCronTasks(): Promise<FrequentCronResult> {
 
 /** Daily jobs (once a day, POST /api/dispatch/cron/daily). */
 export async function executeDailyCronTasks(): Promise<DailyCronResult> {
+  const fuelSync = await syncFuelPricesFromApi({ force: false }).catch((err) => {
+    console.error('[Cron] Daily fuel price sync failed:', err?.message);
+    return { synced: false };
+  });
   return {
     documentsExpiringWarned: await runDocumentExpiryWarnings(),
     loginAttemptsPurged: await purgeOldLoginAttempts(),
     cancellationDocumentsIssued: 0,
+    fuelPricesSynced: Boolean(fuelSync.synced),
   };
 }
 

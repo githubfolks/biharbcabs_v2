@@ -232,12 +232,16 @@
        let planSeq = 0;
        const loadPlans = async () => {
          const seq = ++planSeq;
+         const prevSelected = planSelect.value;
          const pickupVal = (field('pickup')?.value || '').trim();
+         const dropVal = (field('drop')?.value || '').trim();
          const city = pickupVal.split(',')[0].trim();
+         const destCity = dropVal.split(',')[0].trim();
          const pDate = field('date')?.value || '';
          const pTime = field('time')?.value || '';
          const qs = new URLSearchParams();
          if (city) qs.set('origin_city', city);
+         if (destCity) qs.set('destination_city', destCity);
          if (pDate) qs.set('pickup_date', pDate);
          if (pTime) qs.set('pickup_time', pTime);
 
@@ -258,15 +262,19 @@
              opt.value = p.public_id;
              const av = p.availability;
              const avText = av ? ' — ' + av.available_cabs + ' available in ' + av.city : '';
-             opt.textContent = p.name + ' — ' + p.cab.display_name + ' (₹' + Number(p.pricing.total_payment).toLocaleString('en-IN') + ' incl. GST)' + avText;
+             const extraText = p.pricing?.extra_km > 0 ? ' • ' + p.pricing.billed_km + ' km' : '';
+             opt.textContent = p.name + ' — ' + p.cab.display_name + ' (₹' + Number(p.pricing.total_payment).toLocaleString('en-IN') + ' incl. GST' + extraText + ')' + avText;
              planSelect.appendChild(opt);
            });
+           if (prevSelected && Array.from(planSelect.options).some((o) => o.value === prevSelected)) {
+             planSelect.value = prevSelected;
+           }
          } catch (_) {
            if (seq === planSeq) planSelect.innerHTML = '<option value="">Unable to load plans right now</option>';
          }
        };
        loadPlans();
-       [field('pickup'), field('date'), field('time')].forEach((el) => {
+       [field('pickup'), field('drop'), field('date'), field('time')].forEach((el) => {
          if (el) el.addEventListener('change', loadPlans);
        });
      }

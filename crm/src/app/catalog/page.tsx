@@ -12,6 +12,11 @@ export default function CatalogPage() {
   const [error, setError] = useState<string | null>(null);
 
   const [fuelPrices, setFuelPrices] = useState<any[]>([]);
+  const [fuelSyncState, setFuelSyncState] = useState<any>(null);
+  const [fuelApiConfigured, setFuelApiConfigured] = useState(false);
+  const [fuelAutoSyncEnabled, setFuelAutoSyncEnabled] = useState(false);
+  const [syncingFuel, setSyncingFuel] = useState(false);
+  const [fuelSyncMsg, setFuelSyncMsg] = useState<string | null>(null);
   const [cabTypes, setCabTypes] = useState<any[]>([]);
   const [packages, setPackages] = useState<any[]>([]);
   const [driverPlans, setDriverPlans] = useState<any[]>([]);
@@ -68,7 +73,12 @@ export default function CatalogPage() {
       ]);
       const [me, f, c, p, dp] = await Promise.all([meRes.json(), fRes.json(), cRes.json(), pRes.json(), dpRes.json()]);
       setRole(me?.user?.role ?? null);
-      if (f.success) setFuelPrices(f.fuelPrices);
+      if (f.success) {
+        setFuelPrices(f.fuelPrices);
+        setFuelSyncState(f.syncState || null);
+        setFuelApiConfigured(Boolean(f.apiConfigured));
+        setFuelAutoSyncEnabled(Boolean(f.autoSyncEnabled));
+      }
       if (c.success) setCabTypes(c.cabTypes);
       if (p.success) setPackages(p.packages);
       if (dp.success) setDriverPlans(dp.plans);
@@ -92,6 +102,33 @@ export default function CatalogPage() {
     const data = await res.json();
     if (!data.success) return alert(data.error || 'Failed to update fuel price');
     await loadAll();
+  }
+
+  async function syncFuelNow() {
+    setSyncingFuel(true);
+    setFuelSyncMsg(null);
+    setError(null);
+    try {
+      const res = await fetch('/api/catalog/fuel-prices/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ force: true }),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        setError(data.error || 'Fuel price sync failed');
+      } else {
+        const updatedList = Object.entries(data.updated || {})
+          .map(([k, v]) => `${k}: ₹${v}`)
+          .join(', ');
+        setFuelSyncMsg(`Synced for ${data.dateIst} (cached for today)${updatedList ? ` — ${updatedList}` : ''}`);
+        await loadAll();
+      }
+    } catch (err: any) {
+      setError(err?.message || 'Unable to reach fuel sync endpoint');
+    } finally {
+      setSyncingFuel(false);
+    }
   }
 
   async function handleCreateCab(e: React.FormEvent) {
@@ -465,36 +502,70 @@ export default function CatalogPage() {
 
       {/* TAB 3: FUEL PRICES */}
       {tab === 'fuel' && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {fuelPrices.map((f) => (
-            <div key={f.fuel_type} className="bg-white p-5 rounded-lg border border-slate-200 shadow-sm space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-slate-900">{f.fuel_type}</span>
-                <span className="text-xs text-slate-500">per {f.unit}</span>
+        <div className="space-y-4">
+          <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-3">
+            <div className="text-xs text-slate-600 space-y-0.5">
+              <div className="font-semibold text-slate-900">
+                Daily Fuel Price API Sync {fuelAutoSyncEnabled ? '(Auto-Sync ON — cached per IST day)' : fuelApiConfigured ? '(Manual Sync)' : '(Not Configured)'}
               </div>
-              <div className="flex space-x-2">
-                <input
-                  type="number"
-                  step="0.01"
-                  defaultValue={f.price_per_unit}
-                  id={`fuel_${f.fuel_type}`}
-                  disabled={!canManageCatalog}
-                  className="w-full px-3 py-2 border rounded-md text-sm font-mono"
-                />
-                {canManageCatalog && (
-                  <button
-                    onClick={() => saveFuel(f.fuel_type, (document.getElementById(`fuel_${f.fuel_type}`) as HTMLInputElement).value)}
-                    className="inline-flex items-center px-3 py-2 bg-orange-600 text-white rounded-md text-xs font-semibold hover:bg-orange-700"
-                  >
-                    <Save className="h-3.5 w-3.5 mr-1" /> Save
-                  </button>
+              {fuelSyncState?.last_synced_date_ist ? (
+                <div>
+                  Last synced: <strong className="font-mono">{fuelSyncState.last_synced_date_ist}</strong>
+                  {fuelSyncState.synced_at ? ` (${new Date(fuelSyncState.synced_at).toLocaleString('en-IN')})` : ''}
+                </div>
+              ) : (
+                <div>Configure a free Fuel Price API endpoint in <a href="/settings" className="text-orange-600 underline font-semibold">System Settings</a> to enable daily auto-sync.</div>
+              )}
+              {fuelSyncState?.last_error && (
+                <div className="text-rose-600">Last error: {fuelSyncState.last_error}</div>
+              )}
+              {fuelSyncMsg && <div className="text-emerald-700 font-semibold">{fuelSyncMsg}</div>}
+            </div>
+            {canManageCatalog && (
+              <button
+                type="button"
+                onClick={syncFuelNow}
+                disabled={syncingFuel || !fuelApiConfigured}
+                className="inline-flex items-center px-3.5 py-2 bg-emerald-600 text-white rounded-md text-xs font-semibold hover:bg-emerald-700 disabled:opacity-40"
+              >
+                <RefreshCw className={`h-3.5 w-3.5 mr-1.5 ${syncingFuel ? 'animate-spin' : ''}`} />
+                {syncingFuel ? 'Syncing...' : 'Sync from API Now'}
+              </button>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {fuelPrices.map((f) => (
+              <div key={f.fuel_type} className="bg-white p-5 rounded-lg border border-slate-200 shadow-sm space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-slate-900">{f.fuel_type}</span>
+                  <span className="text-xs text-slate-500">per {f.unit}</span>
+                </div>
+                <div className="flex space-x-2">
+                  <input
+                    key={`${f.fuel_type}-${f.price_per_unit}`}
+                    type="number"
+                    step="0.01"
+                    defaultValue={f.price_per_unit}
+                    id={`fuel_${f.fuel_type}`}
+                    disabled={!canManageCatalog}
+                    className="w-full px-3 py-2 border rounded-md text-sm font-mono"
+                  />
+                  {canManageCatalog && (
+                    <button
+                      onClick={() => saveFuel(f.fuel_type, (document.getElementById(`fuel_${f.fuel_type}`) as HTMLInputElement).value)}
+                      className="inline-flex items-center px-3 py-2 bg-orange-600 text-white rounded-md text-xs font-semibold hover:bg-orange-700"
+                    >
+                      <Save className="h-3.5 w-3.5 mr-1" /> Save
+                    </button>
+                  )}
+                </div>
+                {Number(f.price_per_unit) <= 0 && (
+                  <p className="text-xs text-amber-700">Set a positive price before activating {f.fuel_type} packages.</p>
                 )}
               </div>
-              {Number(f.price_per_unit) <= 0 && (
-                <p className="text-xs text-amber-700">Set a positive price before activating {f.fuel_type} packages.</p>
-              )}
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       )}
 

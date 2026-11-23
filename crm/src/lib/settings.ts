@@ -333,6 +333,54 @@ export async function getLocationIqConfig(): Promise<LocationIqConfig> {
   return { api_key: apiKey, country_codes: countryCodes || 'in' };
 }
 
+export interface FuelPriceApiConfig {
+  enabled: boolean;
+  endpoint_url: string;
+  api_key: string;
+  api_host: string;
+  auth_header: string;
+  state: string;
+  city: string;
+  petrol_path: string;
+  diesel_path: string;
+  cng_path: string;
+}
+
+export interface FuelPriceSyncState {
+  last_synced_date_ist: string | null;
+  synced_at: string | null;
+  source_url: string | null;
+  updated_fuels: Record<string, number>;
+  last_error: string | null;
+}
+
+export async function getFuelPriceApiConfig(): Promise<FuelPriceApiConfig> {
+  const raw = await getSetting<any>('fuel_price_api_config', {});
+  return {
+    enabled: Boolean(raw?.enabled ?? false),
+    endpoint_url: String(raw?.endpoint_url || process.env.FUEL_PRICE_API_URL || '').trim(),
+    api_key: String(raw?.api_key || process.env.FUEL_PRICE_API_KEY || '').trim(),
+    api_host: String(raw?.api_host || process.env.FUEL_PRICE_API_HOST || '').trim(),
+    auth_header: String(raw?.auth_header || '').trim(),
+    state: String(raw?.state || 'bihar').trim(),
+    city: String(raw?.city || 'patna').trim(),
+    petrol_path: String(raw?.petrol_path || '').trim(),
+    diesel_path: String(raw?.diesel_path || '').trim(),
+    cng_path: String(raw?.cng_path || '').trim(),
+  };
+}
+
+export async function getFuelPriceSyncState(): Promise<FuelPriceSyncState> {
+  const raw = await getSetting<any>('fuel_price_sync_state', {});
+  return {
+    last_synced_date_ist: raw?.last_synced_date_ist ? String(raw.last_synced_date_ist) : null,
+    synced_at: raw?.synced_at ? String(raw.synced_at) : null,
+    source_url: raw?.source_url ? String(raw.source_url) : null,
+    updated_fuels: raw?.updated_fuels && typeof raw.updated_fuels === 'object' ? raw.updated_fuels : {},
+    last_error: raw?.last_error ? String(raw.last_error) : null,
+  };
+}
+
 /** Return-trip priority and discount settings, validated: incomplete or invalid settings leave the feature off. */
 export async function getReturnTripPolicy(): Promise<ReturnTripPolicyCheck> {
   const raw = await getSetting<any>('return_trip_policy', {});

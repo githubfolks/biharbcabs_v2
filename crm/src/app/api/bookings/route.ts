@@ -7,9 +7,16 @@ import { sendWhatsAppText } from '@/lib/whatsapp';
 import { notify } from '@/lib/wa-notify';
 import { notifyOfferedDrivers } from '@/lib/dispatch-notify';
 import { insertWithBookingCode } from '@/lib/booking-code';
-import { CatalogError, getPricedPackageById } from '@/lib/pricing-engine';
+import {
+  CatalogError,
+  DistanceAdjustedPricing,
+  getPricedPackageById,
+  parseOptionalCoords,
+  pricePackageForRoute,
+} from '@/lib/pricing-engine';
 import { checkCategoryAvailability } from '@/lib/availability';
 import { MIN_OVERRIDE_REASON_LENGTH } from '@/lib/booking-rules';
+import { DrivingDistanceResult } from '@/lib/locationiq';
 
 export const dynamic = 'force-dynamic';
 
@@ -75,11 +82,18 @@ export async function POST(req: NextRequest) {
       pickup_time,
       wp_vehicle_code,
       distance_km,
+      from_lat,
+      from_lon,
+      to_lat,
+      to_lon,
       customer_total_fare,
       auto_broadcast = true,
       fare_override_reason,
       special_notes,
     } = body;
+
+    const fromCoords = parseOptionalCoords(from_lat, from_lon);
+    const toCoords = parseOptionalCoords(to_lat, to_lon);
 
     if (!customer_phone || !origin_city || !pickup_date || !pickup_time) {
       return NextResponse.json(
@@ -108,6 +122,8 @@ export async function POST(req: NextRequest) {
     let fareSource: 'RATE_CARD' | 'OVERRIDE' = 'RATE_CARD';
     let rateCardFare: number | null = null;
     let overrideReason: string | null = null;
+    let routeDistance: DrivingDistanceResult | null = null;
+    let distancePricing: DistanceAdjustedPricing | null = null;
     let taxSplit;
 
     const requestedFare =
@@ -116,8 +132,22 @@ export async function POST(req: NextRequest) {
         : Number(customer_total_fare);
 
     if (pkg) {
-      rateCardFare = pkg.pricing.totalPayment;
-      resolvedDistanceKm = pkg.included_km;
+      // Resolve road distance & distance-adjusted fare via the shared canonical pricing helper.
+      const priced = await pricePackageForRoute(
+        pkg,
+        {
+          fromCoords,
+          toCoords,
+          originText: origin_city,
+          destinationText: destination_city || null,
+        },
+        'Bookings'
+      );
+      routeDistance = priced.routeDistance;
+      distancePricing = priced.pricing;
+
+      rateCardFare = distancePricing.totalPayment;
+      resolvedDistanceKm = distancePricing.billedKm;
       resolvedTripType = pkg.booking_type;
       resolvedVehicleCode = pkg.cab_type.code;
 
@@ -145,7 +175,7 @@ export async function POST(req: NextRequest) {
         taxSplit = await calculateRideSplitWithTaxes(fare);
       } else {
         fare = rateCardFare;
-        taxSplit = pkg.pricing.split;
+        taxSplit = distancePricing.split;
       }
     } else {
       // No package selected: super-admin custom fare only
@@ -309,6 +339,8 @@ export async function POST(req: NextRequest) {
       success: true,
       booking,
       dispatch: dispatchResult,
+      route_distance: routeDistance,
+      distance_pricing: distancePricing,
     });
   } catch (err: any) {
     const status = err instanceof CatalogError ? err.status : 500;

@@ -9,6 +9,7 @@ export const SECRET_MASK = '********';
 export const SECRET_SETTING_FIELDS: Record<string, readonly string[]> = {
   meta_whatsapp_config: ['access_token', 'webhook_verify_token'],
   locationiq_config: ['api_key'],
+  fuel_price_api_config: ['api_key'],
 };
 
 export function maskSettingValue(key: string, value: any): any {

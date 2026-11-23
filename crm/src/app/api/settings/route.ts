@@ -3,6 +3,7 @@ import { requireAdmin } from '@/lib/auth';
 import { getAllSettings, updateSetting } from '@/lib/settings';
 import { checkReturnTripPolicy } from '@/lib/return-trip-pricing';
 import { keepUnchangedSecrets, maskSettings } from '@/lib/settings-secrets';
+import { resetFuelSyncMemoryCache } from '@/lib/fuel-price-sync';
 
 export const dynamic = 'force-dynamic';
 
@@ -43,6 +44,9 @@ export async function POST(req: NextRequest) {
     }
 
     await updateSetting(key, toSave, description);
+    if (key === 'fuel_price_api_config') {
+      resetFuelSyncMemoryCache();
+    }
     console.info(`[Settings] '${key}' changed by admin #${auth.id}`);
     const updated = await getAllSettings(true);
 

@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { listPricedPackages } from '@/lib/pricing-engine';
+import {
+  calculateDistanceAdjustedPricing,
+  listPricedPackages,
+  parseOptionalCoords,
+  resolveRouteDistanceSafely,
+} from '@/lib/pricing-engine';
 import { BOOKING_TYPES } from '@/lib/booking-rules';
 import { getCityCabAvailability } from '@/lib/availability';
+import { getSplitRules } from '@/lib/settings';
 
 export const dynamic = 'force-dynamic';
 
@@ -33,8 +39,11 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const rawType = searchParams.get('booking_type');
     const originCity = searchParams.get('origin_city')?.trim() || '';
+    const destinationCity = searchParams.get('destination_city')?.trim() || '';
     const pickupDate = searchParams.get('pickup_date');
     const pickupTime = searchParams.get('pickup_time');
+    const fromCoords = parseOptionalCoords(searchParams.get('from_lat'), searchParams.get('from_lon'));
+    const toCoords = parseOptionalCoords(searchParams.get('to_lat'), searchParams.get('to_lon'));
     const bookingType = rawType ? rawType.trim().toUpperCase() : null;
     if (bookingType && !BOOKING_TYPES.includes(bookingType as any)) {
       return NextResponse.json(
@@ -43,15 +52,19 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const packages = await listPricedPackages({
-      activeOnly: true,
-      bookingType,
-      skipUnpriceable: true,
-    });
-
-    const availMap = originCity
-      ? await getCityCabAvailability({ originCity, pickupDate, pickupTime })
-      : null;
+    const [packages, availMap, routeDistance, splitRules] = await Promise.all([
+      listPricedPackages({
+        activeOnly: true,
+        bookingType,
+        skipUnpriceable: true,
+      }),
+      originCity ? getCityCabAvailability({ originCity, pickupDate, pickupTime }) : Promise.resolve(null),
+      resolveRouteDistanceSafely(
+        { fromCoords, toCoords, originText: originCity, destinationText: destinationCity },
+        'Public Plans'
+      ),
+      getSplitRules(),
+    ]);
 
     const publicPlans = packages
       .map((p) => {
@@ -65,6 +78,13 @@ export async function GET(req: NextRequest) {
               is_available: false,
             })
           : null;
+        const effective = calculateDistanceAdjustedPricing(
+          p.pricing,
+          p.included_km,
+          p.cab_type.extra_km_charge,
+          routeDistance?.distance_km ?? null,
+          splitRules
+        );
         return {
           public_id: p.public_id,
           name: p.name,
@@ -86,10 +106,13 @@ export async function GET(req: NextRequest) {
             extra_km_charge: p.cab_type.extra_km_charge,
           },
           pricing: {
-            total_fair_pre_gst: p.pricing.totalFairPreGst,
-            gst_pct: p.pricing.gstPct,
-            gst_charge: p.pricing.gstCharge,
-            total_payment: p.pricing.totalPayment,
+            total_fair_pre_gst: effective.totalFairPreGst,
+            gst_pct: effective.gstPct,
+            gst_charge: effective.gstCharge,
+            total_payment: effective.totalPayment,
+            billed_km: effective.billedKm,
+            extra_km: effective.extraKm,
+            extra_km_charge_pre_gst: effective.extraKmChargePreGst,
           },
           ...(availability ? { availability } : {}),
         };
@@ -101,6 +124,8 @@ export async function GET(req: NextRequest) {
       success: true,
       booking_types: BOOKING_TYPES,
       ...(originCity ? { origin_city: originCity } : {}),
+      ...(destinationCity ? { destination_city: destinationCity } : {}),
+      ...(routeDistance ? { route_distance: routeDistance } : {}),
       plans: publicPlans,
     });
   } catch (err: any) {

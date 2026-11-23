@@ -263,6 +263,139 @@ export default function SettingsPage() {
           </div>
         </div>
 
+        {/* Daily Fuel Price API Auto-Sync */}
+        <div className="bg-white p-5 rounded-lg border border-slate-200 shadow-sm space-y-4 md:col-span-2">
+          <div className="flex items-center justify-between border-b pb-3 gap-3">
+            <div className="flex items-center space-x-2">
+              <Database className="h-5 w-5 text-emerald-600" />
+              <div>
+                <h3 className="font-bold text-slate-900">Daily Fuel Price API Auto-Sync (Cached Per Day)</h3>
+                <p className="text-xs text-slate-500">
+                  Auto-fetches Petrol, Diesel &amp; CNG prices once per IST day (max ~30 calls/month — fits free RapidAPI Basic tier or any free JSON endpoint)
+                </p>
+              </div>
+            </div>
+            <label className="inline-flex items-center space-x-2 text-xs font-semibold text-slate-700 cursor-pointer shrink-0">
+              <input
+                type="checkbox"
+                defaultChecked={Boolean(settings.fuel_price_api_config?.enabled)}
+                id="fuel_api_enabled"
+                className="rounded text-emerald-600"
+              />
+              <span>Enable Daily Auto-Sync</span>
+            </label>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="md:col-span-2">
+              <label className="block text-xs font-semibold text-slate-700">Endpoint URL (supports {'{state}'} and {'{city}'} placeholders)</label>
+              <input
+                type="text"
+                defaultValue={settings.fuel_price_api_config?.endpoint_url ?? ''}
+                id="fuel_api_endpoint_url"
+                placeholder="https://daily-petrol-diesel-lpg-cng-fuel-prices-in-india.p.rapidapi.com/v1/fuel-prices/today/india/{state}/{city}"
+                className="w-full mt-1 px-3 py-1.5 border rounded-md text-sm font-mono"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700">API Key (optional for keyless endpoints)</label>
+              <input
+                type="password"
+                autoComplete="off"
+                defaultValue={settings.fuel_price_api_config?.api_key ?? ''}
+                id="fuel_api_key"
+                placeholder="RapidAPI key or Bearer token"
+                className="w-full mt-1 px-3 py-1.5 border rounded-md text-sm font-mono"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700">RapidAPI Host Header (optional — for RapidAPI)</label>
+              <input
+                type="text"
+                defaultValue={settings.fuel_price_api_config?.api_host ?? ''}
+                id="fuel_api_host"
+                placeholder="daily-petrol-diesel-lpg-cng-fuel-prices-in-india.p.rapidapi.com"
+                className="w-full mt-1 px-3 py-1.5 border rounded-md text-sm font-mono"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700">State Slug</label>
+              <input
+                type="text"
+                defaultValue={settings.fuel_price_api_config?.state ?? 'bihar'}
+                id="fuel_api_state"
+                placeholder="bihar"
+                className="w-full mt-1 px-3 py-1.5 border rounded-md text-sm font-mono"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700">City / District Slug</label>
+              <input
+                type="text"
+                defaultValue={settings.fuel_price_api_config?.city ?? 'patna'}
+                id="fuel_api_city"
+                placeholder="patna"
+                className="w-full mt-1 px-3 py-1.5 border rounded-md text-sm font-mono"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
+            <div>
+              <label className="block text-[11px] font-semibold text-slate-600">Petrol JSON Path (optional auto-detect)</label>
+              <input
+                type="text"
+                defaultValue={settings.fuel_price_api_config?.petrol_path ?? ''}
+                id="fuel_api_petrol_path"
+                placeholder="e.g. fuel.petrol.retailPrice"
+                className="w-full mt-1 px-2.5 py-1.5 border rounded-md text-xs font-mono"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-semibold text-slate-600">Diesel JSON Path (optional auto-detect)</label>
+              <input
+                type="text"
+                defaultValue={settings.fuel_price_api_config?.diesel_path ?? ''}
+                id="fuel_api_diesel_path"
+                placeholder="e.g. fuel.diesel.retailPrice"
+                className="w-full mt-1 px-2.5 py-1.5 border rounded-md text-xs font-mono"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-semibold text-slate-600">CNG JSON Path (optional auto-detect)</label>
+              <input
+                type="text"
+                defaultValue={settings.fuel_price_api_config?.cng_path ?? ''}
+                id="fuel_api_cng_path"
+                placeholder="e.g. fuel.cng.retailPrice"
+                className="w-full mt-1 px-2.5 py-1.5 border rounded-md text-xs font-mono"
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end pt-2">
+            <button
+              onClick={() => {
+                handleSaveSetting('fuel_price_api_config', {
+                  enabled: (document.getElementById('fuel_api_enabled') as HTMLInputElement).checked,
+                  endpoint_url: (document.getElementById('fuel_api_endpoint_url') as HTMLInputElement).value.trim(),
+                  api_key: (document.getElementById('fuel_api_key') as HTMLInputElement).value.trim(),
+                  api_host: (document.getElementById('fuel_api_host') as HTMLInputElement).value.trim(),
+                  state: (document.getElementById('fuel_api_state') as HTMLInputElement).value.trim() || 'bihar',
+                  city: (document.getElementById('fuel_api_city') as HTMLInputElement).value.trim() || 'patna',
+                  petrol_path: (document.getElementById('fuel_api_petrol_path') as HTMLInputElement).value.trim(),
+                  diesel_path: (document.getElementById('fuel_api_diesel_path') as HTMLInputElement).value.trim(),
+                  cng_path: (document.getElementById('fuel_api_cng_path') as HTMLInputElement).value.trim(),
+                });
+              }}
+              disabled={savingKey === 'fuel_price_api_config'}
+              className="px-4 py-2 bg-emerald-600 text-white rounded-md text-xs font-semibold hover:bg-emerald-700"
+            >
+              Save Fuel Price API Settings
+            </button>
+          </div>
+        </div>
+
         {/* Driver Ratings & Quality Assurance Policy */}
         <div className="bg-white p-5 rounded-lg border border-slate-200 shadow-sm space-y-4 md:col-span-2">
           <div className="flex items-center space-x-2 border-b pb-3">

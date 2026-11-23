@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { calculatePackagePricing } from '../lib/pricing-engine';
+import { calculateDistanceAdjustedPricing, calculatePackagePricing } from '../lib/pricing-engine';
 import { SplitRules } from '../lib/fare-split';
 import { normalizePlanTripType, planDeductionForRide } from '../lib/driver-plans';
 
@@ -130,4 +130,59 @@ test('planDeductionForRide deducts pre-GST commission + tech fee + ride GST', ()
   assert.equal(normalizePlanTripType('oneway'), 'OUTSTATION');
   assert.equal(normalizePlanTripType('airport'), 'LOCAL');
   assert.equal(normalizePlanTripType('rental'), 'RENTAL');
+});
+
+test('calculateDistanceAdjustedPricing leaves fare unchanged when road distance <= included KM', () => {
+  const mini = calculatePackagePricing({
+    includedKm: 10,
+    includedHours: 1,
+    mileageKmpl: 10,
+    fuelPricePerUnit: 115,
+    perDayCharge: 1000,
+    baseBufferMinutes: 30,
+    driverTa: 0,
+    splitRules: EXCEL_RULES,
+  });
+
+  const within = calculateDistanceAdjustedPricing(mini, 10, 12, 8.5, EXCEL_RULES);
+  assert.equal(within.extraKm, 0);
+  assert.equal(within.extraKmChargePreGst, 0);
+  assert.equal(within.billedKm, 10);
+  assert.equal(within.roadDistanceKm, 8.5);
+  assert.equal(within.totalFairPreGst, 240);
+  assert.equal(within.totalPayment, 252);
+  assert.equal(within.adminCommission, 28.8);
+});
+
+test('calculateDistanceAdjustedPricing adds extra KM charge pre-GST and recalculates CA tax & commission split', () => {
+  const mini = calculatePackagePricing({
+    includedKm: 10,
+    includedHours: 1,
+    mileageKmpl: 10,
+    fuelPricePerUnit: 115,
+    perDayCharge: 1000,
+    baseBufferMinutes: 30,
+    driverTa: 0,
+    splitRules: EXCEL_RULES,
+  });
+
+  // Road distance 25 km vs 10 km included => 15 extra km * ₹12/km = ₹180 pre-GST
+  // Adjusted pre-GST Total Fair = 240 + 180 = 420
+  // Ride GST (5%) = 21.00 => Total Payment = 441.00
+  // Admin Comm (12% of 420) = 50.40
+  // GST on (50.40 + 10) @ 18% = 10.87
+  // Total Company Dues Z = 21 + 50.40 + 10 + 10.87 = 92.27
+  // Driver Gross Earnings = 441 - 92.27 = 348.73
+  const over = calculateDistanceAdjustedPricing(mini, 10, 12, 25, EXCEL_RULES);
+  assert.equal(over.extraKm, 15);
+  assert.equal(over.extraKmChargePreGst, 180);
+  assert.equal(over.billedKm, 25);
+  assert.equal(over.roadDistanceKm, 25);
+  assert.equal(over.totalFairPreGst, 420);
+  assert.equal(over.gstCharge, 21);
+  assert.equal(over.totalPayment, 441);
+  assert.equal(over.adminCommission, 50.4);
+  assert.equal(over.gstOnCommissionAndTechFee, 10.87);
+  assert.equal(over.totalCompanyDuesZ, 92.27);
+  assert.equal(over.driverGrossEarnings, 348.73);
 });

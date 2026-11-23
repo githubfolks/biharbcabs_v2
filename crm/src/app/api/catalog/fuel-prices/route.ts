@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth';
 import { CatalogError, listFuelPrices, updateFuelPrice } from '@/lib/pricing-engine';
+import { getFuelPriceApiConfig, getFuelPriceSyncState } from '@/lib/settings';
 
 export const dynamic = 'force-dynamic';
 
@@ -8,8 +9,18 @@ export async function GET(req: NextRequest) {
   const auth = await requireAdmin(req, 'catalog.view');
   if (auth instanceof NextResponse) return auth;
   try {
-    const fuelPrices = await listFuelPrices();
-    return NextResponse.json({ success: true, fuelPrices });
+    const [fuelPrices, syncState, apiCfg] = await Promise.all([
+      listFuelPrices(),
+      getFuelPriceSyncState(),
+      getFuelPriceApiConfig(),
+    ]);
+    return NextResponse.json({
+      success: true,
+      fuelPrices,
+      syncState,
+      apiConfigured: Boolean(apiCfg.endpoint_url),
+      autoSyncEnabled: Boolean(apiCfg.enabled && apiCfg.endpoint_url),
+    });
   } catch (err: any) {
     return NextResponse.json({ success: false, error: err.message }, { status: 500 });
   }

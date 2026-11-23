@@ -1,7 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth';
-import { CatalogError, createPackage, listPricedPackages } from '@/lib/pricing-engine';
+import {
+  CatalogError,
+  calculateDistanceAdjustedPricing,
+  createPackage,
+  listPricedPackages,
+  parseOptionalCoords,
+  resolveRouteDistanceSafely,
+} from '@/lib/pricing-engine';
 import { getCityCabAvailability } from '@/lib/availability';
+import { getSplitRules } from '@/lib/settings';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,17 +21,35 @@ export async function GET(req: NextRequest) {
     const activeOnly = searchParams.get('active') === 'true';
     const bookingType = searchParams.get('booking_type');
     const originCity = searchParams.get('origin_city')?.trim() || '';
+    const destinationCity = searchParams.get('destination_city')?.trim() || '';
     const pickupDate = searchParams.get('pickup_date');
     const pickupTime = searchParams.get('pickup_time');
+    const fromCoords = parseOptionalCoords(searchParams.get('from_lat'), searchParams.get('from_lon'));
+    const toCoords = parseOptionalCoords(searchParams.get('to_lat'), searchParams.get('to_lon'));
 
-    const packages = await listPricedPackages({ activeOnly, bookingType, skipUnpriceable: true });
+    const [packages, availMap, routeDistance, splitRules] = await Promise.all([
+      listPricedPackages({ activeOnly, bookingType, skipUnpriceable: true }),
+      originCity ? getCityCabAvailability({ originCity, pickupDate, pickupTime }) : Promise.resolve(null),
+      resolveRouteDistanceSafely(
+        { fromCoords, toCoords, originText: originCity, destinationText: destinationCity },
+        'Catalog Packages'
+      ),
+      getSplitRules(),
+    ]);
 
-    if (!originCity) {
-      return NextResponse.json({ success: true, packages });
-    }
-
-    const availMap = await getCityCabAvailability({ originCity, pickupDate, pickupTime });
     const enriched = packages.map((p) => {
+      const pricing = routeDistance
+        ? calculateDistanceAdjustedPricing(
+            p.pricing,
+            p.included_km,
+            p.cab_type.extra_km_charge,
+            routeDistance.distance_km,
+            splitRules
+          )
+        : p.pricing;
+
+      if (!availMap) return { ...p, pricing };
+
       const cat = p.cab_type.category.toUpperCase();
       const av = availMap[cat] ?? {
         city: originCity,
@@ -32,10 +58,16 @@ export async function GET(req: NextRequest) {
         available_cabs: 0,
         is_available: false,
       };
-      return { ...p, availability: av };
+      return { ...p, pricing, availability: av };
     });
 
-    return NextResponse.json({ success: true, origin_city: originCity, packages: enriched });
+    return NextResponse.json({
+      success: true,
+      ...(originCity ? { origin_city: originCity } : {}),
+      ...(destinationCity ? { destination_city: destinationCity } : {}),
+      ...(routeDistance ? { route_distance: routeDistance } : {}),
+      packages: enriched,
+    });
   } catch (err: any) {
     const status = err instanceof CatalogError ? err.status : 500;
     return NextResponse.json({ success: false, error: err.message }, { status });

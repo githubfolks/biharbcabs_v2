@@ -1,7 +1,9 @@
 import { query } from './db';
-import { getSplitRules } from './settings';
+import { getLocationIqConfig, getSplitRules } from './settings';
 import { FareSplit, SplitRules, round2, splitPreGstFare } from './fare-split';
 import { BOOKING_TYPES, CAB_CATEGORIES, FUEL_TYPES } from './booking-rules';
+import { DrivingDistanceResult, resolveDrivingDistance } from './locationiq';
+import { ensureDailyFuelPricesSynced } from './fuel-price-sync';
 
 /**
  * Dynamic CRM Pricing Engine (Single Source of Truth for CRM Operator UI, WhatsApp Bot & WordPress).
@@ -146,6 +148,132 @@ export function calculatePackagePricing(input: {
   };
 }
 
+export interface DistanceAdjustedPricing extends PackagePriceBreakdown {
+  roadDistanceKm: number;
+  billedKm: number;
+  extraKm: number;
+  extraKmChargePreGst: number;
+}
+
+/**
+ * Recalculate package fare when calculated road distance exceeds the package's included KM:
+ * adds `extraKm * cab.extra_km_charge` to pre-GST Total Fair, then recalculates GST,
+ * Total Payment, Admin Commission, and CA company share on the adjusted pre-GST fare.
+ */
+export function calculateDistanceAdjustedPricing(
+  basePricing: PackagePriceBreakdown,
+  includedKm: number,
+  extraKmRate: number,
+  roadDistanceKm: number | null | undefined,
+  splitRules: SplitRules
+): DistanceAdjustedPricing {
+  const roadKm = Number(roadDistanceKm);
+  if (!Number.isFinite(roadKm) || roadKm <= includedKm) {
+    return {
+      ...basePricing,
+      roadDistanceKm: Number.isFinite(roadKm) && roadKm > 0 ? round2(roadKm) : includedKm,
+      billedKm: includedKm,
+      extraKm: 0,
+      extraKmChargePreGst: 0,
+    };
+  }
+
+  const extraKm = round2(roadKm - includedKm);
+  const extraKmChargePreGst = round2(extraKm * Math.max(0, extraKmRate));
+  const adjustedPreGst = round2(basePricing.totalFairPreGst + extraKmChargePreGst);
+  const split = splitPreGstFare(adjustedPreGst, splitRules);
+
+  return {
+    ...basePricing,
+    totalFairPreGst: split.rideTaxableValue,
+    gstPct: splitRules.ride_fare_gst_pct,
+    gstCharge: split.rideGstAmount,
+    totalPayment: split.customerTotalFare,
+    commissionPct: splitRules.platform_commission_pct,
+    adminCommission: split.platformCommission,
+    techFeeAmount: split.techFeeAmount,
+    gstOnCommissionAndTechFee: split.gstAmount,
+    totalCompanyDuesZ: split.totalCompanyDuesZ,
+    driverGrossEarnings: split.driverGrossEarnings,
+    split,
+    roadDistanceKm: round2(roadKm),
+    billedKm: round2(roadKm),
+    extraKm,
+    extraKmChargePreGst,
+  };
+}
+
+export interface RouteDistanceInput {
+  fromCoords?: { lat: number; lon: number } | null;
+  toCoords?: { lat: number; lon: number } | null;
+  originText?: string | null;
+  destinationText?: string | null;
+}
+
+/** Parse an optional coordinate pair from query params or JSON body (returns null if incomplete or invalid). */
+export function parseOptionalCoords(lat: unknown, lon: unknown): { lat: number; lon: number } | null {
+  if (lat === undefined || lat === null || String(lat).trim() === '') return null;
+  if (lon === undefined || lon === null || String(lon).trim() === '') return null;
+  const la = Number(lat);
+  const lo = Number(lon);
+  if (!Number.isFinite(la) || !Number.isFinite(lo)) return null;
+  return { lat: la, lon: lo };
+}
+
+/**
+ * Single canonical road-distance resolver for all fare calculations across CRM, Public API, and WhatsApp Bot.
+ * Uses LocationIQ with PostgreSQL caching; returns null if LocationIQ is unconfigured or unreachable
+ * (never fabricates a distance).
+ */
+export async function resolveRouteDistanceSafely(
+  input: RouteDistanceInput,
+  contextLabel = 'Pricing'
+): Promise<DrivingDistanceResult | null> {
+  const hasCoords = Boolean(input.fromCoords && input.toCoords);
+  const origin = String(input.originText || '').trim();
+  const destination = String(input.destinationText || '').trim();
+  if (!hasCoords && (!origin || !destination)) return null;
+
+  try {
+    const locCfg = await getLocationIqConfig();
+    if (!locCfg.api_key) return null;
+    return await resolveDrivingDistance({
+      fromCoords: input.fromCoords ?? null,
+      toCoords: input.toCoords ?? null,
+      originText: origin || null,
+      destinationText: destination || null,
+    });
+  } catch (err: any) {
+    console.warn(`[${contextLabel}] Road distance resolution skipped, using base package KM:`, err?.message);
+    return null;
+  }
+}
+
+/**
+ * Price a single package for a given route using the canonical road-distance calculation.
+ */
+export async function pricePackageForRoute(
+  pkg: PricedPackage,
+  route: RouteDistanceInput,
+  contextLabel = 'Pricing'
+): Promise<{
+  routeDistance: DrivingDistanceResult | null;
+  pricing: DistanceAdjustedPricing;
+}> {
+  const [routeDistance, splitRules] = await Promise.all([
+    resolveRouteDistanceSafely(route, contextLabel),
+    getSplitRules(),
+  ]);
+  const pricing = calculateDistanceAdjustedPricing(
+    pkg.pricing,
+    pkg.included_km,
+    pkg.cab_type.extra_km_charge,
+    routeDistance?.distance_km ?? null,
+    splitRules
+  );
+  return { routeDistance, pricing };
+}
+
 function mapCab(r: any): CabTypeRow {
   return {
     id: Number(r.id),
@@ -168,6 +296,7 @@ function mapCab(r: any): CabTypeRow {
 }
 
 export async function listFuelPrices(): Promise<FuelPriceRow[]> {
+  await ensureDailyFuelPricesSynced();
   const res = await query(`SELECT * FROM crm_fuel_prices ORDER BY fuel_type ASC`);
   return res.rows.map((r) => ({
     fuel_type: String(r.fuel_type),
@@ -473,6 +602,7 @@ export async function listPricedPackages(opts?: {
   bookingType?: string | null;
   skipUnpriceable?: boolean;
 }): Promise<PricedPackage[]> {
+  await ensureDailyFuelPricesSynced();
   const where: string[] = [];
   const params: any[] = [];
 
@@ -490,6 +620,7 @@ export async function listPricedPackages(opts?: {
 }
 
 export async function getPricedPackageById(id: number): Promise<PricedPackage | null> {
+  await ensureDailyFuelPricesSynced();
   const res = await query(`${PACKAGE_SELECT} WHERE p.id = $1`, [id]);
   if (res.rows.length === 0) return null;
   const list = await hydratePricedPackages(res.rows, false);
@@ -497,6 +628,7 @@ export async function getPricedPackageById(id: number): Promise<PricedPackage | 
 }
 
 export async function getPricedPackageByPublicId(publicId: string): Promise<PricedPackage | null> {
+  await ensureDailyFuelPricesSynced();
   const res = await query(`${PACKAGE_SELECT} WHERE p.public_id = $1 AND p.is_active = true AND c.is_active = true`, [publicId]);
   if (res.rows.length === 0) return null;
   const list = await hydratePricedPackages(res.rows, false);

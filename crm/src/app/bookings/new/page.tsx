@@ -19,6 +19,21 @@ interface DistanceInfo {
   distance_km: number;
   duration_minutes: number;
   duration_text: string;
+  cached?: boolean;
+}
+
+interface AdjustedPricing {
+  totalFairPreGst: number;
+  gstPct: number;
+  gstCharge: number;
+  totalPayment: number;
+  commissionPct: number;
+  adminCommission: number;
+  driverGrossEarnings: number;
+  roadDistanceKm: number;
+  billedKm: number;
+  extraKm: number;
+  extraKmChargePreGst: number;
 }
 
 function PlaceAutocompleteInput({
@@ -153,8 +168,10 @@ export default function OperatorNewBookingPage() {
   const [sourceCoords, setSourceCoords] = useState<{ lat: number; lon: number } | null>(null);
   const [destCoords, setDestCoords] = useState<{ lat: number; lon: number } | null>(null);
   const [distanceInfo, setDistanceInfo] = useState<DistanceInfo | null>(null);
+  const [adjustedPricing, setAdjustedPricing] = useState<AdjustedPricing | null>(null);
   const [distanceLoading, setDistanceLoading] = useState(false);
   const [distanceError, setDistanceError] = useState<string | null>(null);
+  const lastManualRouteRef = useRef<{ origin: string; destination: string } | null>(null);
 
   const [form, setForm] = useState({
     customer_name: '',
@@ -214,46 +231,88 @@ export default function OperatorNewBookingPage() {
     };
   }, [form.origin_city, form.pickup_date, form.pickup_time]);
 
-  // Automatically calculate road distance via LocationIQ when both Source & Destination are selected
-  useEffect(() => {
-    if (!sourceCoords || !destCoords) {
-      setDistanceInfo(null);
-      setDistanceError(null);
-      return;
-    }
-    let cancelled = false;
+  async function runDistanceQuery(params: URLSearchParams) {
     setDistanceLoading(true);
     setDistanceError(null);
-    const params = new URLSearchParams({
-      from_lat: String(sourceCoords.lat),
-      from_lon: String(sourceCoords.lon),
-      to_lat: String(destCoords.lat),
-      to_lon: String(destCoords.lon),
-    });
-    fetch(`/api/location/distance?${params.toString()}`)
-      .then((res) => res.json())
-      .then((data) => {
-        if (cancelled) return;
-        if (data.success && data.route) {
-          setDistanceInfo(data.route);
-        } else {
-          setDistanceInfo(null);
-          setDistanceError(data.error || 'Could not calculate road distance');
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setDistanceInfo(null);
-          setDistanceError('Could not reach distance calculation service');
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setDistanceLoading(false);
+    try {
+      const res = await fetch(`/api/location/distance?${params.toString()}`);
+      const data = await res.json();
+      if (data.success && data.route) {
+        setDistanceInfo(data.route);
+        setAdjustedPricing(data.adjusted_pricing || null);
+      } else {
+        setDistanceInfo(null);
+        setAdjustedPricing(null);
+        setDistanceError(data.error || 'Could not calculate road distance');
+      }
+    } catch {
+      setDistanceInfo(null);
+      setAdjustedPricing(null);
+      setDistanceError('Could not reach distance calculation service');
+    } finally {
+      setDistanceLoading(false);
+    }
+  }
+
+  // Automatically calculate road distance & adjusted fare via LocationIQ when both Source & Destination coords are selected,
+  // or refresh adjusted fare when the selected package changes.
+  useEffect(() => {
+    if (sourceCoords && destCoords) {
+      lastManualRouteRef.current = null;
+      const params = new URLSearchParams({
+        from_lat: String(sourceCoords.lat),
+        from_lon: String(sourceCoords.lon),
+        to_lat: String(destCoords.lat),
+        to_lon: String(destCoords.lon),
       });
-    return () => {
-      cancelled = true;
-    };
-  }, [sourceCoords, destCoords]);
+      if (form.origin_city.trim()) params.set('origin', form.origin_city.trim());
+      if (form.destination_city.trim()) params.set('destination', form.destination_city.trim());
+      if (selectedPackageId) params.set('package_id', selectedPackageId);
+      runDistanceQuery(params);
+      return;
+    }
+
+    if (lastManualRouteRef.current && selectedPackageId) {
+      const params = new URLSearchParams({
+        origin: lastManualRouteRef.current.origin,
+        destination: lastManualRouteRef.current.destination,
+        package_id: selectedPackageId,
+      });
+      runDistanceQuery(params);
+      return;
+    }
+
+    if (!lastManualRouteRef.current) {
+      setDistanceInfo(null);
+      setAdjustedPricing(null);
+      setDistanceError(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sourceCoords, destCoords, selectedPackageId]);
+
+  function handleCalculateManualDistance() {
+    const origin = (form.origin_city || sourceQuery).trim();
+    const destination = (form.destination_city || destQuery).trim();
+    if (!origin || !destination) {
+      setDistanceError('Enter both Origin City and Destination City to calculate distance.');
+      return;
+    }
+    const params = new URLSearchParams();
+    if (sourceCoords && destCoords) {
+      params.set('from_lat', String(sourceCoords.lat));
+      params.set('from_lon', String(sourceCoords.lon));
+      params.set('to_lat', String(destCoords.lat));
+      params.set('to_lon', String(destCoords.lon));
+      params.set('origin', origin);
+      params.set('destination', destination);
+    } else {
+      lastManualRouteRef.current = { origin, destination };
+      params.set('origin', origin);
+      params.set('destination', destination);
+    }
+    if (selectedPackageId) params.set('package_id', selectedPackageId);
+    runDistanceQuery(params);
+  }
 
   const filteredPackages = useMemo(
     () =>
@@ -293,6 +352,10 @@ export default function OperatorNewBookingPage() {
           ...form,
           package_id: selectedPkg.id,
           distance_km: distanceInfo?.distance_km ?? selectedPkg.included_km,
+          from_lat: sourceCoords?.lat ?? null,
+          from_lon: sourceCoords?.lon ?? null,
+          to_lat: destCoords?.lat ?? null,
+          to_lon: destCoords?.lon ?? null,
         }),
       });
       const data = await res.json();
@@ -436,22 +499,49 @@ export default function OperatorNewBookingPage() {
             </div>
           )}
 
-          {selectedPkg && (
-            <div className="bg-slate-50 border border-slate-200 rounded-lg p-3.5 text-xs grid grid-cols-2 md:grid-cols-5 gap-3 font-mono">
-              <div><span className="text-slate-500 block">Total Fair (Pre-GST)</span><strong>₹{selectedPkg.pricing.totalFairPreGst.toFixed(2)}</strong></div>
-              <div><span className="text-slate-500 block">GST ({selectedPkg.pricing.gstPct}%)</span><strong>₹{selectedPkg.pricing.gstCharge.toFixed(2)}</strong></div>
-              <div><span className="text-slate-500 block">Total Payable</span><strong className="text-orange-700">₹{selectedPkg.pricing.totalPayment.toFixed(2)}</strong></div>
-              <div><span className="text-slate-500 block">Admin Comm. ({selectedPkg.pricing.commissionPct}%)</span><strong>₹{selectedPkg.pricing.adminCommission.toFixed(2)}</strong></div>
-              <div><span className="text-slate-500 block">Driver Payout</span><strong className="text-emerald-700">₹{selectedPkg.pricing.driverGrossEarnings.toFixed(2)}</strong></div>
-            </div>
-          )}
+          {selectedPkg && (() => {
+            const livePricing = adjustedPricing ?? selectedPkg.pricing;
+            const hasExtraKm = Boolean(adjustedPricing && adjustedPricing.extraKm > 0);
+            return (
+              <div className="bg-slate-50 border border-slate-200 rounded-lg p-3.5 text-xs space-y-2.5">
+                {hasExtraKm && adjustedPricing && (
+                  <div className="bg-amber-50 border border-amber-200 text-amber-900 rounded-md px-3 py-2 font-medium flex flex-wrap items-center justify-between gap-2">
+                    <span>
+                      Distance-adjusted fare: <strong>{adjustedPricing.roadDistanceKm} km</strong> road distance exceeds package {selectedPkg.included_km} km by <strong>{adjustedPricing.extraKm} km</strong>
+                    </span>
+                    <span className="font-mono font-bold">
+                      +₹{adjustedPricing.extraKmChargePreGst.toFixed(2)} extra KM (pre-GST)
+                    </span>
+                  </div>
+                )}
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-3 font-mono">
+                  <div><span className="text-slate-500 block">Total Fair (Pre-GST)</span><strong>₹{livePricing.totalFairPreGst.toFixed(2)}</strong></div>
+                  <div><span className="text-slate-500 block">GST ({livePricing.gstPct}%)</span><strong>₹{livePricing.gstCharge.toFixed(2)}</strong></div>
+                  <div><span className="text-slate-500 block">Total Payable</span><strong className="text-orange-700">₹{livePricing.totalPayment.toFixed(2)}</strong></div>
+                  <div><span className="text-slate-500 block">Admin Comm. ({livePricing.commissionPct}%)</span><strong>₹{livePricing.adminCommission.toFixed(2)}</strong></div>
+                  <div><span className="text-slate-500 block">Driver Payout</span><strong className="text-emerald-700">₹{livePricing.driverGrossEarnings.toFixed(2)}</strong></div>
+                </div>
+              </div>
+            );
+          })()}
         </div>
 
         {/* Step 2: Source, Destination & Live Distance */}
         <div className="space-y-3 border-t pt-5">
-          <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center">
-            <Navigation className="h-4 w-4 mr-2 text-orange-600" /> 2. Route (Source &amp; Destination Auto-Fill)
-          </h2>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center">
+              <Navigation className="h-4 w-4 mr-2 text-orange-600" /> 2. Route (Source &amp; Destination Auto-Fill)
+            </h2>
+            <button
+              type="button"
+              onClick={handleCalculateManualDistance}
+              disabled={distanceLoading || (!form.origin_city.trim() && !sourceQuery.trim()) || (!form.destination_city.trim() && !destQuery.trim())}
+              className="inline-flex items-center px-3 py-1.5 rounded-md text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40 transition"
+            >
+              {distanceLoading ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Navigation className="h-3.5 w-3.5 mr-1.5" />}
+              Calculate Distance
+            </button>
+          </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <PlaceAutocompleteInput
@@ -510,10 +600,14 @@ export default function OperatorNewBookingPage() {
                   <div className="flex flex-wrap items-center gap-4 text-blue-900 font-mono">
                     <span><strong>Road Distance:</strong> {distanceInfo.distance_km} km</span>
                     <span><strong>Est. Drive Time:</strong> {distanceInfo.duration_text}</span>
+                    {distanceInfo.cached && <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-700">cached</span>}
                   </div>
                   {selectedPkg && estimatedExtraKm > 0 && (
                     <span className="text-amber-800 font-semibold">
-                      Exceeds package {selectedPkg.included_km} km by ~{estimatedExtraKm} km (Extra ₹{selectedPkg.cab_type.extra_km_charge}/km at final billing)
+                      Exceeds package {selectedPkg.included_km} km by {adjustedPricing?.extraKm ?? estimatedExtraKm} km
+                      {adjustedPricing
+                        ? ` → Adjusted Total Payable: ₹${adjustedPricing.totalPayment.toLocaleString('en-IN')}`
+                        : ` (Extra ₹${selectedPkg.cab_type.extra_km_charge}/km)`}
                     </span>
                   )}
                 </>

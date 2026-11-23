@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
-import { getPricedPackageByPublicId, CatalogError } from '@/lib/pricing-engine';
+import {
+  getPricedPackageByPublicId,
+  parseOptionalCoords,
+  pricePackageForRoute,
+  CatalogError,
+} from '@/lib/pricing-engine';
 import { checkCategoryAvailability } from '@/lib/availability';
 import { insertWithBookingCode } from '@/lib/booking-code';
 import { broadcastRideToDrivers } from '@/lib/dispatch-engine';
@@ -57,6 +62,8 @@ export async function POST(req: NextRequest) {
     const pickupDate = String(body.pickup_date || '').trim();
     const pickupTime = String(body.pickup_time || '').trim();
     const specialNotes = body.special_notes ? String(body.special_notes).trim().slice(0, 1000) : null;
+    const fromCoords = parseOptionalCoords(body.from_lat, body.from_lon);
+    const toCoords = parseOptionalCoords(body.to_lat, body.to_lon);
 
     if (!UUID_RE.test(packagePublicId)) {
       return NextResponse.json({ success: false, error: 'Invalid package_public_id.' }, { status: 400 });
@@ -92,7 +99,19 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const split = pkg.pricing.split;
+    const { routeDistance, pricing: adjusted } = await pricePackageForRoute(
+      pkg,
+      {
+        fromCoords,
+        toCoords,
+        originText: originCity,
+        destinationText: destinationCity,
+      },
+      'Public Booking'
+    );
+    const billedKm = adjusted.billedKm;
+    const split = adjusted.split;
+
     if (!(split.driverGrossEarnings > 0)) {
       return NextResponse.json({ success: false, error: 'Selected plan pricing is not available right now.' }, { status: 409 });
     }
@@ -146,7 +165,7 @@ export async function POST(req: NextRequest) {
           pickupDate,
           pickupTime,
           pkg.cab_type.code,
-          pkg.included_km,
+          billedKm,
           split.customerTotalFare,
           split.driverGrossEarnings,
           split.totalCompanyDuesZ,
@@ -193,6 +212,8 @@ export async function POST(req: NextRequest) {
         plan_name: pkg.name,
         cab_name: pkg.cab_type.display_name,
         total_payment: split.customerTotalFare,
+        billed_km: billedKm,
+        route_distance: routeDistance,
         gst_pct: pkg.pricing.gstPct,
         message: 'Booking confirmed. WhatsApp confirmation and driver assignment are in progress.',
       },
