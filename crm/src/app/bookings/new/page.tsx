@@ -139,7 +139,8 @@ function PlaceAutocompleteInput({
 export default function OperatorNewBookingPage() {
   const router = useRouter();
   const [packages, setPackages] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [refreshingAvailability, setRefreshingAvailability] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [created, setCreated] = useState<{ bookingCode: string; offersCreated: number } | null>(null);
@@ -172,7 +173,7 @@ export default function OperatorNewBookingPage() {
   useEffect(() => {
     let cancelled = false;
     const timer = setTimeout(() => {
-      setLoading(true);
+      setRefreshingAvailability(true);
       const sp = new URLSearchParams({ active: 'true' });
       if (form.origin_city.trim()) sp.set('origin_city', form.origin_city.trim());
       if (form.pickup_date) sp.set('pickup_date', form.pickup_date);
@@ -200,9 +201,12 @@ export default function OperatorNewBookingPage() {
           if (!cancelled) setError('Could not load booking packages');
         })
         .finally(() => {
-          if (!cancelled) setLoading(false);
+          if (!cancelled) {
+            setInitialLoading(false);
+            setRefreshingAvailability(false);
+          }
         });
-    }, 300);
+    }, 400);
 
     return () => {
       cancelled = true;
@@ -339,9 +343,16 @@ export default function OperatorNewBookingPage() {
       <form onSubmit={handleSubmit} className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-6">
         {/* Step 1: Booking Type & Package Selection */}
         <div className="space-y-3">
-          <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center">
-            <Car className="h-4 w-4 mr-2 text-orange-600" /> 1. Select Booking Type &amp; Cab Package
-          </h2>
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center">
+              <Car className="h-4 w-4 mr-2 text-orange-600" /> 1. Select Booking Type &amp; Cab Package
+            </h2>
+            {refreshingAvailability && !initialLoading && (
+              <span className="inline-flex items-center text-xs text-slate-500">
+                <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin text-orange-500" /> Checking city availability...
+              </span>
+            )}
+          </div>
 
           <div className="flex flex-wrap gap-2">
             {BOOKING_TYPES.map((bt) => (
@@ -363,7 +374,7 @@ export default function OperatorNewBookingPage() {
             ))}
           </div>
 
-          {loading ? (
+          {initialLoading ? (
             <div className="text-sm text-slate-500 py-4">Loading configured packages...</div>
           ) : filteredPackages.length === 0 ? (
             <div className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-3">
@@ -451,7 +462,7 @@ export default function OperatorNewBookingPage() {
               onChangeText={(val) => {
                 setSourceQuery(val);
                 setSourceCoords(null);
-                setForm((prev) => ({ ...prev, origin_city: val, pickup_address: val }));
+                setForm((prev) => ({ ...prev, pickup_address: val }));
               }}
               onSelectPlace={(place) => {
                 setSourceQuery(place.display_name);
