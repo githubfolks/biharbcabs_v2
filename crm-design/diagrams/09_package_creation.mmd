@@ -5,7 +5,7 @@ flowchart TB
         direction LR
         FUEL["Fuel Prices\ncrm_fuel_prices\nPETROL / DIESEL / CNG\n(Auto-synced daily, > 0)"]
         CAB["Cab Types\ncrm_cab_types\nMileage, PDCRG, Buffer\nExtra KM, PHEXCHG, TA"]
-        RULES["Tax & Split Rules\ncrm_settings\n5% Ride GST, 12% Comm\nRs 10 Fee, 18% GST"]
+        RULES["Tax & Split Rules\ncrm_settings\n5% Ride GST, 10% Comm\nRs 10 Platform Charge"]
         FUEL ~~~ CAB ~~~ RULES
     end
 
@@ -24,7 +24,7 @@ flowchart TB
         direction LR
         DB[("PostgreSQL\nINSERT crm_packages\n(UUID public_id)")]
         CALC["pricing-engine.ts\nFuel = (KM / CML) x FP\nTime = (PDCRG/12) x (Hrs+Buf)"]
-        TOTAL["Pre-GST Total Fair\n+ 5% Ride GST\n= Total Payable"]
+        TOTAL["Pre-GST Total Fair\n+ 5% Ride GST + Rs 10\n= Final Payment"]
         DB --> CALC --> TOTAL
     end
 

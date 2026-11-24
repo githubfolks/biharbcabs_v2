@@ -17,11 +17,11 @@ flowchart TB
         CHK -- "No" --> KEEP --> ADJ
     end
 
-    subgraph CA_SPLIT ["3. CA Tax & Commission Split (on Pre-GST Fair X)"]
+    subgraph CA_SPLIT ["3. Tax, Platform Charge & 10% Commission Split (on Total Fair X)"]
         direction LR
-        CUST["Customer Payable\nRide GST (5%) = 5% of X\nTotal Payable = X + Ride GST"]
-        COMP["Company Dues (Z)\nAdmin Comm = 12% of X\nTech Fee = Rs 10\nComm GST = 18% of (Comm+10)\nZ = Ride GST + Comm + Fee + CGST"]
-        DRV["Driver Gross Earnings\nTotal Payable - Z"]
+        CUST["Customer Final Payment\nRide GST (5%) = 5% of X\nPlatform Charge = Rs 10\nFinal = X + Ride GST + Rs 10"]
+        COMP["Company Dues (Z)\nAdmin Comm = 10% of X\n(Deducted from Driver)\nZ = Comm + Ride GST + Rs 10"]
+        DRV["Driver Final Payment\nTotal Fair (X) - Admin Comm\n(e.g. 3000 - 300 = Rs 2700)"]
         CUST --> COMP --> DRV
     end
 

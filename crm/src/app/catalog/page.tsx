@@ -358,15 +358,17 @@ export default function CatalogPage() {
                   <th className="px-4 py-3">Plan Limits</th>
                   <th className="px-4 py-3">Total Fair (Pre-GST)</th>
                   <th className="px-4 py-3">GST</th>
-                  <th className="px-4 py-3">Total Payment</th>
+                  <th className="px-4 py-3">Platform Charge</th>
+                  <th className="px-4 py-3">Final Payment</th>
                   <th className="px-4 py-3">Admin Comm.</th>
+                  <th className="px-4 py-3">Driver Payment</th>
                   <th className="px-4 py-3">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200">
                 {packages.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="px-4 py-8 text-center text-slate-400">
+                    <td colSpan={10} className="px-4 py-8 text-center text-slate-400">
                       No packages configured yet. Create packages above to publish them to CRM Operators, WhatsApp &amp; WordPress.
                     </td>
                   </tr>
@@ -384,8 +386,10 @@ export default function CatalogPage() {
                       <td className="px-4 py-3 font-mono text-xs">{p.included_km} km / {p.included_hours} hr</td>
                       <td className="px-4 py-3 font-mono">₹{p.pricing.totalFairPreGst.toFixed(2)}</td>
                       <td className="px-4 py-3 font-mono text-xs">₹{p.pricing.gstCharge.toFixed(2)} ({p.pricing.gstPct}%)</td>
+                      <td className="px-4 py-3 font-mono text-xs">₹{Number(p.pricing.techFeeAmount || 0).toFixed(2)}</td>
                       <td className="px-4 py-3 font-mono font-bold text-slate-900">₹{p.pricing.totalPayment.toFixed(2)}</td>
-                      <td className="px-4 py-3 font-mono text-xs text-emerald-700">₹{p.pricing.adminCommission.toFixed(2)} ({p.pricing.commissionPct}%)</td>
+                      <td className="px-4 py-3 font-mono text-xs text-indigo-700">₹{p.pricing.adminCommission.toFixed(2)} ({p.pricing.commissionPct}%)</td>
+                      <td className="px-4 py-3 font-mono text-xs font-semibold text-emerald-700">₹{p.pricing.driverGrossEarnings.toFixed(2)}</td>
                       <td className="px-4 py-3">
                         <button
                           disabled={!canManageCatalog}

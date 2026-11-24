@@ -250,8 +250,8 @@ export async function getRevenueProtectionPolicy(): Promise<RevenueProtectionPol
   const windowMins = Number(raw.payment_link_window_minutes);
 
   return {
-    platform_commission_pct: Number(raw.platform_commission_pct ?? raw.platform_facilitation_percentage ?? 12.0),
-    gst_on_commission_pct: Number(raw.gst_on_commission_pct ?? raw.statutory_gst_percentage ?? 18.0),
+    platform_commission_pct: Number(raw.platform_commission_pct ?? raw.platform_facilitation_percentage ?? 10.0),
+    gst_on_commission_pct: Number(raw.gst_on_commission_pct ?? raw.statutory_gst_percentage ?? 0.0),
     tech_fee_amount: Number(raw.tech_fee_amount ?? raw.flat_tech_fee ?? 10.0),
     customer_convenience_fee: Number(raw.customer_convenience_fee ?? 39.0),
     night_surcharge: Number(raw.night_surcharge ?? 200.0),

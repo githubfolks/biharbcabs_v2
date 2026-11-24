@@ -130,12 +130,11 @@ export async function completeTripAndSettle(
     const extraSubtotal = round2(extraKmCharges + extraHourCharges);
     const extraRideGst = extraSubtotal > 0 ? gstOnTop(extraSubtotal, rideGstPct) : 0;
     const extraCommission = extraSubtotal > 0 ? round2((extraSubtotal * commPct) / 100) : 0;
-    const extraCommissionGst = extraCommission > 0 ? gstOnTop(extraCommission, splitRules.gst_on_commission_pct) : 0;
 
     const totalCustomerPayable = round2(baseFare + extraSubtotal + extraRideGst + tollParking);
 
-    // Recalculate BiharCabs' total share with extra charges (CA rules: ride GST + commission + tech fee + GST on comm+fee)
-    const commission = round2(bookedShare + extraRideGst + extraCommission + extraCommissionGst);
+    // Company dues include booked share (Ride GST + Admin Comm + Platform Charge) + extra Ride GST + extra Admin Comm
+    const commission = round2(bookedShare + extraRideGst + extraCommission);
     const balanceCustomerDue = Math.max(0, round2(totalCustomerPayable - advancePaid - cashCollected));
 
     const revPolicy = await getRevenueProtectionPolicy();
@@ -309,9 +308,9 @@ export async function completeTripAndSettle(
     if (extraHourCharges > 0) lineItems.push({ description: 'Extra Hours Charges', amount: extraHourCharges });
     if (tollParking > 0) lineItems.push({ description: 'Toll & Parking (Actuals)', amount: tollParking });
 
-    // BiharCabs' sole customer invoice: line amounts include GST; GST on the ride (fare + extras) is shown
-    // separately. Tolls/parking are passed through at actuals without GST.
-    const invoiceTax = gstIncluded(totalCustomerPayable - tollParking, splitRules.ride_fare_gst_pct);
+    // BiharCabs' sole customer invoice: Ride GST applies on ride fare + extras (excludes pass-through tolls & flat platform charge).
+    const platformCharge = Number(b.tech_fee_amount || 0);
+    const invoiceTax = gstIncluded(Math.max(0, totalCustomerPayable - tollParking - platformCharge), rideGstPct);
     // Place of supply and CGST/SGST or IGST (Rule 46; Section 12(9) IGST Act). When it cannot be known
     // (unlisted pickup city, malformed customer GSTIN, BiharCabs' state not configured), the trip is still
     // settled and the invoice numbered; the invoice waits for staff to choose the state.

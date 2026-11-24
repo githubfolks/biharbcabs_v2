@@ -26,6 +26,7 @@ interface AdjustedPricing {
   totalFairPreGst: number;
   gstPct: number;
   gstCharge: number;
+  techFeeAmount: number;
   totalPayment: number;
   commissionPct: number;
   adminCommission: number;
@@ -472,7 +473,7 @@ export default function OperatorNewBookingPage() {
                       </div>
                       <div className="text-right shrink-0">
                         <div className="font-bold text-orange-700 font-mono">₹{p.pricing.totalPayment.toLocaleString('en-IN')}</div>
-                        <div className="text-[10px] text-slate-500">incl. {p.pricing.gstPct}% GST</div>
+                        <div className="text-[10px] text-slate-500">incl. {p.pricing.gstPct}% GST + ₹{Number(p.pricing.techFeeAmount || 0)} fee</div>
                       </div>
                     </div>
                     <div className="text-[11px] text-slate-500 mt-2 font-mono">
@@ -514,12 +515,13 @@ export default function OperatorNewBookingPage() {
                     </span>
                   </div>
                 )}
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-3 font-mono">
+                <div className="grid grid-cols-2 md:grid-cols-6 gap-3 font-mono">
                   <div><span className="text-slate-500 block">Total Fair (Pre-GST)</span><strong>₹{livePricing.totalFairPreGst.toFixed(2)}</strong></div>
                   <div><span className="text-slate-500 block">GST ({livePricing.gstPct}%)</span><strong>₹{livePricing.gstCharge.toFixed(2)}</strong></div>
-                  <div><span className="text-slate-500 block">Total Payable</span><strong className="text-orange-700">₹{livePricing.totalPayment.toFixed(2)}</strong></div>
+                  <div><span className="text-slate-500 block">Platform Charge</span><strong>₹{Number(livePricing.techFeeAmount || 0).toFixed(2)}</strong></div>
+                  <div><span className="text-slate-500 block">Final Payment</span><strong className="text-orange-700">₹{livePricing.totalPayment.toFixed(2)}</strong></div>
                   <div><span className="text-slate-500 block">Admin Comm. ({livePricing.commissionPct}%)</span><strong>₹{livePricing.adminCommission.toFixed(2)}</strong></div>
-                  <div><span className="text-slate-500 block">Driver Payout</span><strong className="text-emerald-700">₹{livePricing.driverGrossEarnings.toFixed(2)}</strong></div>
+                  <div><span className="text-slate-500 block">Driver Payment</span><strong className="text-emerald-700">₹{livePricing.driverGrossEarnings.toFixed(2)}</strong></div>
                 </div>
               </div>
             );

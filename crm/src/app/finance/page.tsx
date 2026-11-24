@@ -198,22 +198,24 @@ export default function FinancePage() {
             ₹{Number(summary.totalGstStatutory).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
           </div>
           <p className="text-[10px] text-blue-600/80 mt-1">
-            5% ride GST (Sec 9(5)) ₹{Number(summary.totalRideGst).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-            {' '}+ 18% on commission &amp; fee ₹{Number(summary.totalCommissionGst).toLocaleString('en-IN', { minimumFractionDigits: 2 })}.
-            Completed rides.
+            5% ride GST ₹{Number(summary.totalRideGst).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+            {Number(summary.totalCommissionGst) > 0
+              ? ` + commission GST ₹${Number(summary.totalCommissionGst).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`
+              : ''}
+            . Completed rides.
           </p>
         </div>
 
-        {/* Card 3: Tech Fee */}
+        {/* Card 3: Platform Charge */}
         <div className="min-w-0 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
           <div className="flex items-center justify-between text-slate-500 text-xs font-semibold uppercase">
-            <span>Tech Fees (₹10)</span>
+            <span>Platform Charge (₹10)</span>
             <ShieldCheck className="h-4 w-4 text-indigo-600" />
           </div>
           <div className="mt-2 text-xl font-bold font-mono tabular-nums [overflow-wrap:anywhere] text-slate-900">
             ₹{Number(summary.totalTechFees).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
           </div>
-          <p className="text-[10px] text-slate-400 mt-1">Platform software fee on completed rides</p>
+          <p className="text-[10px] text-slate-400 mt-1">Platform charge collected on completed rides</p>
         </div>
 
         {/* Card 4: Security Reserve Float */}

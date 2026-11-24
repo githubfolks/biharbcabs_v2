@@ -65,7 +65,7 @@ export default function SettingsPage() {
     advance_token_percentage: 10.0,
     min_advance_amount: 200.0,
     platform_commission_pct: 10.0,
-    gst_on_commission_pct: 18.0,
+    gst_on_commission_pct: 0.0,
     tech_fee_amount: 10.0,
     customer_convenience_fee: 39.0,
     night_surcharge: 200.0,
@@ -509,8 +509,8 @@ export default function SettingsPage() {
           <div className="flex items-center space-x-2 border-b pb-3">
             <ShieldCheck className="h-5 w-5 text-indigo-600" />
             <div>
-              <h3 className="font-bold text-slate-900">Revenue Protection, Take-Rate &amp; Dues Recovery Policy</h3>
-              <p className="text-xs text-slate-500">Configure advance booking tokens, 18% GST splits, customer convenience fees, dynamic credit limits, rolling reserves &amp; streak bonuses</p>
+              <h3 className="font-bold text-slate-900">Revenue Protection, Commission &amp; Platform Charge Policy</h3>
+              <p className="text-xs text-slate-500">Configure driver commission %, platform charge added to customer final payment, dynamic credit limits, rolling reserves &amp; streak bonuses</p>
             </div>
           </div>
 
@@ -519,27 +519,27 @@ export default function SettingsPage() {
             <div className="bg-slate-50 p-3.5 rounded-lg border border-slate-200/80">
               <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-2 flex items-center">
                 <DollarSign className="h-4 w-4 mr-1 text-emerald-600" />
-                Admin Commission (ACP), Statutory GST &amp; Driver Payment Link Window
+                Admin Commission (ACP), GST &amp; Driver Payment Link Window
               </h4>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div>
                   <label className="block text-[11px] font-semibold text-slate-700">Admin Commission Percentage (ACP %)</label>
-                  <p className="text-[10px] text-slate-400 mb-1">Commission on pre-GST Total Fair (e.g. 12%)</p>
+                  <p className="text-[10px] text-slate-400 mb-1">Deducted from driver on pre-GST Total Fair (e.g. 10%)</p>
                   <input
                     type="number"
                     step="0.5"
-                    defaultValue={revPolicy.platform_commission_pct ?? 12.0}
+                    defaultValue={revPolicy.platform_commission_pct ?? 10.0}
                     id="rev_platform_fee"
                     className="w-full px-2.5 py-1.5 border rounded-md text-sm font-mono font-bold text-indigo-700"
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-700">GST on Commission + Tech Fee (%)</label>
-                  <p className="text-[10px] text-slate-400 mb-1">18% GST on commission + tech fee together (per CA)</p>
+                  <label className="block text-[11px] font-semibold text-slate-700">Extra GST on Commission (%)</label>
+                  <p className="text-[10px] text-slate-400 mb-1">0% (driver receives Total Fair minus Admin Commission)</p>
                   <input
                     type="number"
                     step="0.5"
-                    defaultValue={revPolicy.gst_on_commission_pct ?? 18.0}
+                    defaultValue={revPolicy.gst_on_commission_pct ?? 0.0}
                     id="rev_gst_percentage"
                     className="w-full px-2.5 py-1.5 border rounded-md text-sm font-mono"
                   />
@@ -572,8 +572,8 @@ export default function SettingsPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-700">Flat Tech Dispatch Fee (₹)</label>
-                  <p className="text-[10px] text-slate-400 mb-1">Software dispatch charge per booking</p>
+                  <label className="block text-[11px] font-semibold text-slate-700">Platform Charge (₹)</label>
+                  <p className="text-[10px] text-slate-400 mb-1">Added to Customer Final Payment (e.g. ₹10)</p>
                   <input
                     type="number"
                     step="1"

@@ -109,6 +109,7 @@ export async function GET(req: NextRequest) {
             total_fair_pre_gst: effective.totalFairPreGst,
             gst_pct: effective.gstPct,
             gst_charge: effective.gstCharge,
+            platform_charge: effective.techFeeAmount,
             total_payment: effective.totalPayment,
             billed_km: effective.billedKm,
             extra_km: effective.extraKm,
