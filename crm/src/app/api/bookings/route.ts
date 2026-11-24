@@ -80,6 +80,8 @@ export async function POST(req: NextRequest) {
       drop_address,
       pickup_date,
       pickup_time,
+      is_round_trip = false,
+      return_date,
       wp_vehicle_code,
       distance_km,
       from_lat,
@@ -131,8 +133,12 @@ export async function POST(req: NextRequest) {
         ? null
         : Number(customer_total_fare);
 
+    const isRoundTrip = Boolean(is_round_trip);
+    const cleanReturnDate = isRoundTrip && return_date ? String(return_date).trim() : null;
+    let resolvedTripDays = 1;
+
     if (pkg) {
-      // Resolve road distance & distance-adjusted fare via the shared canonical pricing helper.
+      // Resolve road distance & distance/round-trip adjusted fare via the shared canonical pricing helper.
       const priced = await pricePackageForRoute(
         pkg,
         {
@@ -140,11 +146,15 @@ export async function POST(req: NextRequest) {
           toCoords,
           originText: origin_city,
           destinationText: destination_city || null,
+          isRoundTrip,
+          pickupDate: pickup_date,
+          returnDate: cleanReturnDate,
         },
         'Bookings'
       );
       routeDistance = priced.routeDistance;
       distancePricing = priced.pricing;
+      resolvedTripDays = distancePricing.tripDays;
 
       rateCardFare = distancePricing.totalPayment;
       resolvedDistanceKm = distancePricing.billedKm;
@@ -265,6 +275,7 @@ export async function POST(req: NextRequest) {
           package_id, cab_type_id, fuel_type, included_km, included_hours,
           base_fare_pre_gst, applied_gst_pct, applied_commission_pct,
           applied_extra_hour_charge, applied_extra_km_charge, special_notes, booking_source,
+          is_round_trip, return_date, trip_days,
           created_at, updated_at
         ) VALUES (
           $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
@@ -273,6 +284,7 @@ export async function POST(req: NextRequest) {
           $18, $19, $20, $21, $22, $23,
           $24, $25, $26, $27, $28,
           $29, $30, $31, $32, $33, $34, 'CRM',
+          $35, $36, $37,
           CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
         )
         RETURNING *`,
@@ -311,6 +323,9 @@ export async function POST(req: NextRequest) {
           pkg?.cab_type.extra_hour_charge ?? null,
           pkg?.cab_type.extra_km_charge ?? null,
           special_notes || null,
+          isRoundTrip,
+          cleanReturnDate,
+          resolvedTripDays,
         ]
       )
     );
@@ -325,10 +340,13 @@ export async function POST(req: NextRequest) {
       await notifyOfferedDrivers(Number(booking.id), dispatchResult);
     }
 
+    const roundTripLabel = isRoundTrip
+      ? ` • Round Trip (${resolvedTripDays} ${resolvedTripDays === 1 ? 'day' : 'days'}${cleanReturnDate ? `, return ${cleanReturnDate}` : ''})`
+      : '';
     const customerText =
-      `Booking #${bookingCode} confirmed (${resolvedTripType}${pkg ? ` — ${pkg.name}` : ''}). ` +
+      `Booking #${bookingCode} confirmed (${resolvedTripType}${roundTripLabel}${pkg ? ` — ${pkg.name}` : ''}). ` +
       `Cab: ${pkg ? pkg.cab_type.display_name : resolvedVehicleCode.toUpperCase()}. ` +
-      `Total Payable at drop: ₹${fare.toLocaleString('en-IN')} (incl. GST). We are assigning your verified driver now.`;
+      `Total Payable at drop: ₹${fare.toLocaleString('en-IN')} (incl. GST & platform charge). We are assigning your verified driver now.`;
 
     await notify(cleanPhone, 'customer_booking_update', {
       params: [`#${bookingCode}`, customerText],

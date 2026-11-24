@@ -177,6 +177,8 @@
     if (selectedPlanId && config.bookUrl) {
       const submitBtn = form.querySelector('[type=submit]');
       const oldLabel = submitBtn ? submitBtn.textContent : '';
+      const isRoundTrip = (selected && /round/i.test(selected.textContent || '')) || /round/i.test(field('category')?.value || '');
+      const returnDateVal = form.querySelector('[data-bc-field="return_date"], input[name="return_date"]')?.value || '';
       if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Confirming booking…'; }
       fetch(config.bookUrl, {
         method: 'POST',
@@ -191,6 +193,8 @@
           drop_address: drop,
           pickup_date: date,
           pickup_time: time,
+          is_round_trip: Boolean(isRoundTrip),
+          return_date: isRoundTrip ? (returnDateVal || date) : null,
           special_notes: instructions
         })
       })
@@ -239,11 +243,18 @@
          const destCity = dropVal.split(',')[0].trim();
          const pDate = field('date')?.value || '';
          const pTime = field('time')?.value || '';
+         const activeTab = form.closest('.hero-booking-card')?.querySelector('.hbc-tab.active');
+         const isRoundTrip = (activeTab && /round/i.test(activeTab.textContent || '')) || /round/i.test(field('category')?.value || '');
+         const returnDateVal = form.querySelector('[data-bc-field="return_date"], input[name="return_date"]')?.value || '';
          const qs = new URLSearchParams();
          if (city) qs.set('origin_city', city);
          if (destCity) qs.set('destination_city', destCity);
          if (pDate) qs.set('pickup_date', pDate);
          if (pTime) qs.set('pickup_time', pTime);
+         if (isRoundTrip) {
+           qs.set('is_round_trip', 'true');
+           qs.set('return_date', returnDateVal || pDate);
+         }
 
          planSelect.innerHTML = '<option value="">Loading available cab plans…</option>';
          try {
@@ -274,8 +285,11 @@
          }
        };
        loadPlans();
-       [field('pickup'), field('drop'), field('date'), field('time')].forEach((el) => {
+       [field('pickup'), field('drop'), field('date'), field('time'), field('category'), form.querySelector('[data-bc-field="return_date"], input[name="return_date"]')].forEach((el) => {
          if (el) el.addEventListener('change', loadPlans);
+       });
+       form.closest('.hero-booking-card')?.querySelectorAll('.hbc-tab').forEach((tab) => {
+         tab.addEventListener('click', () => setTimeout(loadPlans, 30));
        });
      }
    }

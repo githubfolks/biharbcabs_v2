@@ -153,34 +153,97 @@ export interface DistanceAdjustedPricing extends PackagePriceBreakdown {
   billedKm: number;
   extraKm: number;
   extraKmChargePreGst: number;
+  isRoundTrip: boolean;
+  tripDays: number;
+  extraDays: number;
+  extraDayCabChargePreGst: number;
+  extraDayDriverTaPreGst: number;
+}
+
+export interface RoundTripOptions {
+  isRoundTrip?: boolean;
+  tripDays?: number;
+  perDayCharge?: number;
+  driverTa?: number;
 }
 
 /**
- * Recalculate package fare when calculated road distance exceeds the package's included KM:
- * adds `extraKm * cab.extra_km_charge` to pre-GST Total Fair, then recalculates GST,
- * Total Payment, Admin Commission, and CA company share on the adjusted pre-GST fare.
+ * Calculate inclusive trip days for a round trip (same-day return = 1 day, next-day = 2 days).
+ * Throws CatalogError(400) if returnDate is earlier than pickupDate.
+ */
+export function calculateTripDays(
+  pickupDate?: string | null,
+  returnDate?: string | null,
+  isRoundTrip?: boolean
+): number {
+  if (!isRoundTrip) return 1;
+  const p = String(pickupDate || '').trim();
+  const r = String(returnDate || '').trim();
+  if (!p || !r) return 1;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(p) || !/^\d{4}-\d{2}-\d{2}$/.test(r)) {
+    throw new CatalogError('Pickup date and return date must be in YYYY-MM-DD format.', 400);
+  }
+  const pMs = Date.parse(`${p}T00:00:00Z`);
+  const rMs = Date.parse(`${r}T00:00:00Z`);
+  if (!Number.isFinite(pMs) || !Number.isFinite(rMs)) {
+    throw new CatalogError('Invalid pickup or return date.', 400);
+  }
+  if (rMs < pMs) {
+    throw new CatalogError('Return date cannot be earlier than pickup date.', 400);
+  }
+  const diffDays = Math.round((rMs - pMs) / (24 * 60 * 60 * 1000));
+  if (diffDays > 60) {
+    throw new CatalogError('Round trip duration cannot exceed 60 days.', 400);
+  }
+  return diffDays + 1;
+}
+
+/**
+ * Recalculate package fare for road distance and optional Round Trip:
+ * - For Round Trip: doubles one-way road distance (2x km) and for multi-day trips (tripDays > 1),
+ *   adds (tripDays - 1) * (cab.per_day_charge + cab.driver_ta) to pre-GST Total Fair.
+ * - Adds extraKm * cab.extra_km_charge when effective road distance exceeds includedKm.
+ * - Recalculates Ride GST, Platform Charge, Final Payment, Admin Commission, and Driver Earnings
+ *   via the single splitPreGstFare() formula.
  */
 export function calculateDistanceAdjustedPricing(
   basePricing: PackagePriceBreakdown,
   includedKm: number,
   extraKmRate: number,
   roadDistanceKm: number | null | undefined,
-  splitRules: SplitRules
+  splitRules: SplitRules,
+  roundTrip?: RoundTripOptions
 ): DistanceAdjustedPricing {
-  const roadKm = Number(roadDistanceKm);
-  if (!Number.isFinite(roadKm) || roadKm <= includedKm) {
+  const isRoundTrip = Boolean(roundTrip?.isRoundTrip);
+  const tripDays = isRoundTrip ? Math.max(1, Math.round(Number(roundTrip?.tripDays || 1))) : 1;
+  const extraDays = isRoundTrip ? Math.max(0, tripDays - 1) : 0;
+
+  const rawRoadKm = Number(roadDistanceKm);
+  const hasRoadKm = Number.isFinite(rawRoadKm) && rawRoadKm > 0;
+  const effectiveRoadKm = hasRoadKm ? round2(isRoundTrip ? rawRoadKm * 2 : rawRoadKm) : includedKm;
+
+  const extraKm = hasRoadKm && effectiveRoadKm > includedKm ? round2(effectiveRoadKm - includedKm) : 0;
+  const extraKmChargePreGst = round2(extraKm * Math.max(0, extraKmRate));
+  const extraDayCabChargePreGst = round2(extraDays * Math.max(0, Number(roundTrip?.perDayCharge || 0)));
+  const extraDayDriverTaPreGst = round2(extraDays * Math.max(0, Number(roundTrip?.driverTa || 0)));
+
+  const totalExtraPreGst = round2(extraKmChargePreGst + extraDayCabChargePreGst + extraDayDriverTaPreGst);
+  if (totalExtraPreGst <= 0) {
     return {
       ...basePricing,
-      roadDistanceKm: Number.isFinite(roadKm) && roadKm > 0 ? round2(roadKm) : includedKm,
+      roadDistanceKm: effectiveRoadKm,
       billedKm: includedKm,
       extraKm: 0,
       extraKmChargePreGst: 0,
+      isRoundTrip,
+      tripDays,
+      extraDays,
+      extraDayCabChargePreGst: 0,
+      extraDayDriverTaPreGst: 0,
     };
   }
 
-  const extraKm = round2(roadKm - includedKm);
-  const extraKmChargePreGst = round2(extraKm * Math.max(0, extraKmRate));
-  const adjustedPreGst = round2(basePricing.totalFairPreGst + extraKmChargePreGst);
+  const adjustedPreGst = round2(basePricing.totalFairPreGst + totalExtraPreGst);
   const split = splitPreGstFare(adjustedPreGst, splitRules);
 
   return {
@@ -196,10 +259,15 @@ export function calculateDistanceAdjustedPricing(
     totalCompanyDuesZ: split.totalCompanyDuesZ,
     driverGrossEarnings: split.driverGrossEarnings,
     split,
-    roadDistanceKm: round2(roadKm),
-    billedKm: round2(roadKm),
+    roadDistanceKm: effectiveRoadKm,
+    billedKm: Math.max(includedKm, effectiveRoadKm),
     extraKm,
     extraKmChargePreGst,
+    isRoundTrip,
+    tripDays,
+    extraDays,
+    extraDayCabChargePreGst,
+    extraDayDriverTaPreGst,
   };
 }
 
@@ -208,6 +276,9 @@ export interface RouteDistanceInput {
   toCoords?: { lat: number; lon: number } | null;
   originText?: string | null;
   destinationText?: string | null;
+  isRoundTrip?: boolean;
+  pickupDate?: string | null;
+  returnDate?: string | null;
 }
 
 /** Parse an optional coordinate pair from query params or JSON body (returns null if incomplete or invalid). */
@@ -260,6 +331,8 @@ export async function pricePackageForRoute(
   routeDistance: DrivingDistanceResult | null;
   pricing: DistanceAdjustedPricing;
 }> {
+  const isRoundTrip = Boolean(route.isRoundTrip);
+  const tripDays = calculateTripDays(route.pickupDate, route.returnDate, isRoundTrip);
   const [routeDistance, splitRules] = await Promise.all([
     resolveRouteDistanceSafely(route, contextLabel),
     getSplitRules(),
@@ -269,7 +342,13 @@ export async function pricePackageForRoute(
     pkg.included_km,
     pkg.cab_type.extra_km_charge,
     routeDistance?.distance_km ?? null,
-    splitRules
+    splitRules,
+    {
+      isRoundTrip,
+      tripDays,
+      perDayCharge: pkg.cab_type.per_day_charge,
+      driverTa: pkg.cab_type.driver_ta,
+    }
   );
   return { routeDistance, pricing };
 }

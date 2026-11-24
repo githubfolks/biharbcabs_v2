@@ -61,6 +61,8 @@ export async function POST(req: NextRequest) {
     const dropAddress = body.drop_address ? String(body.drop_address).trim().slice(0, 500) : null;
     const pickupDate = String(body.pickup_date || '').trim();
     const pickupTime = String(body.pickup_time || '').trim();
+    const isRoundTrip = Boolean(body.is_round_trip);
+    const returnDate = isRoundTrip && body.return_date ? String(body.return_date).trim() : null;
     const specialNotes = body.special_notes ? String(body.special_notes).trim().slice(0, 1000) : null;
     const fromCoords = parseOptionalCoords(body.from_lat, body.from_lon);
     const toCoords = parseOptionalCoords(body.to_lat, body.to_lon);
@@ -106,11 +108,15 @@ export async function POST(req: NextRequest) {
         toCoords,
         originText: originCity,
         destinationText: destinationCity,
+        isRoundTrip,
+        pickupDate,
+        returnDate,
       },
       'Public Booking'
     );
     const billedKm = adjusted.billedKm;
     const split = adjusted.split;
+    const tripDays = adjusted.tripDays;
 
     if (!(split.driverGrossEarnings > 0)) {
       return NextResponse.json({ success: false, error: 'Selected plan pricing is not available right now.' }, { status: 409 });
@@ -143,6 +149,7 @@ export async function POST(req: NextRequest) {
           package_id, cab_type_id, fuel_type, included_km, included_hours,
           base_fare_pre_gst, applied_gst_pct, applied_commission_pct,
           applied_extra_hour_charge, applied_extra_km_charge, special_notes, booking_source,
+          is_round_trip, return_date, trip_days,
           created_at, updated_at
         ) VALUES (
           $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
@@ -151,6 +158,7 @@ export async function POST(req: NextRequest) {
           $17, $18, 'RATE_CARD', $12,
           $19, $20, $21, $22, $23,
           $24, $25, $26, $27, $28, $29, 'WORDPRESS',
+          $30, $31, $32,
           CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
         )
         RETURNING id, booking_code`,
@@ -184,6 +192,9 @@ export async function POST(req: NextRequest) {
           pkg.cab_type.extra_hour_charge,
           pkg.cab_type.extra_km_charge,
           specialNotes,
+          isRoundTrip,
+          returnDate,
+          tripDays,
         ]
       )
     );
@@ -213,6 +224,9 @@ export async function POST(req: NextRequest) {
         cab_name: pkg.cab_type.display_name,
         total_payment: split.customerTotalFare,
         billed_km: billedKm,
+        is_round_trip: isRoundTrip,
+        return_date: returnDate,
+        trip_days: tripDays,
         route_distance: routeDistance,
         gst_pct: pkg.pricing.gstPct,
         message: 'Booking confirmed. WhatsApp confirmation and driver assignment are in progress.',

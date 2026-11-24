@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth';
 import { resolveDrivingDistance, LocationError } from '@/lib/locationiq';
-import { calculateDistanceAdjustedPricing, getPricedPackageById } from '@/lib/pricing-engine';
+import {
+  CatalogError,
+  calculateDistanceAdjustedPricing,
+  calculateTripDays,
+  getPricedPackageById,
+} from '@/lib/pricing-engine';
 import { getSplitRules } from '@/lib/settings';
 
 export const dynamic = 'force-dynamic';
@@ -24,6 +29,9 @@ export async function GET(req: NextRequest) {
     const origin = sp.get('origin')?.trim() || null;
     const destination = sp.get('destination')?.trim() || null;
     const packageIdRaw = sp.get('package_id')?.trim() || null;
+    const isRoundTrip = sp.get('is_round_trip') === 'true' || sp.get('is_round_trip') === '1';
+    const pickupDate = sp.get('pickup_date')?.trim() || null;
+    const returnDate = sp.get('return_date')?.trim() || null;
 
     const fromCoords = fromLat !== null && fromLon !== null ? { lat: fromLat, lon: fromLon } : null;
     const toCoords = toLat !== null && toLon !== null ? { lat: toLat, lon: toLon } : null;
@@ -41,13 +49,20 @@ export async function GET(req: NextRequest) {
       if (Number.isInteger(pkgId) && pkgId > 0) {
         const pkg = await getPricedPackageById(pkgId);
         if (pkg) {
+          const tripDays = calculateTripDays(pickupDate, returnDate, isRoundTrip);
           const splitRules = await getSplitRules();
           adjusted_pricing = calculateDistanceAdjustedPricing(
             pkg.pricing,
             pkg.included_km,
             pkg.cab_type.extra_km_charge,
             route.distance_km,
-            splitRules
+            splitRules,
+            {
+              isRoundTrip,
+              tripDays,
+              perDayCharge: pkg.cab_type.per_day_charge,
+              driverTa: pkg.cab_type.driver_ta,
+            }
           );
         }
       }
@@ -55,7 +70,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ success: true, route, adjusted_pricing });
   } catch (err: any) {
-    const status = err instanceof LocationError ? err.status : 500;
+    const status = err instanceof LocationError || err instanceof CatalogError ? err.status : 500;
     return NextResponse.json({ success: false, error: err.message }, { status });
   }
 }

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { calculateDistanceAdjustedPricing, calculatePackagePricing } from '../lib/pricing-engine';
+import { calculateDistanceAdjustedPricing, calculatePackagePricing, calculateTripDays } from '../lib/pricing-engine';
 import { SplitRules } from '../lib/fare-split';
 import { normalizePlanTripType, planDeductionForRide } from '../lib/driver-plans';
 
@@ -155,4 +155,51 @@ test('calculateDistanceAdjustedPricing adds extra KM charge pre-GST and recalcul
   assert.equal(over.gstOnCommissionAndTechFee, 0);
   assert.equal(over.totalCompanyDuesZ, 73);
   assert.equal(over.driverGrossEarnings, 378);
+});
+
+test('calculateTripDays and Round Trip pricing double road distance and add multi-day Cab + Driver TA', () => {
+  assert.equal(calculateTripDays('2026-11-25', '2026-11-25', true), 1);
+  assert.equal(calculateTripDays('2026-11-25', '2026-11-27', true), 3);
+  assert.equal(calculateTripDays('2026-11-25', '2026-11-27', false), 1);
+  assert.throws(() => calculateTripDays('2026-11-27', '2026-11-25', true), /earlier than pickup/);
+
+  const suv = calculatePackagePricing({
+    includedKm: 100,
+    includedHours: 12,
+    mileageKmpl: 10,
+    fuelPricePerUnit: 100,
+    perDayCharge: 1500,
+    baseBufferMinutes: 0,
+    driverTa: 300,
+    splitRules: PRICING_RULES,
+  });
+  // Base Pre-GST = Fuel (1000) + Cab Time (1500) + TA (300) = 2800
+  assert.equal(suv.totalFairPreGst, 2800);
+
+  // Round Trip: 120 km one-way => 240 km round-trip => 140 extra km * ₹15/km = ₹2,100
+  // 2-day trip (extraDays = 1) => +₹1,500 PDCRG + ₹300 Driver TA = ₹1,800
+  // Adjusted Pre-GST = 2800 + 2100 + 1800 = 6700
+  // Ride GST (5%) = 335, Platform Charge = 10 => Final Payment = 7045
+  // Admin Comm (10% of 6700) = 670, Driver Final Payment = 6700 - 670 = 6030
+  const rt = calculateDistanceAdjustedPricing(suv, 100, 15, 120, PRICING_RULES, {
+    isRoundTrip: true,
+    tripDays: 2,
+    perDayCharge: 1500,
+    driverTa: 300,
+  });
+  assert.equal(rt.isRoundTrip, true);
+  assert.equal(rt.tripDays, 2);
+  assert.equal(rt.extraDays, 1);
+  assert.equal(rt.roadDistanceKm, 240);
+  assert.equal(rt.billedKm, 240);
+  assert.equal(rt.extraKm, 140);
+  assert.equal(rt.extraKmChargePreGst, 2100);
+  assert.equal(rt.extraDayCabChargePreGst, 1500);
+  assert.equal(rt.extraDayDriverTaPreGst, 300);
+  assert.equal(rt.totalFairPreGst, 6700);
+  assert.equal(rt.gstCharge, 335);
+  assert.equal(rt.techFeeAmount, 10);
+  assert.equal(rt.totalPayment, 7045);
+  assert.equal(rt.adminCommission, 670);
+  assert.equal(rt.driverGrossEarnings, 6030);
 });

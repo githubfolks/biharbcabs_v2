@@ -39,7 +39,7 @@ class BCGE_Rest {
             return self::fail('CRM_NOT_CONFIGURED', 'CRM API base URL is not configured.', 503);
         }
         $query_args = array();
-        foreach (array('booking_type', 'origin_city', 'destination_city', 'pickup_date', 'pickup_time', 'from_lat', 'from_lon', 'to_lat', 'to_lon') as $param) {
+        foreach (array('booking_type', 'origin_city', 'destination_city', 'pickup_date', 'pickup_time', 'is_round_trip', 'return_date', 'from_lat', 'from_lon', 'to_lat', 'to_lon') as $param) {
             $val = sanitize_text_field((string) $request->get_param($param));
             if ($val !== '') {
                 $query_args[$param] = $val;

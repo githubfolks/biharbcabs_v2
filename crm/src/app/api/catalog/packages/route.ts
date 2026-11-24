@@ -3,6 +3,7 @@ import { requireAdmin } from '@/lib/auth';
 import {
   CatalogError,
   calculateDistanceAdjustedPricing,
+  calculateTripDays,
   createPackage,
   listPricedPackages,
   parseOptionalCoords,
@@ -24,6 +25,9 @@ export async function GET(req: NextRequest) {
     const destinationCity = searchParams.get('destination_city')?.trim() || '';
     const pickupDate = searchParams.get('pickup_date');
     const pickupTime = searchParams.get('pickup_time');
+    const isRoundTrip = searchParams.get('is_round_trip') === 'true' || searchParams.get('is_round_trip') === '1';
+    const returnDate = searchParams.get('return_date')?.trim() || null;
+    const tripDays = calculateTripDays(pickupDate, returnDate, isRoundTrip);
     const fromCoords = parseOptionalCoords(searchParams.get('from_lat'), searchParams.get('from_lon'));
     const toCoords = parseOptionalCoords(searchParams.get('to_lat'), searchParams.get('to_lon'));
 
@@ -38,13 +42,19 @@ export async function GET(req: NextRequest) {
     ]);
 
     const enriched = packages.map((p) => {
-      const pricing = routeDistance
+      const pricing = routeDistance || isRoundTrip
         ? calculateDistanceAdjustedPricing(
             p.pricing,
             p.included_km,
             p.cab_type.extra_km_charge,
-            routeDistance.distance_km,
-            splitRules
+            routeDistance?.distance_km ?? null,
+            splitRules,
+            {
+              isRoundTrip,
+              tripDays,
+              perDayCharge: p.cab_type.per_day_charge,
+              driverTa: p.cab_type.driver_ta,
+            }
           )
         : p.pricing;
 

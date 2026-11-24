@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
+  CatalogError,
   calculateDistanceAdjustedPricing,
+  calculateTripDays,
   listPricedPackages,
   parseOptionalCoords,
   resolveRouteDistanceSafely,
@@ -42,6 +44,9 @@ export async function GET(req: NextRequest) {
     const destinationCity = searchParams.get('destination_city')?.trim() || '';
     const pickupDate = searchParams.get('pickup_date');
     const pickupTime = searchParams.get('pickup_time');
+    const isRoundTrip = searchParams.get('is_round_trip') === 'true' || searchParams.get('is_round_trip') === '1';
+    const returnDate = searchParams.get('return_date')?.trim() || null;
+    const tripDays = calculateTripDays(pickupDate, returnDate, isRoundTrip);
     const fromCoords = parseOptionalCoords(searchParams.get('from_lat'), searchParams.get('from_lon'));
     const toCoords = parseOptionalCoords(searchParams.get('to_lat'), searchParams.get('to_lon'));
     const bookingType = rawType ? rawType.trim().toUpperCase() : null;
@@ -83,7 +88,13 @@ export async function GET(req: NextRequest) {
           p.included_km,
           p.cab_type.extra_km_charge,
           routeDistance?.distance_km ?? null,
-          splitRules
+          splitRules,
+          {
+            isRoundTrip,
+            tripDays,
+            perDayCharge: p.cab_type.per_day_charge,
+            driverTa: p.cab_type.driver_ta,
+          }
         );
         return {
           public_id: p.public_id,
@@ -114,6 +125,9 @@ export async function GET(req: NextRequest) {
             billed_km: effective.billedKm,
             extra_km: effective.extraKm,
             extra_km_charge_pre_gst: effective.extraKmChargePreGst,
+            is_round_trip: effective.isRoundTrip,
+            trip_days: effective.tripDays,
+            extra_day_charge_pre_gst: effective.extraDayCabChargePreGst + effective.extraDayDriverTaPreGst,
           },
           ...(availability ? { availability } : {}),
         };
@@ -130,6 +144,7 @@ export async function GET(req: NextRequest) {
       plans: publicPlans,
     });
   } catch (err: any) {
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+    const status = err instanceof CatalogError ? err.status : 500;
+    return NextResponse.json({ success: false, error: err.message }, { status });
   }
 }

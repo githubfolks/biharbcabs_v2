@@ -14,6 +14,7 @@ import {
   getPricedPackageById,
   listCabTypes,
   calculateDistanceAdjustedPricing,
+  calculateTripDays,
   resolveRouteDistanceSafely,
   pricePackageForRoute,
 } from './pricing-engine';
@@ -207,6 +208,9 @@ async function quoteAndOfferVehicles(phone: string, ctx: Record<string, any>): P
     rawType === 'LOCAL' || rawType === 'AIRPORT' || rawType === 'RAILWAY_STATION' ? 'LOCAL' :
     'OUTSTATION';
 
+  const isRoundTrip = Boolean(ctx.is_round_trip) || rawType === 'ROUNDTRIP' || rawType === 'ROUND_TRIP';
+  const tripDays = calculateTripDays(ctx.pickup_date || null, ctx.return_date || null, isRoundTrip);
+
   const [packages, routeDistance, splitRules] = await Promise.all([
     listPricedPackages({ activeOnly: true, bookingType, skipUnpriceable: true }),
     resolveRouteDistanceSafely(
@@ -226,7 +230,7 @@ async function quoteAndOfferVehicles(phone: string, ctx: Record<string, any>): P
       if (a.phone) {
         await sendWhatsAppText(
           a.phone,
-          `⚠️ Custom Quote Needed: Customer ${phone} requested ${bookingType} (${ctx.origin}${ctx.destination ? ` → ${ctx.destination}` : ''}) for ${formatPickup(new Date(ctx.pickup_at))}. Open CRM to book.`
+          `⚠️ Custom Quote Needed: Customer ${phone} requested ${bookingType}${isRoundTrip ? ' (Round Trip)' : ''} (${ctx.origin}${ctx.destination ? ` → ${ctx.destination}` : ''}) for ${formatPickup(new Date(ctx.pickup_at))}. Open CRM to book.`
         );
       }
     }
@@ -239,7 +243,13 @@ async function quoteAndOfferVehicles(phone: string, ctx: Record<string, any>): P
       p.included_km,
       p.cab_type.extra_km_charge,
       routeDistance?.distance_km ?? null,
-      splitRules
+      splitRules,
+      {
+        isRoundTrip,
+        tripDays,
+        perDayCharge: p.cab_type.per_day_charge,
+        driverTa: p.cab_type.driver_ta,
+      }
     );
     const fare = adjusted.totalPayment;
     const kmLabel = adjusted.extraKm > 0 ? `${adjusted.billedKm} km` : `${p.included_km} km`;
@@ -254,13 +264,20 @@ async function quoteAndOfferVehicles(phone: string, ctx: Record<string, any>): P
   await updateConversation(phone, 'AWAITING_VEHICLE_CHOICE', {
     ...ctx,
     trip_type: bookingType,
+    is_round_trip: isRoundTrip,
+    trip_days: tripDays,
     road_distance_km: routeDistance?.distance_km ?? null,
   });
 
-  const distLine = routeDistance ? `\nEst. Distance: ${routeDistance.distance_km} km (${routeDistance.duration_text})` : '';
+  const rtLine = isRoundTrip
+    ? ` (Round Trip • ${tripDays} ${tripDays === 1 ? 'day' : 'days'}${ctx.return_date ? `, return ${ctx.return_date}` : ''})`
+    : '';
+  const distLine = routeDistance
+    ? `\nEst. Distance: ${isRoundTrip ? `${Math.round(routeDistance.distance_km * 20) / 10} km (2x)` : `${routeDistance.distance_km} km`} (${routeDistance.duration_text} one-way)`
+    : '';
   await sendWhatsAppList(
     phone,
-    `🚖 ${bookingType} Plans: ${ctx.origin}${ctx.destination ? ` → ${ctx.destination}` : ''}${distLine}\nPickup: ${formatPickup(new Date(ctx.pickup_at))}\n\nAll prices include GST. Tap below to select your plan:`,
+    `🚖 ${bookingType}${rtLine} Plans: ${ctx.origin}${ctx.destination ? ` → ${ctx.destination}` : ''}${distLine}\nPickup: ${formatPickup(new Date(ctx.pickup_at))}\n\nAll prices include GST & platform charge. Tap below to select your plan:`,
     'Choose Plan',
     [{ title: 'Available Cab Plans', rows }],
     'BiharCabs Live Plans'
@@ -1023,7 +1040,46 @@ export async function processIncomingWhatsAppMessage(params: {
       tripType = 'RENTAL';
     }
 
-    await updateConversation(fromPhone, 'AWAITING_ORIGIN', { trip_type: tripType });
+    if (tripType === 'OUTSTATION') {
+      if (lowerText.includes('round')) {
+        await updateConversation(fromPhone, 'AWAITING_ORIGIN', { trip_type: 'OUTSTATION', is_round_trip: true });
+        await sendWhatsAppText(
+          fromPhone,
+          intents?.customer_prompts?.ask_origin ||
+            'Round Trip selected! Which city will you be picked up from? (e.g. Patna, Darbhanga, Gaya):'
+        );
+        return;
+      }
+      await updateConversation(fromPhone, 'AWAITING_TRIP_DIRECTION', { trip_type: 'OUTSTATION' });
+      await sendWhatsAppButtons(
+        fromPhone,
+        'Is this a One-Way or Round Trip journey?',
+        [
+          { id: 'dir_oneway', title: '➡️ One-Way' },
+          { id: 'dir_roundtrip', title: '🔁 Round Trip' },
+        ],
+        'Select Journey Type'
+      );
+      return;
+    }
+
+    await updateConversation(fromPhone, 'AWAITING_ORIGIN', { trip_type: tripType, is_round_trip: false });
+    await sendWhatsAppText(
+      fromPhone,
+      intents?.customer_prompts?.ask_origin ||
+        'Which city will you be picked up from? (e.g. Patna, Darbhanga, Gaya, Muzaffarpur):'
+    );
+    return;
+  }
+
+  // Step 1b: One-Way vs Round Trip (Outstation)
+  if (conv.state === 'AWAITING_TRIP_DIRECTION') {
+    const isRoundTrip = buttonId === 'dir_roundtrip' || lowerText.includes('round');
+    await updateConversation(fromPhone, 'AWAITING_ORIGIN', {
+      ...conv.context_data,
+      trip_type: 'OUTSTATION',
+      is_round_trip: isRoundTrip,
+    });
     await sendWhatsAppText(
       fromPhone,
       intents?.customer_prompts?.ask_origin ||
@@ -1056,14 +1112,46 @@ export async function processIncomingWhatsAppMessage(params: {
     return;
   }
 
-  // Step 3b: Pickup time given -> live fares, with any return-trip offer
+  // Step 3b: Pickup time given -> if Round Trip ask return date, else quote plans
   if (conv.state === 'AWAITING_PICKUP_TIME') {
     const pickup = parsePickupTime(rawText);
     if (!pickup) {
       await askPickupTime(fromPhone, conv.context_data, true);
       return;
     }
-    await quoteAndOfferVehicles(fromPhone, { ...conv.context_data, ...pickupContext(pickup) });
+    const nextCtx: Record<string, any> = { ...conv.context_data, ...pickupContext(pickup) };
+    if (nextCtx.is_round_trip) {
+      await updateConversation(fromPhone, 'AWAITING_RETURN_DATE', nextCtx);
+      await sendWhatsAppText(
+        fromPhone,
+        `Pickup: ${formatPickup(new Date(nextCtx.pickup_at))}.\nWhen will you return? Reply *Same day* or enter the return date (e.g. *27 Nov* or *${nextCtx.pickup_date}*):`
+      );
+      return;
+    }
+    await quoteAndOfferVehicles(fromPhone, nextCtx);
+    return;
+  }
+
+  // Step 3c: Return date given (Round Trip)
+  if (conv.state === 'AWAITING_RETURN_DATE') {
+    const pickupDate: string = conv.context_data.pickup_date;
+    let returnDate: string | null = null;
+    if (lowerText.includes('same') || lowerText === 'today') {
+      returnDate = pickupDate;
+    } else if (/^\d{4}-\d{2}-\d{2}$/.test(rawText.trim())) {
+      returnDate = rawText.trim();
+    } else {
+      const parsed = parsePickupTime(`${rawText.trim()} 10:00`);
+      if (parsed) returnDate = pickupContext(parsed).pickup_date;
+    }
+    if (!returnDate || returnDate < pickupDate) {
+      await sendWhatsAppText(
+        fromPhone,
+        `Please enter a valid return date on or after ${pickupDate} (e.g. *Same day* or *27 Nov*):`
+      );
+      return;
+    }
+    await quoteAndOfferVehicles(fromPhone, { ...conv.context_data, return_date: returnDate });
     return;
   }
 
@@ -1081,6 +1169,9 @@ export async function processIncomingWhatsAppMessage(params: {
       {
         originText: conv.context_data.origin || null,
         destinationText: conv.context_data.destination || null,
+        isRoundTrip: Boolean(conv.context_data.is_round_trip),
+        pickupDate: conv.context_data.pickup_date || null,
+        returnDate: conv.context_data.return_date || null,
       },
       'WhatsApp Select'
     );
@@ -1159,17 +1250,23 @@ async function createCustomerBooking(
   );
   const customerId = custRes.rows[0].id;
 
+  const isRoundTrip = Boolean(ctx.is_round_trip);
+  const returnDate = isRoundTrip && ctx.return_date ? String(ctx.return_date) : null;
   const { pricing: adjusted } = await pricePackageForRoute(
     pkg,
     {
       originText: ctx.origin || null,
       destinationText: ctx.destination || null,
+      isRoundTrip,
+      pickupDate: ctx.pickup_date || null,
+      returnDate,
     },
     'WhatsApp Booking'
   );
   const split = adjusted.split;
   const totalFare = split.customerTotalFare;
   const billedKm = adjusted.billedKm;
+  const tripDays = adjusted.tripDays;
 
   const bookRes = await insertWithBookingCode((bookingCode) =>
     query(
@@ -1182,13 +1279,15 @@ async function createCustomerBooking(
         ride_gst_amount, platform_commission_amount,
         package_id, cab_type_id, fuel_type, included_km, included_hours,
         base_fare_pre_gst, applied_gst_pct, applied_commission_pct,
-        applied_extra_hour_charge, applied_extra_km_charge, booking_source
+        applied_extra_hour_charge, applied_extra_km_charge, booking_source,
+        is_round_trip, return_date, trip_days
       ) VALUES (
         $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
         $11, $12, $13, $14, 0, $15, $16, $12,
         'FULL_CASH', 0, 'NOT_REQUIRED', 'AWAITING_DRIVER',
         $17, $18, $19, $20, $21, $22, $23,
-        $24, $25, $26, $27, $28, 'WHATSAPP'
+        $24, $25, $26, $27, $28, 'WHATSAPP',
+        $29, $30, $31
       )
       RETURNING id, booking_code`,
       [
@@ -1220,6 +1319,9 @@ async function createCustomerBooking(
         pkg.pricing.commissionPct,
         pkg.cab_type.extra_hour_charge,
         pkg.cab_type.extra_km_charge,
+        isRoundTrip,
+        returnDate,
+        tripDays,
       ]
     )
   );

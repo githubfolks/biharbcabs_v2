@@ -35,6 +35,11 @@ interface AdjustedPricing {
   billedKm: number;
   extraKm: number;
   extraKmChargePreGst: number;
+  isRoundTrip?: boolean;
+  tripDays?: number;
+  extraDays?: number;
+  extraDayCabChargePreGst?: number;
+  extraDayDriverTaPreGst?: number;
 }
 
 function PlaceAutocompleteInput({
@@ -184,6 +189,8 @@ export default function OperatorNewBookingPage() {
     drop_address: '',
     pickup_date: new Date().toISOString().split('T')[0],
     pickup_time: '10:00',
+    is_round_trip: false,
+    return_date: new Date().toISOString().split('T')[0],
     special_notes: '',
     auto_broadcast: true,
   });
@@ -196,6 +203,10 @@ export default function OperatorNewBookingPage() {
       if (form.origin_city.trim()) sp.set('origin_city', form.origin_city.trim());
       if (form.pickup_date) sp.set('pickup_date', form.pickup_date);
       if (form.pickup_time) sp.set('pickup_time', form.pickup_time);
+      if (form.is_round_trip) {
+        sp.set('is_round_trip', 'true');
+        if (form.return_date) sp.set('return_date', form.return_date);
+      }
 
       fetch(`/api/catalog/packages?${sp.toString()}`)
         .then((res) => res.json())
@@ -230,7 +241,7 @@ export default function OperatorNewBookingPage() {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [form.origin_city, form.pickup_date, form.pickup_time]);
+  }, [form.origin_city, form.pickup_date, form.pickup_time, form.is_round_trip, form.return_date]);
 
   async function runDistanceQuery(params: URLSearchParams) {
     setDistanceLoading(true);
@@ -269,6 +280,11 @@ export default function OperatorNewBookingPage() {
       if (form.origin_city.trim()) params.set('origin', form.origin_city.trim());
       if (form.destination_city.trim()) params.set('destination', form.destination_city.trim());
       if (selectedPackageId) params.set('package_id', selectedPackageId);
+      if (form.is_round_trip) {
+        params.set('is_round_trip', 'true');
+        if (form.pickup_date) params.set('pickup_date', form.pickup_date);
+        if (form.return_date) params.set('return_date', form.return_date);
+      }
       runDistanceQuery(params);
       return;
     }
@@ -279,6 +295,11 @@ export default function OperatorNewBookingPage() {
         destination: lastManualRouteRef.current.destination,
         package_id: selectedPackageId,
       });
+      if (form.is_round_trip) {
+        params.set('is_round_trip', 'true');
+        if (form.pickup_date) params.set('pickup_date', form.pickup_date);
+        if (form.return_date) params.set('return_date', form.return_date);
+      }
       runDistanceQuery(params);
       return;
     }
@@ -289,7 +310,7 @@ export default function OperatorNewBookingPage() {
       setDistanceError(null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sourceCoords, destCoords, selectedPackageId]);
+  }, [sourceCoords, destCoords, selectedPackageId, form.is_round_trip, form.pickup_date, form.return_date]);
 
   function handleCalculateManualDistance() {
     const origin = (form.origin_city || sourceQuery).trim();
@@ -312,6 +333,11 @@ export default function OperatorNewBookingPage() {
       params.set('destination', destination);
     }
     if (selectedPackageId) params.set('package_id', selectedPackageId);
+    if (form.is_round_trip) {
+      params.set('is_round_trip', 'true');
+      if (form.pickup_date) params.set('pickup_date', form.pickup_date);
+      if (form.return_date) params.set('return_date', form.return_date);
+    }
     runDistanceQuery(params);
   }
 
@@ -333,9 +359,10 @@ export default function OperatorNewBookingPage() {
 
   const estimatedExtraKm = useMemo(() => {
     if (!distanceInfo || !selectedPkg) return 0;
-    const extra = distanceInfo.distance_km - Number(selectedPkg.included_km || 0);
+    const effectiveRoadKm = form.is_round_trip ? distanceInfo.distance_km * 2 : distanceInfo.distance_km;
+    const extra = effectiveRoadKm - Number(selectedPkg.included_km || 0);
     return extra > 0 ? Math.round(extra * 10) / 10 : 0;
-  }, [distanceInfo, selectedPkg]);
+  }, [distanceInfo, selectedPkg, form.is_round_trip]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -418,24 +445,58 @@ export default function OperatorNewBookingPage() {
             )}
           </div>
 
-          <div className="flex flex-wrap gap-2">
-            {BOOKING_TYPES.map((bt) => (
-              <button
-                type="button"
-                key={bt}
-                onClick={() => {
-                  setBookingType(bt);
-                  setSelectedPackageId('');
-                }}
-                className={`px-4 py-2 rounded-lg text-xs font-bold border transition ${
-                  bookingType === bt
-                    ? 'bg-orange-600 text-white border-orange-600'
-                    : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
-                }`}
-              >
-                {bt === 'LOCAL' ? 'LOCAL (Airport / Railway Stn)' : bt}
-              </button>
-            ))}
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap gap-2">
+              {BOOKING_TYPES.map((bt) => (
+                <button
+                  type="button"
+                  key={bt}
+                  onClick={() => {
+                    setBookingType(bt);
+                    setSelectedPackageId('');
+                    if (bt !== 'OUTSTATION') {
+                      setForm((prev) => ({ ...prev, is_round_trip: false }));
+                    }
+                  }}
+                  className={`px-4 py-2 rounded-lg text-xs font-bold border transition ${
+                    bookingType === bt
+                      ? 'bg-orange-600 text-white border-orange-600'
+                      : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
+                  }`}
+                >
+                  {bt === 'LOCAL' ? 'LOCAL (Airport / Railway Stn)' : bt}
+                </button>
+              ))}
+            </div>
+
+            {bookingType === 'OUTSTATION' && (
+              <div className="inline-flex rounded-lg border border-slate-300 overflow-hidden bg-slate-50">
+                <button
+                  type="button"
+                  onClick={() => setForm((prev) => ({ ...prev, is_round_trip: false }))}
+                  className={`px-3.5 py-2 text-xs font-bold transition ${
+                    !form.is_round_trip ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-100'
+                  }`}
+                >
+                  One-Way
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setForm((prev) => ({
+                      ...prev,
+                      is_round_trip: true,
+                      return_date: prev.return_date && prev.return_date >= prev.pickup_date ? prev.return_date : prev.pickup_date,
+                    }))
+                  }
+                  className={`px-3.5 py-2 text-xs font-bold transition ${
+                    form.is_round_trip ? 'bg-indigo-600 text-white' : 'text-slate-700 hover:bg-slate-100'
+                  }`}
+                >
+                  Round Trip (2x KM)
+                </button>
+              </div>
+            )}
           </div>
 
           {initialLoading ? (
@@ -502,16 +563,31 @@ export default function OperatorNewBookingPage() {
 
           {selectedPkg && (() => {
             const livePricing = adjustedPricing ?? selectedPkg.pricing;
-            const hasExtraKm = Boolean(adjustedPricing && adjustedPricing.extraKm > 0);
+            const hasExtraKm = Boolean(livePricing && livePricing.extraKm > 0);
+            const hasExtraDays = Boolean(livePricing && livePricing.extraDays > 0);
+            const extraDayTotal = Number(livePricing?.extraDayCabChargePreGst || 0) + Number(livePricing?.extraDayDriverTaPreGst || 0);
             return (
               <div className="bg-slate-50 border border-slate-200 rounded-lg p-3.5 text-xs space-y-2.5">
-                {hasExtraKm && adjustedPricing && (
+                {(hasExtraKm || hasExtraDays || form.is_round_trip) && (
                   <div className="bg-amber-50 border border-amber-200 text-amber-900 rounded-md px-3 py-2 font-medium flex flex-wrap items-center justify-between gap-2">
                     <span>
-                      Distance-adjusted fare: <strong>{adjustedPricing.roadDistanceKm} km</strong> road distance exceeds package {selectedPkg.included_km} km by <strong>{adjustedPricing.extraKm} km</strong>
+                      {form.is_round_trip ? (
+                        <><strong>Round Trip ({livePricing.tripDays || 1} {(livePricing.tripDays || 1) === 1 ? 'day' : 'days'}):</strong> </>
+                      ) : (
+                        <>Distance-adjusted fare: </>
+                      )}
+                      {hasExtraKm && (
+                        <><strong>{livePricing.roadDistanceKm} km</strong> {form.is_round_trip ? '(2x road km) ' : ''}exceeds {selectedPkg.included_km} km by <strong>{livePricing.extraKm} km</strong></>
+                      )}
+                      {hasExtraKm && hasExtraDays ? ' • ' : ''}
+                      {hasExtraDays && (
+                        <>+{livePricing.extraDays} extra {livePricing.extraDays === 1 ? 'day' : 'days'} cab &amp; driver TA</>
+                      )}
                     </span>
                     <span className="font-mono font-bold">
-                      +₹{adjustedPricing.extraKmChargePreGst.toFixed(2)} extra KM (pre-GST)
+                      {hasExtraKm ? `+₹${Number(livePricing.extraKmChargePreGst || 0).toFixed(2)} KM` : ''}
+                      {hasExtraKm && hasExtraDays ? ' + ' : ''}
+                      {hasExtraDays ? `+₹${extraDayTotal.toFixed(2)} Days` : ''}
                     </span>
                   </div>
                 )}
@@ -657,12 +733,38 @@ export default function OperatorNewBookingPage() {
             </div>
             <div>
               <label className="block text-xs font-semibold text-slate-700">Pickup Date *</label>
-              <input type="date" required value={form.pickup_date} onChange={(e) => setForm({ ...form, pickup_date: e.target.value })} className="w-full mt-1 px-3 py-2 border rounded-md text-sm" />
+              <input
+                type="date"
+                required
+                value={form.pickup_date}
+                onChange={(e) => {
+                  const nextPickup = e.target.value;
+                  setForm((prev) => ({
+                    ...prev,
+                    pickup_date: nextPickup,
+                    return_date: prev.return_date < nextPickup ? nextPickup : prev.return_date,
+                  }));
+                }}
+                className="w-full mt-1 px-3 py-2 border rounded-md text-sm"
+              />
             </div>
             <div>
               <label className="block text-xs font-semibold text-slate-700">Pickup Time *</label>
               <input type="time" required value={form.pickup_time} onChange={(e) => setForm({ ...form, pickup_time: e.target.value })} className="w-full mt-1 px-3 py-2 border rounded-md text-sm" />
             </div>
+            {form.is_round_trip && (
+              <div>
+                <label className="block text-xs font-semibold text-indigo-700">Return Date (Round Trip) *</label>
+                <input
+                  type="date"
+                  required
+                  min={form.pickup_date}
+                  value={form.return_date}
+                  onChange={(e) => setForm({ ...form, return_date: e.target.value })}
+                  className="w-full mt-1 px-3 py-2 border border-indigo-300 rounded-md text-sm bg-indigo-50/40"
+                />
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-center">
