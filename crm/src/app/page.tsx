@@ -4,10 +4,11 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { 
   Car, Clock, AlertTriangle, CheckCircle, RefreshCw, Send, UserCheck, 
-  PlusCircle, Phone, MapPin, Calendar
+  PlusCircle, Phone, MapPin, Calendar, History
 } from 'lucide-react';
 import { hasPermission } from '@/lib/permissions';
 import FailedMessagesPanel from '@/components/FailedMessagesPanel';
+import BookingTimelineDrawer from '@/components/BookingTimelineDrawer';
 import { CANCELLABLE_STATUSES } from '@/lib/booking-rules';
 
 export default function DispatchBoard() {
@@ -18,6 +19,8 @@ export default function DispatchBoard() {
 
   const [role, setRole] = useState<string | null>(null);
   const canCancel = hasPermission(role, 'bookings.cancel');
+  const canManageDispatch = hasPermission(role, 'dispatch.manage');
+  const [timelineBookingId, setTimelineBookingId] = useState<number | null>(null);
 
   // Cancelling a booking (staff): who is at fault decides the refund; the outcome is shown before confirming.
   const [cancelTarget, setCancelTarget] = useState<any | null>(null);
@@ -229,7 +232,7 @@ export default function DispatchBoard() {
             <tbody className="divide-y divide-slate-200 text-slate-700">
               {bookings.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-slate-400">
+                  <td colSpan={7} className="px-4 py-8 text-center text-slate-600">
                     No bookings found in this view. Click &ldquo;New Booking &amp; Dispatch&rdquo; to create one.
                   </td>
                 </tr>
@@ -261,7 +264,7 @@ export default function DispatchBoard() {
                       <div className="text-xs text-slate-500 uppercase font-mono">
                         {b.wp_vehicle_code} &bull; Payout: ₹{Number(b.driver_payout_amount).toLocaleString('en-IN')}
                       </div>
-                      <div className="text-[10px] text-slate-400 mt-0.5">
+                      <div className="text-[10px] text-slate-600 mt-0.5">
                         {b.package_name ? `${b.package_name} • ` : ''}Cash Payable at Drop: ₹{Number(b.customer_total_fare).toLocaleString('en-IN')}
                       </div>
                     </td>
@@ -280,7 +283,7 @@ export default function DispatchBoard() {
                           )}
                         </div>
                       ) : (
-                        <span className="text-xs text-slate-400 italic">Unassigned</span>
+                        <span className="text-xs text-slate-600 italic">Unassigned</span>
                       )}
                     </td>
                     <td className="px-4 py-3">
@@ -299,6 +302,14 @@ export default function DispatchBoard() {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-right space-x-2 whitespace-nowrap">
+                      <button
+                        onClick={() => setTimelineBookingId(Number(b.id))}
+                        title="View ride timeline"
+                        className="inline-flex items-center px-2.5 py-1.5 border border-slate-300 text-xs font-medium rounded text-slate-700 bg-white hover:bg-slate-50"
+                      >
+                        <History className="h-3.5 w-3.5 mr-1" />
+                        Timeline
+                      </button>
                       {b.booking_status === 'CONFIRMED_AWAITING_DRIVER' || b.booking_status === 'ESCALATED_NO_DRIVER' ? (
                         <button
                           onClick={() => handleBroadcast(b.id)}
@@ -308,8 +319,6 @@ export default function DispatchBoard() {
                           <Send className="h-3 w-3 mr-1" />
                           {actionLoading === b.id ? 'Broadcasting...' : 'Broadcast'}
                         </button>
-                      ) : !(canCancel && CANCELLABLE_STATUSES.includes(b.booking_status)) ? (
-                        <span className="text-xs text-slate-400">&mdash;</span>
                       ) : null}
                       {canCancel && CANCELLABLE_STATUSES.includes(b.booking_status) && (
                         <button
@@ -368,6 +377,14 @@ export default function DispatchBoard() {
             </div>
           </form>
         </div>
+      )}
+      {timelineBookingId !== null && (
+        <BookingTimelineDrawer
+          bookingId={timelineBookingId}
+          canManage={canManageDispatch}
+          onClose={() => setTimelineBookingId(null)}
+          onUpdated={loadBookings}
+        />
       )}
     </div>
   );

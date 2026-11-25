@@ -546,7 +546,7 @@ export default function SettingsPage() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div>
                   <label className="block text-[11px] font-semibold text-slate-700">Admin Commission Percentage (ACP %)</label>
-                  <p className="text-[10px] text-slate-400 mb-1">Deducted from driver on pre-GST Total Fair (e.g. 10%)</p>
+                  <p className="text-[10px] text-slate-600 mb-1">Deducted from driver on pre-GST Total Fair (e.g. 10%)</p>
                   <input
                     type="number"
                     step="0.5"
@@ -557,7 +557,7 @@ export default function SettingsPage() {
                 </div>
                 <div>
                   <label className="block text-[11px] font-semibold text-slate-700">Extra GST on Commission (%)</label>
-                  <p className="text-[10px] text-slate-400 mb-1">0% (driver receives Total Fair minus Admin Commission)</p>
+                  <p className="text-[10px] text-slate-600 mb-1">0% (driver receives Total Fair minus Admin Commission)</p>
                   <input
                     type="number"
                     step="0.5"
@@ -568,7 +568,7 @@ export default function SettingsPage() {
                 </div>
                 <div>
                   <label className="block text-[11px] font-semibold text-slate-700">Driver Payment Link Expiry (Minutes)</label>
-                  <p className="text-[10px] text-slate-400 mb-1">Razorpay expiry window for driver dues &amp; plan links</p>
+                  <p className="text-[10px] text-slate-600 mb-1">Razorpay expiry window for driver dues &amp; plan links</p>
                   <input
                     type="number"
                     min="15"
@@ -584,7 +584,7 @@ export default function SettingsPage() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3 pt-3 border-t border-slate-200">
                 <div>
                   <label className="block text-[11px] font-semibold text-slate-700">Customer Platform Convenience Fee (₹)</label>
-                  <p className="text-[10px] text-slate-400 mb-1">Added to customer invoice (e.g. ₹39)</p>
+                  <p className="text-[10px] text-slate-600 mb-1">Added to customer invoice (e.g. ₹39)</p>
                   <input
                     type="number"
                     step="1"
@@ -595,7 +595,7 @@ export default function SettingsPage() {
                 </div>
                 <div>
                   <label className="block text-[11px] font-semibold text-slate-700">Platform Charge (₹)</label>
-                  <p className="text-[10px] text-slate-400 mb-1">Added to Customer Final Payment (e.g. ₹10)</p>
+                  <p className="text-[10px] text-slate-600 mb-1">Added to Customer Final Payment (e.g. ₹10)</p>
                   <input
                     type="number"
                     step="1"
@@ -606,7 +606,7 @@ export default function SettingsPage() {
                 </div>
                 <div>
                   <label className="block text-[11px] font-semibold text-slate-700">Night Pickup Surcharge (₹)</label>
-                  <p className="text-[10px] text-slate-400 mb-1">Between 10:00 PM – 06:00 AM</p>
+                  <p className="text-[10px] text-slate-600 mb-1">Between 10:00 PM – 06:00 AM</p>
                   <input
                     type="number"
                     step="10"
@@ -628,7 +628,7 @@ export default function SettingsPage() {
                 <div className="p-2.5 bg-white rounded border border-rose-200">
                   <div className="flex justify-between items-center mb-1">
                     <span className="text-xs font-bold text-rose-700">Probation Tier</span>
-                    <span className="text-[10px] text-slate-400">&lt;5 trips or &lt;4.2★</span>
+                    <span className="text-[10px] text-slate-600">&lt;5 trips or &lt;4.2★</span>
                   </div>
                   <label className="block text-[10px] font-medium text-slate-600">Max Negative Dues Limit (₹)</label>
                   <input
@@ -642,7 +642,7 @@ export default function SettingsPage() {
                 <div className="p-2.5 bg-white rounded border border-blue-200">
                   <div className="flex justify-between items-center mb-1">
                     <span className="text-xs font-bold text-blue-700">Standard Tier</span>
-                    <span className="text-[10px] text-slate-400">≥5 trips &amp; ≥4.2★</span>
+                    <span className="text-[10px] text-slate-600">≥5 trips &amp; ≥4.2★</span>
                   </div>
                   <label className="block text-[10px] font-medium text-slate-600">Max Negative Dues Limit (₹)</label>
                   <input
@@ -677,7 +677,7 @@ export default function SettingsPage() {
                 <div className="p-2.5 bg-white rounded border border-emerald-200">
                   <div className="flex justify-between items-center mb-1">
                     <span className="text-xs font-bold text-emerald-700">Elite Fleet Partner</span>
-                    <span className="text-[10px] text-slate-400">≥25 trips &amp; ≥4.8★</span>
+                    <span className="text-[10px] text-slate-600">≥25 trips &amp; ≥4.8★</span>
                   </div>
                   <label className="block text-[10px] font-medium text-slate-600">Max Negative Dues Limit (₹)</label>
                   <input
@@ -720,7 +720,7 @@ export default function SettingsPage() {
               <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                 <div>
                   <label className="block text-[11px] font-semibold text-slate-700">Target Security Reserve (₹)</label>
-                  <p className="text-[10px] text-slate-400 mb-1">Target float accumulated per driver</p>
+                  <p className="text-[10px] text-slate-600 mb-1">Target float accumulated per driver</p>
                   <input
                     type="number"
                     defaultValue={revPolicy.target_security_reserve}
@@ -730,7 +730,7 @@ export default function SettingsPage() {
                 </div>
                 <div>
                   <label className="block text-[11px] font-semibold text-slate-700">Reserve Deduction per Trip (₹)</label>
-                  <p className="text-[10px] text-slate-400 mb-1">Deducted only from positive advance payouts</p>
+                  <p className="text-[10px] text-slate-600 mb-1">Deducted only from positive advance payouts</p>
                   <input
                     type="number"
                     defaultValue={revPolicy.reserve_deduction_per_trip}
@@ -740,7 +740,7 @@ export default function SettingsPage() {
                 </div>
                 <div>
                   <label className="block text-[11px] font-semibold text-slate-700">Streak Milestone Target (Trips)</label>
-                  <p className="text-[10px] text-slate-400 mb-1">Every N trips grants a bonus</p>
+                  <p className="text-[10px] text-slate-600 mb-1">Every N trips grants a bonus</p>
                   <input
                     type="number"
                     defaultValue={revPolicy.streak_bonus_target_trips}
@@ -750,7 +750,7 @@ export default function SettingsPage() {
                 </div>
                 <div>
                   <label className="block text-[11px] font-semibold text-slate-700">Streak Bonus Amount (₹)</label>
-                  <p className="text-[10px] text-slate-400 mb-1">Credited to wallet &amp; clears dues first</p>
+                  <p className="text-[10px] text-slate-600 mb-1">Credited to wallet &amp; clears dues first</p>
                   <input
                     type="number"
                     defaultValue={revPolicy.streak_bonus_amount}

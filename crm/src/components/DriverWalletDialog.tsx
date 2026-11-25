@@ -38,7 +38,7 @@ export default function DriverWalletDialog({ driverId, onClose }: { driverId: nu
             <Wallet className="h-5 w-5 mr-1.5 text-emerald-600" />
             Wallet{data ? `: ${data.driver.full_name}` : ''}
           </h3>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600" aria-label="Close">
+          <button onClick={onClose} className="text-slate-600 hover:text-slate-900" aria-label="Close">
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -46,7 +46,7 @@ export default function DriverWalletDialog({ driverId, onClose }: { driverId: nu
         {error ? (
           <div className="p-3 bg-rose-50 border border-rose-200 rounded text-sm text-rose-700">{error}</div>
         ) : !data ? (
-          <div className="py-10 flex justify-center items-center text-slate-400 text-sm">
+          <div className="py-10 flex justify-center items-center text-slate-600 text-sm">
             <RefreshCw className="h-5 w-5 animate-spin mr-2" /> Loading wallet...
           </div>
         ) : (
@@ -95,7 +95,7 @@ export default function DriverWalletDialog({ driverId, onClose }: { driverId: nu
                         </td>
                         <td className="px-3 py-2 whitespace-nowrap">
                           {String(e.transaction_type).replace(/_/g, ' ')}
-                          <div className="text-[10px] text-slate-400">{e.payment_channel}</div>
+                          <div className="text-[10px] text-slate-600">{e.payment_channel}</div>
                         </td>
                         <td className={`px-3 py-2 text-right font-mono font-semibold whitespace-nowrap ${e.direction === 'DEBIT' ? 'text-rose-600' : 'text-emerald-700'}`}>
                           {e.direction === 'DEBIT' ? '−' : '+'}
@@ -103,11 +103,11 @@ export default function DriverWalletDialog({ driverId, onClose }: { driverId: nu
                         </td>
                         <td className="px-3 py-2 whitespace-nowrap">
                           {e.booking_code || '—'}
-                          {e.reference_id && <div className="text-[10px] text-slate-400 font-mono">{e.reference_id}</div>}
+                          {e.reference_id && <div className="text-[10px] text-slate-600 font-mono">{e.reference_id}</div>}
                         </td>
                         <td className="px-3 py-2 text-slate-600 min-w-[12rem] break-words">
                           {e.notes || ''}
-                          {e.recorded_by_name && <div className="text-[10px] text-slate-400">by {e.recorded_by_name}</div>}
+                          {e.recorded_by_name && <div className="text-[10px] text-slate-600">by {e.recorded_by_name}</div>}
                         </td>
                       </tr>
                     ))}

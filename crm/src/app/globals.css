@@ -12,3 +12,8 @@ body {
   background: rgb(var(--background-rgb));
 }
 
+input::placeholder,
+textarea::placeholder {
+  color: #293546;
+  opacity: 1;
+}

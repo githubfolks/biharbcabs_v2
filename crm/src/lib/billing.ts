@@ -5,6 +5,7 @@ import { nextDocumentNumber } from './gst-documents';
 import { documentTaxSplit, taxColumns } from './place-of-supply';
 import { creditLimitFor } from './driver-dues';
 import { deductPlanOnTripCompletion, planDeductionForRide } from './driver-plans';
+import { recordBookingEvent } from './booking-timeline';
 import { PoolClient } from 'pg';
 
 export interface FinalBillingInput {
@@ -231,6 +232,7 @@ export async function completeTripAndSettle(
     await client.query(
       `UPDATE crm_bookings
        SET booking_status = 'COMPLETED_SETTLED',
+           trip_completed_at = COALESCE(trip_completed_at, CURRENT_TIMESTAMP),
            payment_status = $1,
            cash_collected_by_driver = $2,
            closing_km = $3,
@@ -248,6 +250,30 @@ export async function completeTripAndSettle(
         extraHourCharges,
         input.bookingId,
       ]
+    );
+
+    await recordBookingEvent(
+      {
+        bookingId: input.bookingId,
+        eventType: 'TRIP_COMPLETED',
+        fromStatus: b.booking_status,
+        toStatus: 'COMPLETED_SETTLED',
+        actorType: 'SYSTEM',
+        actorLabel: 'Billing Settlement',
+        summary: `Trip completed & settled (Cash collected: ₹${cashCollected.toLocaleString('en-IN')}, Driver payout: ₹${driverGrossEarnings.toLocaleString('en-IN')})`,
+        metadata: {
+          closingKm: input.closingKm ?? null,
+          tollParking,
+          extraKmCharges,
+          extraHourCharges,
+          cashCollected,
+          driverGrossEarnings,
+          commission,
+          driverNetSettlement,
+          settlementType,
+        },
+      },
+      client
     );
 
     // Record Ledger Entries

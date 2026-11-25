@@ -16,6 +16,7 @@ import { notifyOfferedDrivers } from './dispatch-notify';
 import { notify, notifyAdmins } from './wa-notify';
 import { expireDriverReturns } from './return-trips';
 import { sendWhatsAppText, sendWhatsAppButtons } from './whatsapp';
+import { recordBookingEvent } from './booking-timeline';
 
 export interface FrequentCronResult {
   slaBreachesEscalated: number;
@@ -96,6 +97,14 @@ export async function runDriverWakeupChecks(): Promise<number> {
         `UPDATE crm_bookings SET wakeup_sent_at = CURRENT_TIMESTAMP WHERE id = $1`,
         [b.id]
       );
+      await recordBookingEvent({
+        bookingId: Number(b.id),
+        eventType: 'WAKEUP_SENT',
+        actorType: 'SYSTEM',
+        actorLabel: 'Wake-up Cron',
+        summary: `T-${hoursBefore}h wake-up check sent to driver ${b.driver_name || targetPhone}`,
+        metadata: { hoursBefore },
+      });
       sentCount++;
     }
   }
@@ -121,12 +130,20 @@ export async function runUnconfirmedWakeupAlerts(): Promise<number> {
        AND b.wakeup_sent_at IS NOT NULL AND b.wakeup_confirmed_at IS NULL AND b.wakeup_alerted_at IS NULL
        AND b.wakeup_sent_at <= CURRENT_TIMESTAMP - ($2 * INTERVAL '1 minute')
        AND ((b.pickup_date + b.pickup_time) AT TIME ZONE 'Asia/Kolkata') <= CURRENT_TIMESTAMP + ($1 * INTERVAL '1 minute')
-     RETURNING b.booking_code, b.pickup_address,
+     RETURNING b.id, b.booking_code, b.pickup_address,
                to_char(b.pickup_date, 'DD Mon') AS pickup_day, to_char(b.pickup_time, 'HH24:MI') AS pickup_hm,
                d.full_name AS driver_name, d.phone AS driver_phone`,
     [minutes, WAKEUP_ANSWER_MINUTES]
   );
   for (const b of claimed.rows) {
+    await recordBookingEvent({
+      bookingId: Number(b.id),
+      eventType: 'WAKEUP_ALERTED',
+      actorType: 'SYSTEM',
+      actorLabel: 'Wake-up Cron',
+      summary: `Driver ${b.driver_name} did not confirm wake-up check — admins alerted`,
+      metadata: { driverName: b.driver_name, driverPhone: b.driver_phone },
+    });
     await notifyAdmins(
       `⏰ Driver ${b.driver_name} (${b.driver_phone}) has NOT confirmed trip #${b.booking_code}: pickup ${b.pickup_day} at ${b.pickup_hm}, ${b.pickup_address}. Call the driver, or reassign the ride from the CRM.`
     );

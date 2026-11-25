@@ -41,6 +41,9 @@ interface AdjustedPricing {
   extraDays?: number;
   extraDayCabChargePreGst?: number;
   extraDayDriverTaPreGst?: number;
+  tolerancePct?: number;
+  maxAllowedKm?: number;
+  withinPackageRange?: boolean;
 }
 
 function PlaceAutocompleteInput({
@@ -119,7 +122,7 @@ function PlaceAutocompleteInput({
     <div ref={containerRef} className="relative">
       <label className="block text-xs font-semibold text-slate-700">{label}</label>
       <div className="relative mt-1">
-        <MapPin className="h-4 w-4 text-slate-400 absolute left-3 top-2.5 pointer-events-none" />
+        <MapPin className="h-4 w-4 text-slate-600 absolute left-3 top-2.5 pointer-events-none" />
         <input
           required={required}
           value={value}
@@ -365,10 +368,18 @@ export default function OperatorNewBookingPage() {
     return extra > 0 ? Math.round(extra * 10) / 10 : 0;
   }, [distanceInfo, selectedPkg, form.is_round_trip]);
 
+  const isDistanceOutOfRange = Boolean(adjustedPricing && adjustedPricing.withinPackageRange === false);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!selectedPkg) {
       setError('Please select a booking plan/package.');
+      return;
+    }
+    if (isDistanceOutOfRange && adjustedPricing) {
+      setError(
+        `Route distance (${adjustedPricing.roadDistanceKm} km) exceeds the maximum allowed ${adjustedPricing.maxAllowedKm} km (${selectedPkg.included_km} km + ${adjustedPricing.tolerancePct ?? 20}% tolerance) for "${selectedPkg.name}". Please select a higher-KM package.`
+      );
       return;
     }
     setSubmitting(true);
@@ -558,7 +569,7 @@ export default function OperatorNewBookingPage() {
                         )}
                       </div>
                     ) : (
-                      <div className="mt-2 text-[10px] text-slate-400">Enter source city below to check live cab availability</div>
+                      <div className="mt-2 text-[10px] text-slate-600">Enter source city below to check live cab availability</div>
                     )}
                   </button>
                 );
@@ -671,7 +682,11 @@ export default function OperatorNewBookingPage() {
 
           {/* Live Road Distance Banner */}
           {(distanceLoading || distanceInfo || distanceError) && (
-            <div className="p-3 rounded-lg border bg-blue-50/70 border-blue-200 flex flex-wrap items-center justify-between gap-3 text-xs">
+            <div className={`p-3.5 rounded-lg border flex flex-wrap items-center justify-between gap-3 text-xs ${
+              isDistanceOutOfRange
+                ? 'bg-rose-50 border-rose-300'
+                : 'bg-blue-50/70 border-blue-200'
+            }`}>
               {distanceLoading ? (
                 <span className="inline-flex items-center text-blue-700 font-medium">
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Calculating driving distance via LocationIQ...
@@ -680,19 +695,23 @@ export default function OperatorNewBookingPage() {
                 <span className="text-amber-800">{distanceError}</span>
               ) : distanceInfo ? (
                 <>
-                  <div className="flex flex-wrap items-center gap-4 text-blue-900 font-mono">
-                    <span><strong>Road Distance:</strong> {distanceInfo.distance_km} km</span>
+                  <div className={`flex flex-wrap items-center gap-4 font-mono ${isDistanceOutOfRange ? 'text-rose-900' : 'text-blue-900'}`}>
+                    <span><strong>Road Distance:</strong> {distanceInfo.distance_km} km{form.is_round_trip ? ` (2x = ${(distanceInfo.distance_km * 2).toFixed(1)} km)` : ''}</span>
                     <span><strong>Est. Drive Time:</strong> {distanceInfo.duration_text}</span>
                     {distanceInfo.cached && <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-700">cached</span>}
                   </div>
-                  {selectedPkg && estimatedExtraKm > 0 && (
+                  {selectedPkg && isDistanceOutOfRange && adjustedPricing ? (
+                    <span className="text-rose-800 font-bold">
+                      Out of package range! Max allowed for {selectedPkg.name} is {adjustedPricing.maxAllowedKm} km ({selectedPkg.included_km} km + {adjustedPricing.tolerancePct ?? 20}% tolerance). Please select a higher-KM package.
+                    </span>
+                  ) : selectedPkg && estimatedExtraKm > 0 ? (
                     <span className="text-amber-800 font-semibold">
-                      Exceeds package {selectedPkg.included_km} km by {adjustedPricing?.extraKm ?? estimatedExtraKm} km
+                      Exceeds package {selectedPkg.included_km} km by {adjustedPricing?.extraKm ?? estimatedExtraKm} km (within +{adjustedPricing?.tolerancePct ?? 20}% tolerance)
                       {adjustedPricing
-                        ? ` → Adjusted Total Payable: ₹${adjustedPricing.totalPayment.toLocaleString('en-IN')}`
+                        ? ` → Adjusted Final Payment: ₹${adjustedPricing.totalPayment.toLocaleString('en-IN')}`
                         : ` (Extra ₹${selectedPkg.cab_type.extra_km_charge}/km)`}
                     </span>
-                  )}
+                  ) : null}
                 </>
               ) : null}
             </div>
@@ -789,7 +808,7 @@ export default function OperatorNewBookingPage() {
         <div className="flex justify-end pt-4 border-t">
           <button
             type="submit"
-            disabled={submitting || !selectedPkg}
+            disabled={submitting || !selectedPkg || isDistanceOutOfRange}
             className="inline-flex items-center px-5 py-2.5 bg-orange-600 text-white rounded-lg text-sm font-semibold hover:bg-orange-700 disabled:opacity-50"
           >
             <Send className="h-4 w-4 mr-2" />

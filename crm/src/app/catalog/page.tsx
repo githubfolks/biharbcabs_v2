@@ -881,7 +881,7 @@ export default function CatalogPage() {
               <tbody className="divide-y divide-slate-200">
                 {driverPlans.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-4 py-8 text-center text-slate-400">
+                    <td colSpan={6} className="px-4 py-8 text-center text-slate-600">
                       No driver subscription plans configured yet. Drivers can send PLANS on WhatsApp once created.
                     </td>
                   </tr>

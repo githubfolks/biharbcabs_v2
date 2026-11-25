@@ -196,22 +196,24 @@ export default function DriverEditDialog({
   const mask = (v: string | null) => (v ? `•••• ${String(v).slice(-4)}` : '—');
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-start sm:items-center justify-center p-4">
-      <div className="bg-white rounded-xl shadow-2xl max-w-3xl w-full p-4 sm:p-6 space-y-5 my-4">
-        <div className="flex justify-between items-center border-b pb-3">
+    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+      <div className="bg-white rounded-xl shadow-2xl max-w-3xl w-full max-h-[90vh] flex flex-col overflow-hidden">
+        <div className="shrink-0 flex justify-between items-center border-b px-5 py-4 bg-white">
           <h3 className="text-lg font-bold text-slate-900 flex items-center">
             <Pencil className="h-5 w-5 mr-1.5 text-orange-600" />
             Edit Driver{detail ? `: ${detail.driver.full_name}` : ''}
           </h3>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600" aria-label="Close">
+          <button onClick={onClose} className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100" aria-label="Close">
             <X className="h-5 w-5" />
           </button>
         </div>
 
+        <div className="overflow-y-auto p-5 space-y-5 flex-1">
+
         {loadError ? (
           <div className="p-3 bg-rose-50 border border-rose-200 rounded text-sm text-rose-700">{loadError}</div>
         ) : !detail ? (
-          <div className="py-10 flex justify-center items-center text-slate-400 text-sm">
+          <div className="py-10 flex justify-center items-center text-slate-600 text-sm">
             <RefreshCw className="h-5 w-5 animate-spin mr-2" /> Loading driver...
           </div>
         ) : (
@@ -427,7 +429,7 @@ export default function DriverEditDialog({
             <div className="border-t pt-4">
               <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Change history</h4>
               {detail.edits.length === 0 ? (
-                <p className="text-xs text-slate-400 italic">No edits recorded.</p>
+                <p className="text-xs text-slate-600 italic">No edits recorded.</p>
               ) : (
                 <ul className="space-y-1.5 max-h-56 overflow-y-auto text-xs">
                   {detail.edits.map((e: any) => (
@@ -451,6 +453,7 @@ export default function DriverEditDialog({
             </div>
           </>
         )}
+        </div>
       </div>
     </div>
   );

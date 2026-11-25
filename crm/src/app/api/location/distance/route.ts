@@ -7,7 +7,7 @@ import {
   calculateTripDays,
   getPricedPackageById,
 } from '@/lib/pricing-engine';
-import { getSplitRules } from '@/lib/settings';
+import { getPackageDistanceTolerancePct, getSplitRules } from '@/lib/settings';
 
 export const dynamic = 'force-dynamic';
 
@@ -50,7 +50,7 @@ export async function GET(req: NextRequest) {
         const pkg = await getPricedPackageById(pkgId);
         if (pkg) {
           const tripDays = calculateTripDays(pickupDate, returnDate, isRoundTrip);
-          const splitRules = await getSplitRules();
+          const [splitRules, tolerancePct] = await Promise.all([getSplitRules(), getPackageDistanceTolerancePct()]);
           adjusted_pricing = calculateDistanceAdjustedPricing(
             pkg.pricing,
             pkg.included_km,
@@ -62,6 +62,7 @@ export async function GET(req: NextRequest) {
               tripDays,
               perDayCharge: pkg.cab_type.per_day_charge,
               driverTa: pkg.cab_type.driver_ta,
+              tolerancePct,
             }
           );
         }

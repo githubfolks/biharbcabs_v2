@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { 
-  Car, MessageSquare, Users, Wallet, Sliders, LogOut, User, Database, ChevronRight, Menu, X, Package, PlusCircle,
+  Car, MessageSquare, Users, Wallet, Sliders, LogOut, User, Database, ChevronRight, Menu, X, Package, PlusCircle, Smartphone,
 } from 'lucide-react';
 import { Permission, hasPermission } from '@/lib/permissions';
 
@@ -18,7 +18,7 @@ const timeText = (iso: string) =>
   new Date(iso).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
 
 type Pill = { label: string; title: string; dot: string; icon: string; chip: string };
-const GREY: Omit<Pill, 'label' | 'title'> = { dot: 'bg-slate-400', icon: 'text-slate-400', chip: 'text-slate-500 bg-slate-50 border-slate-200' };
+const GREY: Omit<Pill, 'label' | 'title'> = { dot: 'bg-slate-500', icon: 'text-slate-600', chip: 'text-slate-700 bg-slate-50 border-slate-200' };
 const GREEN: Omit<Pill, 'label' | 'title'> = { dot: 'bg-emerald-500', icon: 'text-emerald-400', chip: 'text-slate-600 bg-slate-50 border-slate-200' };
 const AMBER: Omit<Pill, 'label' | 'title'> = { dot: 'bg-amber-500', icon: 'text-amber-400', chip: 'text-amber-800 bg-amber-50 border-amber-200' };
 const RED: Omit<Pill, 'label' | 'title'> = { dot: 'bg-rose-500', icon: 'text-rose-400', chip: 'text-rose-700 bg-rose-50 border-rose-200' };
@@ -156,6 +156,14 @@ export default function SidebarLayout({ children }: SidebarLayoutProps) {
       icon: MessageSquare,
       badge: 'Live',
       active: pathname.startsWith('/inbox'),
+      permission: 'inbox.use',
+    },
+    {
+      href: '/simulator',
+      label: 'WA Simulator',
+      icon: Smartphone,
+      badge: 'Test',
+      active: pathname.startsWith('/simulator'),
       permission: 'inbox.use',
     },
     {
@@ -312,7 +320,7 @@ export default function SidebarLayout({ children }: SidebarLayoutProps) {
               <Menu className="h-5 w-5" />
             </button>
             <span className="font-semibold text-slate-900 hidden sm:inline">BiharCabs Operations</span>
-            <ChevronRight className="h-3.5 w-3.5 text-slate-400 hidden sm:inline" />
+            <ChevronRight className="h-3.5 w-3.5 text-slate-600 hidden sm:inline" />
             <span className="capitalize text-slate-500 truncate">
               {pathname === '/' ? 'Live Dispatch' : pathname.replace('/', '').replace(/-/g, ' ')}
             </span>

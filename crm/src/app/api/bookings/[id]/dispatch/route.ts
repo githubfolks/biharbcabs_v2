@@ -8,6 +8,7 @@ import { query, withTransaction } from '@/lib/db';
 import { settleReturnDiscountFunding } from '@/lib/return-trips';
 import { notifyAssignment, notifyOfferedDrivers } from '@/lib/dispatch-notify';
 import { issueStartOtp } from '@/lib/trip-otp';
+import { recordBookingEvent } from '@/lib/booking-timeline';
 
 export async function POST(
   req: NextRequest,
@@ -68,6 +69,7 @@ export async function POST(
            SET assigned_driver_id = $1,
                assigned_vehicle_id = $2,
                booking_status = 'DRIVER_ASSIGNED',
+               driver_assigned_at = CURRENT_TIMESTAMP,
                updated_at = CURRENT_TIMESTAMP
            WHERE id = $3`,
           [driverId, eligibility.vehicleId, bookingId]
@@ -77,6 +79,28 @@ export async function POST(
           `UPDATE crm_dispatch_offers SET offer_status = 'EXPIRED', responded_at = CURRENT_TIMESTAMP
            WHERE booking_id = $1 AND offer_status = 'PENDING'`,
           [bookingId]
+        );
+        const drvRow = (await client.query('SELECT full_name, phone FROM crm_drivers WHERE id = $1', [driverId])).rows[0];
+        await recordBookingEvent(
+          {
+            bookingId,
+            eventType: reassigning ? 'DRIVER_REASSIGNED' : 'DRIVER_ASSIGNED',
+            fromStatus: booking.booking_status,
+            toStatus: 'DRIVER_ASSIGNED',
+            actorType: 'ADMIN',
+            actorId: auth.id,
+            actorLabel: auth.full_name || auth.email || `Admin #${auth.id}`,
+            summary: reassigning
+              ? `Reassigned to driver ${drvRow?.full_name || `#${driverId}`}`
+              : `Manually assigned to driver ${drvRow?.full_name || `#${driverId}`}`,
+            metadata: {
+              driverId,
+              driverName: drvRow?.full_name ?? null,
+              vehicleId: eligibility.vehicleId,
+              previousDriverId: reassigning ? Number(booking.assigned_driver_id) : null,
+            },
+          },
+          client
         );
         // A new code for starting the trip; on a reassignment it replaces the previous driver's.
         const startOtp = await issueStartOtp(client, bookingId);

@@ -453,7 +453,7 @@ export default function DriversPage() {
             <tbody className="divide-y divide-slate-200 text-slate-700">
               {drivers.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-slate-400">
+                  <td colSpan={7} className="px-4 py-8 text-center text-slate-600">
                     {loading
                       ? 'Loading drivers...'
                       : loadError
@@ -475,7 +475,7 @@ export default function DriversPage() {
                         <Phone className="h-3 w-3 mr-1" />
                         {d.phone} (WA: {d.whatsapp_phone})
                       </div>
-                      <div className="text-[11px] text-slate-400 mt-0.5">
+                      <div className="text-[11px] text-slate-600 mt-0.5">
                         DL: <span className="font-mono">{d.license_number || 'Submitted'}</span>
                       </div>
                     </td>
@@ -485,11 +485,11 @@ export default function DriversPage() {
                         d.vehicles.map((v: any) => (
                           <div key={v.id} className="text-xs text-slate-500">
                             <span>{v.model_name}</span> ({v.registration_no})
-                            <span className="ml-1 uppercase text-slate-400 font-mono">[{v.wp_vehicle_code}]</span>
+                            <span className="ml-1 uppercase text-slate-600 font-mono">[{v.wp_vehicle_code}]</span>
                           </div>
                         ))
                       ) : (
-                        <span className="text-xs text-slate-400 italic">No vehicle</span>
+                        <span className="text-xs text-slate-600 italic">No vehicle</span>
                       )}
                     </td>
                     <td className="px-4 py-3">
@@ -510,7 +510,7 @@ export default function DriversPage() {
                           ({d.total_ratings_count || 0})
                         </span>
                       </div>
-                      <div className="text-[10px] text-slate-400 mt-0.5">
+                      <div className="text-[10px] text-slate-600 mt-0.5">
                         {d.total_trips_completed || 0} trips
                       </div>
                       <div className="mt-1">
@@ -529,7 +529,7 @@ export default function DriversPage() {
                     <td className="px-4 py-3">
                       <div className="font-mono text-xs font-bold text-slate-800">
                         ₹{Number(d.security_reserve_balance || 0).toFixed(2)}
-                        <span className="text-[10px] text-slate-400 font-normal"> / ₹{d.target_security_reserve || 500}</span>
+                        <span className="text-[10px] text-slate-600 font-normal"> / ₹{d.target_security_reserve || 500}</span>
                       </div>
                       <div className="w-24 bg-slate-200 rounded-full h-1.5 mt-1 overflow-hidden">
                         <div
@@ -545,7 +545,7 @@ export default function DriversPage() {
                         <Wallet className="h-3.5 w-3.5 mr-1" />
                         ₹{Number(d.wallet_balance).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                       </div>
-                      <div className="text-[10px] text-slate-400">
+                      <div className="text-[10px] text-slate-600">
                         Limit: -₹{Number(d.dynamic_credit_limit || d.max_negative_balance || 300).toLocaleString('en-IN')}
                       </div>
                     </td>
@@ -567,40 +567,40 @@ export default function DriversPage() {
                       {hasPermission(role, 'ledger.view') && (
                         <button
                           onClick={() => setWalletDriver(d)}
-                          className="inline-flex items-center px-2 py-1 bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 rounded text-xs font-medium"
+                          className="inline-flex items-center justify-center p-2 bg-white hover:bg-indigo-50 border border-slate-300 hover:border-indigo-300 text-indigo-700 rounded-lg transition"
                           title="Wallet ledger entries"
+                          aria-label="Wallet ledger entries"
                         >
-                          <Wallet className="h-3 w-3 mr-1" />
-                          Wallet
+                          <Wallet className="h-5 w-5" />
                         </button>
                       )}
                       <button
                         onClick={() => setEditDriverId(d.id)}
-                        className="inline-flex items-center px-2 py-1 bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 rounded text-xs font-medium"
+                        className="inline-flex items-center justify-center p-2 bg-white hover:bg-slate-100 border border-slate-300 text-slate-700 rounded-lg transition"
                         title="Edit details, payout details and vehicles"
+                        aria-label="Edit driver"
                       >
-                        <Pencil className="h-3 w-3 mr-1" />
-                        Edit
+                        <Pencil className="h-5 w-5" />
                       </button>
                       <button
                         onClick={() => openStatusModal(d)}
-                        className={`inline-flex items-center px-2 py-1 border rounded text-xs font-semibold ${
+                        className={`inline-flex items-center justify-center p-2 border rounded-lg transition ${
                           d.onboarding_status === 'PENDING_DOCS'
                             ? 'bg-sky-600 hover:bg-sky-700 border-sky-600 text-white'
-                            : 'bg-white hover:bg-slate-50 border-slate-300 text-slate-700'
+                            : 'bg-white hover:bg-sky-50 border-slate-300 hover:border-sky-300 text-sky-700'
                         }`}
-                        title="Activate, suspend or offboard this driver"
+                        title={d.onboarding_status === 'PENDING_DOCS' ? 'Review documents & activate' : 'Activate, suspend or offboard this driver'}
+                        aria-label={d.onboarding_status === 'PENDING_DOCS' ? 'Review driver status' : 'Change driver status'}
                       >
-                        <ShieldCheck className="h-3 w-3 mr-1" />
-                        {d.onboarding_status === 'PENDING_DOCS' ? 'Review' : 'Status'}
+                        <ShieldCheck className="h-5 w-5" />
                       </button>
                       <button
                         onClick={() => openRatingModal(d)}
-                        className="inline-flex items-center px-2 py-1 bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 rounded text-xs font-medium"
+                        className="inline-flex items-center justify-center p-2 bg-white hover:bg-amber-50 border border-slate-300 hover:border-amber-300 text-amber-500 rounded-lg transition"
                         title="View ratings and dispute customer feedback"
+                        aria-label="View driver reviews"
                       >
-                        <Star className="h-3 w-3 mr-1 text-amber-500 fill-amber-500" />
-                        Reviews
+                        <Star className="h-5 w-5 fill-amber-500" />
                       </button>
                       <button
                         onClick={() => {
@@ -608,11 +608,11 @@ export default function DriversPage() {
                           setIncentiveAmount(200);
                           setIncentiveReason('Weekly Top Partner Bonus');
                         }}
-                        className="inline-flex items-center px-2 py-1 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-emerald-800 rounded text-xs font-semibold"
-                        title="Award streak/performance incentive &amp; clear dues"
+                        className="inline-flex items-center justify-center p-2 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-emerald-700 rounded-lg transition"
+                        title="Award streak/performance incentive & clear dues"
+                        aria-label="Award driver bonus"
                       >
-                        <Gift className="h-3 w-3 mr-1 text-emerald-600" />
-                        Bonus
+                        <Gift className="h-5 w-5" />
                       </button>
                     </td>
                   </tr>
@@ -629,7 +629,7 @@ export default function DriversPage() {
           <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full p-6 space-y-4">
             <div className="flex justify-between items-center border-b pb-3">
               <h3 className="text-lg font-bold text-slate-900">Onboard Driver & Vehicle</h3>
-              <button onClick={closeOnboardModal} className="text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
+              <button onClick={closeOnboardModal} className="text-slate-600 hover:text-slate-900 text-xl font-bold">&times;</button>
             </div>
             <form onSubmit={handleOnboardDriver} className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
@@ -811,14 +811,14 @@ export default function DriversPage() {
               </div>
               <button
                 onClick={() => setSelectedDriverRating(null)}
-                className="text-slate-400 hover:text-slate-600"
+                className="text-slate-600 hover:text-slate-900"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
 
             {loadingRating ? (
-              <div className="py-12 flex justify-center items-center text-slate-400 text-sm">
+              <div className="py-12 flex justify-center items-center text-slate-600 text-sm">
                 <RefreshCw className="h-5 w-5 animate-spin mr-2" /> Loading rating history...
               </div>
             ) : selectedDriverRating.profile ? (
@@ -858,7 +858,7 @@ export default function DriversPage() {
                     Customer Ratings & Feedback Log
                   </h4>
                   {selectedDriverRating.profile.recentReviews.length === 0 ? (
-                    <div className="text-center py-6 text-xs text-slate-400 italic">
+                    <div className="text-center py-6 text-xs text-slate-600 italic">
                       No ratings submitted yet for this driver.
                     </div>
                   ) : (
@@ -891,7 +891,7 @@ export default function DriversPage() {
                                   {rev.feedbackCategory}
                                 </span>
                               )}
-                              <span className="text-slate-400 text-[10px]">
+                              <span className="text-slate-600 text-[10px]">
                                 {new Date(rev.createdAt).toLocaleDateString('en-IN', {
                                   day: '2-digit',
                                   month: 'short',
@@ -993,7 +993,7 @@ export default function DriversPage() {
                 </h3>
                 <p className="text-xs text-slate-500">{statusDriver.phone} &bull; {statusDriver.base_city}</p>
               </div>
-              <button onClick={() => setStatusDriver(null)} className="text-slate-400 hover:text-slate-600">
+              <button onClick={() => setStatusDriver(null)} className="text-slate-600 hover:text-slate-900">
                 <X className="h-5 w-5" />
               </button>
             </div>
@@ -1001,7 +1001,7 @@ export default function DriversPage() {
             {statusLoadError ? (
               <div className="p-3 bg-rose-50 border border-rose-200 rounded text-sm text-rose-700">{statusLoadError}</div>
             ) : !statusDetail ? (
-              <div className="py-10 flex justify-center items-center text-slate-400 text-sm">
+              <div className="py-10 flex justify-center items-center text-slate-600 text-sm">
                 <RefreshCw className="h-5 w-5 animate-spin mr-2" /> Loading status...
               </div>
             ) : (
@@ -1166,7 +1166,7 @@ export default function DriversPage() {
                 <div className="border-t pt-3">
                   <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Status History</h4>
                   {statusDetail.history.length === 0 ? (
-                    <p className="text-xs text-slate-400 italic">No manual status changes recorded.</p>
+                    <p className="text-xs text-slate-600 italic">No manual status changes recorded.</p>
                   ) : (
                     <ul className="space-y-1.5 max-h-48 overflow-y-auto text-xs">
                       {statusDetail.history.map((h: any) => (
@@ -1197,7 +1197,7 @@ export default function DriversPage() {
                 <Gift className="h-5 w-5 text-emerald-600" />
                 <h3 className="text-base font-bold text-slate-900">Award Driver Incentive &amp; Bonus</h3>
               </div>
-              <button onClick={() => setSelectedDriverIncentive(null)} className="text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
+              <button onClick={() => setSelectedDriverIncentive(null)} className="text-slate-600 hover:text-slate-900 text-xl font-bold">&times;</button>
             </div>
 
             <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 text-xs space-y-1.5">

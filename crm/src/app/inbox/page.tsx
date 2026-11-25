@@ -125,9 +125,9 @@ export default function InboxPage() {
                 {threadsError}
               </div>
             ) : loading && threads.length === 0 ? (
-              <div className="p-6 text-center text-xs text-slate-400">Loading conversations…</div>
+              <div className="p-6 text-center text-xs text-slate-600">Loading conversations…</div>
             ) : threads.length === 0 ? (
-              <div className="p-6 text-center text-xs text-slate-400">
+              <div className="p-6 text-center text-xs text-slate-600">
                 No active WhatsApp conversations yet. Messages sent to +91 7070992170 will appear here.
               </div>
             ) : (
@@ -154,14 +154,14 @@ export default function InboxPage() {
                         <span className="font-semibold text-slate-900 text-sm truncate">
                           {t.customer_name || t.driver_name || `+${t.phone}`}
                         </span>
-                        <span className="text-[10px] text-slate-400 shrink-0">
+                        <span className="text-[10px] text-slate-600 shrink-0">
                           {new Date(t.last_message_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
                         </span>
                       </div>
                       <div className="text-xs text-slate-500 font-mono mt-0.5 truncate">
                         +{t.phone} &bull; <span className="uppercase text-[10px] font-semibold text-slate-600">[{t.role}]</span>
                       </div>
-                      <div className="text-xs text-slate-400 truncate mt-1">
+                      <div className="text-xs text-slate-600 truncate mt-1">
                         State: <span className="font-mono text-slate-600">{t.state}</span>
                       </div>
                     </div>
@@ -198,7 +198,7 @@ export default function InboxPage() {
                     </div>
                   </div>
                 </div>
-                <div className="hidden sm:flex text-xs text-slate-400 items-center shrink-0">
+                <div className="hidden sm:flex text-xs text-slate-600 items-center shrink-0">
                   <Clock className="h-3.5 w-3.5 mr-1" />
                   Live WhatsApp Cloud API
                 </div>
@@ -211,7 +211,7 @@ export default function InboxPage() {
                     {messagesError}
                   </div>
                 ) : messages.length === 0 ? (
-                  <div className="h-full flex items-center justify-center text-xs text-slate-400">
+                  <div className="h-full flex items-center justify-center text-xs text-slate-600">
                     No messages recorded for this conversation yet.
                   </div>
                 ) : (
@@ -248,7 +248,7 @@ export default function InboxPage() {
                           )}
                           <div
                             className={`text-[10px] mt-1 text-right ${
-                              isOutbound ? 'text-emerald-100' : 'text-slate-400'
+                              isOutbound ? 'text-emerald-100' : 'text-slate-600'
                             }`}
                           >
                             {new Date(m.created_at).toLocaleTimeString('en-IN', {
@@ -283,7 +283,7 @@ export default function InboxPage() {
               </form>
             </>
           ) : (
-            <div className="h-full flex items-center justify-center text-slate-400 text-sm">
+            <div className="h-full flex items-center justify-center text-slate-600 text-sm">
               Select a conversation to start reading or chatting
             </div>
           )}

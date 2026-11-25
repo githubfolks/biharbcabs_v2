@@ -1,6 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { calculateDistanceAdjustedPricing, calculatePackagePricing, calculateTripDays } from '../lib/pricing-engine';
+import {
+  assertWithinPackageDistanceRange,
+  calculateDistanceAdjustedPricing,
+  calculatePackagePricing,
+  calculateTripDays,
+} from '../lib/pricing-engine';
 import { SplitRules } from '../lib/fare-split';
 import { normalizePlanTripType, planDeductionForRide } from '../lib/driver-plans';
 
@@ -202,4 +207,34 @@ test('calculateTripDays and Round Trip pricing double road distance and add mult
   assert.equal(rt.totalPayment, 7045);
   assert.equal(rt.adminCommission, 670);
   assert.equal(rt.driverGrossEarnings, 6030);
+});
+
+test('package distance range enforces +20% soft tolerance and blocks routes above 120%', () => {
+  const micro = calculatePackagePricing({
+    includedKm: 10,
+    includedHours: 2,
+    mileageKmpl: 15,
+    fuelPricePerUnit: 113.37,
+    perDayCharge: 800,
+    baseBufferMinutes: 30,
+    driverTa: 0,
+    splitRules: PRICING_RULES,
+  });
+
+  // 11.5 km is within 12 km (10 km + 20% tolerance) => allowed, 1.5 extra km billed
+  const withinTol = calculateDistanceAdjustedPricing(micro, 10, 16, 11.5, PRICING_RULES, { tolerancePct: 20 });
+  assert.equal(withinTol.maxAllowedKm, 12);
+  assert.equal(withinTol.withinPackageRange, true);
+  assert.equal(withinTol.extraKm, 1.5);
+  assert.equal(withinTol.extraKmChargePreGst, 24);
+  assert.doesNotThrow(() => assertWithinPackageDistanceRange('Micro-10KM-2Hr', 10, withinTol));
+
+  // 15 km exceeds 12 km (120% of 10 km) => blocked
+  const outOfRange = calculateDistanceAdjustedPricing(micro, 10, 16, 15, PRICING_RULES, { tolerancePct: 20 });
+  assert.equal(outOfRange.maxAllowedKm, 12);
+  assert.equal(outOfRange.withinPackageRange, false);
+  assert.throws(
+    () => assertWithinPackageDistanceRange('Micro-10KM-2Hr', 10, outOfRange),
+    /exceeds the maximum allowed range of 12 km/
+  );
 });

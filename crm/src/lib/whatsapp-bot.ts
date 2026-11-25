@@ -1,5 +1,6 @@
 import { query, withTransaction } from './db';
 import { findDriverByPhones } from './driver-edits';
+import { recordBookingEvent } from './booking-timeline';
 
 const ALREADY_REGISTERED_REPLY =
   '🙏 You are already registered with BiharCabs as a driver, so nothing has been changed. Please contact the BiharCabs operations team to update your details.';
@@ -32,6 +33,7 @@ import {
   getReturnTripPolicy,
   getSplitRules,
   getCompanyBillingInfo,
+  getPackageDistanceTolerancePct,
 } from './settings';
 import { listSubscriptionPlans, requestDriverPlanPaymentLink, PlanError } from './driver-plans';
 import { applyReturnDiscount } from './return-trip-pricing';
@@ -211,16 +213,37 @@ async function quoteAndOfferVehicles(phone: string, ctx: Record<string, any>): P
   const isRoundTrip = Boolean(ctx.is_round_trip) || rawType === 'ROUNDTRIP' || rawType === 'ROUND_TRIP';
   const tripDays = calculateTripDays(ctx.pickup_date || null, ctx.return_date || null, isRoundTrip);
 
-  const [packages, routeDistance, splitRules] = await Promise.all([
+  const [packages, routeDistance, splitRules, tolerancePct] = await Promise.all([
     listPricedPackages({ activeOnly: true, bookingType, skipUnpriceable: true }),
     resolveRouteDistanceSafely(
       { originText: ctx.origin || null, destinationText: ctx.destination || null },
       'WhatsApp Quote'
     ),
     getSplitRules(),
+    getPackageDistanceTolerancePct(),
   ]);
 
-  if (packages.length === 0) {
+  const eligiblePackages = packages
+    .map((p) => {
+      const adjusted = calculateDistanceAdjustedPricing(
+        p.pricing,
+        p.included_km,
+        p.cab_type.extra_km_charge,
+        routeDistance?.distance_km ?? null,
+        splitRules,
+        {
+          isRoundTrip,
+          tripDays,
+          perDayCharge: p.cab_type.per_day_charge,
+          driverTa: p.cab_type.driver_ta,
+          tolerancePct,
+        }
+      );
+      return { pkg: p, adjusted };
+    })
+    .filter((entry) => entry.adjusted.withinPackageRange);
+
+  if (eligiblePackages.length === 0) {
     await updateConversation(phone, 'IDLE', {});
     await sendWhatsAppText(
       phone,
@@ -237,20 +260,7 @@ async function quoteAndOfferVehicles(phone: string, ctx: Record<string, any>): P
     return;
   }
 
-  const rows = packages.slice(0, 10).map((p) => {
-    const adjusted = calculateDistanceAdjustedPricing(
-      p.pricing,
-      p.included_km,
-      p.cab_type.extra_km_charge,
-      routeDistance?.distance_km ?? null,
-      splitRules,
-      {
-        isRoundTrip,
-        tripDays,
-        perDayCharge: p.cab_type.per_day_charge,
-        driverTa: p.cab_type.driver_ta,
-      }
-    );
+  const rows = eligiblePackages.slice(0, 10).map(({ pkg: p, adjusted }) => {
     const fare = adjusted.totalPayment;
     const kmLabel = adjusted.extraKm > 0 ? `${adjusted.billedKm} km` : `${p.included_km} km`;
     const notes = `${p.cab_type.display_name} • ${kmLabel} / ${p.included_hours} hr • Extra ₹${p.cab_type.extra_hour_charge}/hr`;
@@ -488,6 +498,13 @@ export async function processIncomingWhatsAppMessage(params: {
        WHERE booking_id = $1 AND driver_id IN (SELECT id FROM crm_drivers WHERE phone = $2 OR whatsapp_phone = $2)`,
       [bookingId, fromPhone]
     );
+    await recordBookingEvent({
+      bookingId,
+      eventType: 'DRIVER_OFFER_DECLINED',
+      actorType: 'DRIVER',
+      actorLabel: fromPhone,
+      summary: `Driver (${fromPhone}) declined the ride offer`,
+    });
 
     await sendWhatsAppText(fromPhone, `Ride #${bookingId} declined. You will receive new ride broadcasts shortly.`);
     return;
@@ -506,13 +523,20 @@ export async function processIncomingWhatsAppMessage(params: {
            AND ($2::bigint IS NULL OR b.id = $2)
          ORDER BY b.pickup_date, b.pickup_time LIMIT 1
        )
-       RETURNING booking_code`,
+       RETURNING id, booking_code`,
       [fromPhone.replace(/\D/g, ''), Number.isInteger(tapped) ? tapped : null]
     );
     if (!confirmed.rows[0]) {
       await sendWhatsAppText(fromPhone, 'We could not find an upcoming trip assigned to you. If this is wrong, please call BiharCabs support.');
       return;
     }
+    await recordBookingEvent({
+      bookingId: Number(confirmed.rows[0].id),
+      eventType: 'WAKEUP_CONFIRMED',
+      actorType: 'DRIVER',
+      actorLabel: fromPhone,
+      summary: `Driver confirmed readiness for pickup (wake-up check)`,
+    });
     await sendWhatsAppText(fromPhone, `✅ Thanks, you are confirmed for trip #${confirmed.rows[0].booking_code}. Please make sure the cab is fuelled and clean, and reach the pickup on time.`);
     return;
   }
@@ -1263,6 +1287,15 @@ async function createCustomerBooking(
     },
     'WhatsApp Booking'
   );
+  if (!adjusted.withinPackageRange) {
+    await resetConversation(fromPhone);
+    await sendWhatsAppText(
+      fromPhone,
+      `Sorry, this route (${adjusted.roadDistanceKm} km) exceeds the allowed range for ${pkg.name} (max ${adjusted.maxAllowedKm} km). Please reply *HI* to select a suitable package.`
+    );
+    return;
+  }
+
   const split = adjusted.split;
   const totalFare = split.customerTotalFare;
   const billedKm = adjusted.billedKm;
@@ -1327,6 +1360,24 @@ async function createCustomerBooking(
   );
   const bookingCode: string = bookRes.rows[0].booking_code;
   const bookingId = Number(bookRes.rows[0].id);
+  await recordBookingEvent({
+    bookingId,
+    eventType: 'BOOKING_CREATED',
+    toStatus: 'AWAITING_DRIVER',
+    actorType: 'CUSTOMER',
+    actorId: Number(customerId),
+    actorLabel: fromPhone,
+    summary: `Booking #${bookingCode} created via WhatsApp (${ctx.origin}${ctx.destination ? ` → ${ctx.destination}` : ''}${isRoundTrip ? `, Round Trip ${tripDays}d` : ''})`,
+    metadata: {
+      source: 'WHATSAPP',
+      tripType: pkg.booking_type,
+      packageName: pkg.name,
+      cab: pkg.cab_type.display_name,
+      customerTotalFare: totalFare,
+      isRoundTrip,
+      tripDays,
+    },
+  });
   await resetConversation(fromPhone);
 
   const summary =

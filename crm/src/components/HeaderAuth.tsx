@@ -34,7 +34,7 @@ export default function HeaderAuth() {
 
   if (pathname === '/login') {
     return (
-      <div className="flex items-center space-x-2 text-xs text-slate-400">
+      <div className="flex items-center space-x-2 text-xs text-slate-600">
         <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
         <span>Native PostgreSQL</span>
       </div>

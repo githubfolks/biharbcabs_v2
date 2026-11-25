@@ -13,6 +13,7 @@ import { settleReturnDiscountFunding } from './return-trips';
 import { issueStartOtp } from './trip-otp';
 import { FareSplit, splitFare } from './fare-split';
 import { normalizePlanTripType, planDeductionForRide, reservePlanForBookingIfApplicable } from './driver-plans';
+import { recordBookingEvent } from './booking-timeline';
 
 export interface DispatchCandidate {
   driver_id: number;
@@ -435,6 +436,28 @@ export async function broadcastRideToDrivers(
       offersCreated++;
     }
 
+    await recordBookingEvent(
+      {
+        bookingId,
+        eventType: 'DRIVER_BROADCAST',
+        fromStatus: booking.booking_status,
+        toStatus: 'AWAITING_DRIVER',
+        actorType: 'SYSTEM',
+        actorLabel: 'Dispatch Engine',
+        summary:
+          offersCreated > 0
+            ? `Ride broadcasted to ${offersCreated} eligible ${isReturnPriority ? 'returning ' : ''}driver${offersCreated === 1 ? '' : 's'}`
+            : `Broadcast attempted — 0 eligible drivers matched right now`,
+        metadata: {
+          offersCreated,
+          isReturnPriority,
+          offeredDriverFare,
+          slaDeadline: slaDeadline.toISOString(),
+        },
+      },
+      client
+    );
+
     return {
       success: true,
       offersCreated,
@@ -585,9 +608,26 @@ export async function acceptRideOffer(
        SET assigned_driver_id = $1,
            assigned_vehicle_id = $2,
            booking_status = 'DRIVER_ASSIGNED',
+           driver_assigned_at = CURRENT_TIMESTAMP,
            updated_at = CURRENT_TIMESTAMP
        WHERE id = $3`,
       [driverId, vehicleId, bookingId]
+    );
+
+    const drvRow = (await client.query('SELECT full_name, phone FROM crm_drivers WHERE id = $1', [driverId])).rows[0];
+    await recordBookingEvent(
+      {
+        bookingId,
+        eventType: 'DRIVER_ASSIGNED',
+        fromStatus: booking.booking_status,
+        toStatus: 'DRIVER_ASSIGNED',
+        actorType: 'DRIVER',
+        actorId: driverId,
+        actorLabel: drvRow?.full_name || `Driver #${driverId}`,
+        summary: `Driver ${drvRow?.full_name || `#${driverId}`} accepted the ride offer`,
+        metadata: { driverId, vehicleId },
+      },
+      client
     );
 
     // 3. Mark this driver's offer as ACCEPTED
@@ -642,6 +682,19 @@ export async function checkAndEscalateSlaBreaches(): Promise<BookingDetails[]> {
        AND sla_deadline_at <= CURRENT_TIMESTAMP
      RETURNING *`
   );
+
+  for (const row of res.rows) {
+    await recordBookingEvent({
+      bookingId: Number(row.id),
+      eventType: 'SLA_ESCALATED',
+      fromStatus: 'AWAITING_DRIVER',
+      toStatus: 'ESCALATED_NO_DRIVER',
+      actorType: 'SYSTEM',
+      actorLabel: 'SLA Monitor',
+      summary: `SLA deadline expired without driver acceptance — escalated to admin`,
+      metadata: { slaDeadlineAt: row.sla_deadline_at },
+    });
+  }
 
   return res.rows;
 }

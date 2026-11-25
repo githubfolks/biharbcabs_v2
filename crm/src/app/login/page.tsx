@@ -68,7 +68,7 @@ export default function LoginPage() {
               </label>
               <div className="mt-1 relative rounded-md shadow-sm">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Mail className="h-5 w-5 text-slate-400" />
+                  <Mail className="h-5 w-5 text-slate-600" />
                 </div>
                 <input
                   type="email"
@@ -87,7 +87,7 @@ export default function LoginPage() {
               </label>
               <div className="mt-1 relative rounded-md shadow-sm">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Lock className="h-5 w-5 text-slate-400" />
+                  <Lock className="h-5 w-5 text-slate-600" />
                 </div>
                 <input
                   type="password"
@@ -118,7 +118,7 @@ export default function LoginPage() {
             </button>
           </div>
 
-          <div className="text-center pt-2 text-xs text-slate-400">
+          <div className="text-center pt-2 text-xs text-slate-600">
             Initial setup credentials seeded in database: <br />
             <code className="text-slate-600 font-mono">admin@biharcabs.com</code>
           </div>

@@ -9,7 +9,7 @@ import {
 } from '@/lib/pricing-engine';
 import { BOOKING_TYPES } from '@/lib/booking-rules';
 import { getCityCabAvailability } from '@/lib/availability';
-import { getSplitRules } from '@/lib/settings';
+import { getPackageDistanceTolerancePct, getSplitRules } from '@/lib/settings';
 
 export const dynamic = 'force-dynamic';
 
@@ -57,7 +57,7 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const [packages, availMap, routeDistance, splitRules] = await Promise.all([
+    const [packages, availMap, routeDistance, splitRules, tolerancePct] = await Promise.all([
       listPricedPackages({
         activeOnly: true,
         bookingType,
@@ -69,6 +69,7 @@ export async function GET(req: NextRequest) {
         'Public Plans'
       ),
       getSplitRules(),
+      getPackageDistanceTolerancePct(),
     ]);
 
     const publicPlans = packages
@@ -94,6 +95,7 @@ export async function GET(req: NextRequest) {
             tripDays,
             perDayCharge: p.cab_type.per_day_charge,
             driverTa: p.cab_type.driver_ta,
+            tolerancePct,
           }
         );
         return {
@@ -128,12 +130,14 @@ export async function GET(req: NextRequest) {
             is_round_trip: effective.isRoundTrip,
             trip_days: effective.tripDays,
             extra_day_charge_pre_gst: effective.extraDayCabChargePreGst + effective.extraDayDriverTaPreGst,
+            max_allowed_km: effective.maxAllowedKm,
+            within_package_range: effective.withinPackageRange,
           },
           ...(availability ? { availability } : {}),
         };
       })
-      // Hide cab categories that have 0 free cabs in the selected source city (e.g. all cabs on ongoing rides).
-      .filter((p) => !p.availability || p.availability.is_available);
+      // Hide cab categories with 0 free cabs in origin city AND packages whose KM range is exceeded by the route.
+      .filter((p) => (!p.availability || p.availability.is_available) && p.pricing.within_package_range);
 
     return NextResponse.json({
       success: true,

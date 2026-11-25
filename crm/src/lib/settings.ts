@@ -160,6 +160,15 @@ export async function getDriverRideGapHours(): Promise<number> {
   return raw;
 }
 
+/** Max percentage above package included_km allowed before blocking booking (default 20%). */
+export async function getPackageDistanceTolerancePct(): Promise<number> {
+  const raw = Number((await getSetting<{ value: number }>('package_distance_tolerance_pct', { value: 20 })).value);
+  if (!Number.isFinite(raw) || raw < 0 || raw > 200) {
+    return 20;
+  }
+  return raw;
+}
+
 export async function getMetaWhatsAppConfig(): Promise<MetaWhatsAppConfig> {
   return getSetting<MetaWhatsAppConfig>('meta_whatsapp_config');
 }

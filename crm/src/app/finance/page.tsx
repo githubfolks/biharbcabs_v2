@@ -185,7 +185,7 @@ export default function FinancePage() {
           <div className="mt-2 text-xl font-bold font-mono tabular-nums [overflow-wrap:anywhere] text-slate-900">
             ₹{Number(summary.totalCommissionRevenue).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
           </div>
-          <p className="text-[10px] text-slate-400 mt-1">Net facilitation fees earned</p>
+          <p className="text-[10px] text-slate-600 mt-1">Net facilitation fees earned</p>
         </div>
 
         {/* Card 2: GST on rides: 5% ride GST (Sec 9(5)) + 18% on commission and tech fee */}
@@ -215,7 +215,7 @@ export default function FinancePage() {
           <div className="mt-2 text-xl font-bold font-mono tabular-nums [overflow-wrap:anywhere] text-slate-900">
             ₹{Number(summary.totalTechFees).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
           </div>
-          <p className="text-[10px] text-slate-400 mt-1">Platform charge collected on completed rides</p>
+          <p className="text-[10px] text-slate-600 mt-1">Platform charge collected on completed rides</p>
         </div>
 
         {/* Card 4: Security Reserve Float */}
@@ -399,7 +399,7 @@ export default function FinancePage() {
           <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700">
             Audit Trail Ledger ({ledger.length} entries)
           </h3>
-          <span className="text-[11px] text-slate-400 font-mono">Immutable Double-Entry Ledger</span>
+          <span className="text-[11px] text-slate-600 font-mono">Immutable Double-Entry Ledger</span>
         </div>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
@@ -417,7 +417,7 @@ export default function FinancePage() {
             <tbody className="divide-y divide-slate-200 text-slate-700">
               {ledger.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-slate-400">
+                  <td colSpan={7} className="px-4 py-8 text-center text-slate-600">
                     No ledger transactions found for selected filter.
                   </td>
                 </tr>
@@ -446,7 +446,7 @@ export default function FinancePage() {
                       ) : tx.customer_name ? (
                         <span className="text-slate-700">👤 {tx.customer_name}</span>
                       ) : (
-                        <span className="text-slate-400 italic">General</span>
+                        <span className="text-slate-600 italic">General</span>
                       )}
                     </td>
                     <td className="px-4 py-3 text-xs uppercase font-mono text-slate-500">
@@ -466,7 +466,7 @@ export default function FinancePage() {
                     <td className="px-4 py-3 text-xs text-slate-500">
                       <div>{tx.notes || '—'}</div>
                       {tx.reference_id && (
-                        <div className="text-[10px] text-slate-400 font-mono mt-0.5">Ref: {tx.reference_id}</div>
+                        <div className="text-[10px] text-slate-600 font-mono mt-0.5">Ref: {tx.reference_id}</div>
                       )}
                     </td>
                   </tr>

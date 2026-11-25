@@ -2,6 +2,7 @@ import crypto from 'crypto';
 import { PoolClient } from 'pg';
 import { withTransaction } from './db';
 import { getSetting } from './settings';
+import { recordBookingEvent } from './booking-timeline';
 
 /**
  * Customer OTP to start a trip. Issued when a driver is assigned and sent to the customer; the driver
@@ -42,6 +43,16 @@ export async function issueStartOtp(client: PoolClient, bookingId: number, polic
      WHERE id = $2`,
     [hashOtp(bookingId, otp), bookingId]
   );
+  await recordBookingEvent(
+    {
+      bookingId,
+      eventType: 'START_OTP_ISSUED',
+      actorType: 'SYSTEM',
+      actorLabel: 'Trip OTP',
+      summary: `Start OTP issued and sent to customer`,
+    },
+    client
+  );
   return otp;
 }
 
@@ -78,7 +89,22 @@ export async function startTripWithOtp(bookingId: number, driverPhone: string, c
     if (!crypto.timingSafeEqual(expected, given)) {
       const attempts = b.start_otp_failed_attempts + 1;
       await client.query(`UPDATE crm_bookings SET start_otp_failed_attempts = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`, [attempts, b.id]);
-      if (attempts >= policy.max_failed_attempts) return { status: 'LOCKED', booking: b, justLocked: true };
+      const locked = attempts >= policy.max_failed_attempts;
+      await recordBookingEvent(
+        {
+          bookingId: Number(b.id),
+          eventType: locked ? 'START_OTP_LOCKED' : 'START_OTP_FAILED',
+          actorType: 'DRIVER',
+          actorId: b.assigned_driver_id ? Number(b.assigned_driver_id) : null,
+          actorLabel: driverPhone,
+          summary: locked
+            ? `Start OTP locked after ${attempts} failed attempts`
+            : `Wrong Start OTP entered (attempt ${attempts}/${policy.max_failed_attempts})`,
+          metadata: { attempts, maxAttempts: policy.max_failed_attempts },
+        },
+        client
+      );
+      if (locked) return { status: 'LOCKED', booking: b, justLocked: true };
       return { status: 'WRONG_OTP', attemptsLeft: policy.max_failed_attempts - attempts };
     }
 
@@ -89,6 +115,19 @@ export async function startTripWithOtp(bookingId: number, driverPhone: string, c
        WHERE id = $1
        RETURNING *`,
       [b.id]
+    );
+    await recordBookingEvent(
+      {
+        bookingId: Number(b.id),
+        eventType: 'TRIP_STARTED',
+        fromStatus: 'DRIVER_ASSIGNED',
+        toStatus: 'TRIP_IN_PROGRESS',
+        actorType: 'DRIVER',
+        actorId: b.assigned_driver_id ? Number(b.assigned_driver_id) : null,
+        actorLabel: driverPhone,
+        summary: `Trip started after Start OTP verification`,
+      },
+      client
     );
     return { status: 'STARTED', booking: { ...started.rows[0], customer_phone: b.customer_phone } };
   });

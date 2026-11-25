@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import {
+  assertWithinPackageDistanceRange,
   getPricedPackageByPublicId,
   parseOptionalCoords,
   pricePackageForRoute,
@@ -12,6 +13,7 @@ import { broadcastRideToDrivers } from '@/lib/dispatch-engine';
 import { notifyOfferedDrivers } from '@/lib/dispatch-notify';
 import { notify } from '@/lib/wa-notify';
 import { sendWhatsAppText } from '@/lib/whatsapp';
+import { recordBookingEvent } from '@/lib/booking-timeline';
 
 export const dynamic = 'force-dynamic';
 
@@ -117,6 +119,7 @@ export async function POST(req: NextRequest) {
     const billedKm = adjusted.billedKm;
     const split = adjusted.split;
     const tripDays = adjusted.tripDays;
+    assertWithinPackageDistanceRange(pkg.name, pkg.included_km, adjusted);
 
     if (!(split.driverGrossEarnings > 0)) {
       return NextResponse.json({ success: false, error: 'Selected plan pricing is not available right now.' }, { status: 409 });
@@ -201,6 +204,25 @@ export async function POST(req: NextRequest) {
 
     const bookingId = Number(bookRes.rows[0].id);
     const bookingCode = String(bookRes.rows[0].booking_code);
+
+    await recordBookingEvent({
+      bookingId,
+      eventType: 'BOOKING_CREATED',
+      toStatus: 'AWAITING_DRIVER',
+      actorType: 'CUSTOMER',
+      actorId: Number(customerId),
+      actorLabel: customerName || customerPhone,
+      summary: `Booking #${bookingCode} created via Website (${originCity}${destinationCity ? ` → ${destinationCity}` : ''}${isRoundTrip ? `, Round Trip ${tripDays}d` : ''})`,
+      metadata: {
+        source: 'WORDPRESS',
+        tripType: pkg.booking_type,
+        packageName: pkg.name,
+        cab: pkg.cab_type.display_name,
+        customerTotalFare: split.customerTotalFare,
+        isRoundTrip,
+        tripDays,
+      },
+    });
 
     // 3. Trigger WhatsApp workflow (customer confirmation + driver broadcast)
     const dispatch = await broadcastRideToDrivers(bookingId);

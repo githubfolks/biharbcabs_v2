@@ -10,6 +10,7 @@ import { insertWithBookingCode } from '@/lib/booking-code';
 import {
   CatalogError,
   DistanceAdjustedPricing,
+  assertWithinPackageDistanceRange,
   getPricedPackageById,
   parseOptionalCoords,
   pricePackageForRoute,
@@ -17,6 +18,7 @@ import {
 import { checkCategoryAvailability } from '@/lib/availability';
 import { MIN_OVERRIDE_REASON_LENGTH } from '@/lib/booking-rules';
 import { DrivingDistanceResult } from '@/lib/locationiq';
+import { recordBookingEvent } from '@/lib/booking-timeline';
 
 export const dynamic = 'force-dynamic';
 
@@ -155,6 +157,7 @@ export async function POST(req: NextRequest) {
       routeDistance = priced.routeDistance;
       distancePricing = priced.pricing;
       resolvedTripDays = distancePricing.tripDays;
+      assertWithinPackageDistanceRange(pkg.name, pkg.included_km, distancePricing);
 
       rateCardFare = distancePricing.totalPayment;
       resolvedDistanceKm = distancePricing.billedKm;
@@ -332,6 +335,25 @@ export async function POST(req: NextRequest) {
 
     const booking = bookRes.rows[0];
     const bookingCode: string = booking.booking_code;
+
+    await recordBookingEvent({
+      bookingId: Number(booking.id),
+      eventType: 'BOOKING_CREATED',
+      toStatus: initialStatus,
+      actorType: 'ADMIN',
+      actorId: admin.id,
+      actorLabel: admin.full_name || admin.email || `Admin #${admin.id}`,
+      summary: `Booking #${bookingCode} created via CRM (${origin_city}${destination_city ? ` → ${destination_city}` : ''}${isRoundTrip ? `, Round Trip ${resolvedTripDays}d` : ''})`,
+      metadata: {
+        source: 'CRM',
+        tripType: resolvedTripType,
+        packageName: pkg?.name ?? null,
+        cab: pkg ? pkg.cab_type.display_name : resolvedVehicleCode,
+        customerTotalFare: fare,
+        isRoundTrip,
+        tripDays: resolvedTripDays,
+      },
+    });
 
     // 3. Trigger WhatsApp workflow: notify customer & broadcast to matching verified drivers
     let dispatchResult = null;

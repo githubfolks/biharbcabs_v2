@@ -1,5 +1,5 @@
 import { query } from './db';
-import { getLocationIqConfig, getSplitRules } from './settings';
+import { getLocationIqConfig, getPackageDistanceTolerancePct, getSplitRules } from './settings';
 import { FareSplit, SplitRules, round2, splitPreGstFare } from './fare-split';
 import { BOOKING_TYPES, CAB_CATEGORIES, FUEL_TYPES } from './booking-rules';
 import { DrivingDistanceResult, resolveDrivingDistance } from './locationiq';
@@ -158,6 +158,9 @@ export interface DistanceAdjustedPricing extends PackagePriceBreakdown {
   extraDays: number;
   extraDayCabChargePreGst: number;
   extraDayDriverTaPreGst: number;
+  tolerancePct: number;
+  maxAllowedKm: number;
+  withinPackageRange: boolean;
 }
 
 export interface RoundTripOptions {
@@ -165,6 +168,7 @@ export interface RoundTripOptions {
   tripDays?: number;
   perDayCharge?: number;
   driverTa?: number;
+  tolerancePct?: number;
 }
 
 /**
@@ -217,10 +221,16 @@ export function calculateDistanceAdjustedPricing(
   const isRoundTrip = Boolean(roundTrip?.isRoundTrip);
   const tripDays = isRoundTrip ? Math.max(1, Math.round(Number(roundTrip?.tripDays || 1))) : 1;
   const extraDays = isRoundTrip ? Math.max(0, tripDays - 1) : 0;
+  const tolerancePct =
+    roundTrip?.tolerancePct !== undefined && Number.isFinite(Number(roundTrip.tolerancePct))
+      ? Math.max(0, Number(roundTrip.tolerancePct))
+      : 20;
+  const maxAllowedKm = round2(includedKm * (1 + tolerancePct / 100));
 
   const rawRoadKm = Number(roadDistanceKm);
   const hasRoadKm = Number.isFinite(rawRoadKm) && rawRoadKm > 0;
   const effectiveRoadKm = hasRoadKm ? round2(isRoundTrip ? rawRoadKm * 2 : rawRoadKm) : includedKm;
+  const withinPackageRange = !hasRoadKm || effectiveRoadKm <= maxAllowedKm;
 
   const extraKm = hasRoadKm && effectiveRoadKm > includedKm ? round2(effectiveRoadKm - includedKm) : 0;
   const extraKmChargePreGst = round2(extraKm * Math.max(0, extraKmRate));
@@ -240,6 +250,9 @@ export function calculateDistanceAdjustedPricing(
       extraDays,
       extraDayCabChargePreGst: 0,
       extraDayDriverTaPreGst: 0,
+      tolerancePct,
+      maxAllowedKm,
+      withinPackageRange,
     };
   }
 
@@ -268,7 +281,24 @@ export function calculateDistanceAdjustedPricing(
     extraDays,
     extraDayCabChargePreGst,
     extraDayDriverTaPreGst,
+    tolerancePct,
+    maxAllowedKm,
+    withinPackageRange,
   };
+}
+
+/** Throw HTTP 422 CatalogError when route distance exceeds package included KM + tolerance%. */
+export function assertWithinPackageDistanceRange(
+  packageName: string,
+  includedKm: number,
+  pricing: DistanceAdjustedPricing
+): void {
+  if (!pricing.withinPackageRange) {
+    throw new CatalogError(
+      `Route distance (${pricing.roadDistanceKm} km${pricing.isRoundTrip ? ' round-trip' : ''}) exceeds the maximum allowed range of ${pricing.maxAllowedKm} km (${includedKm} km + ${pricing.tolerancePct}% tolerance) for package "${packageName}". Please select a higher-KM package.`,
+      422
+    );
+  }
 }
 
 export interface RouteDistanceInput {
@@ -333,9 +363,10 @@ export async function pricePackageForRoute(
 }> {
   const isRoundTrip = Boolean(route.isRoundTrip);
   const tripDays = calculateTripDays(route.pickupDate, route.returnDate, isRoundTrip);
-  const [routeDistance, splitRules] = await Promise.all([
+  const [routeDistance, splitRules, tolerancePct] = await Promise.all([
     resolveRouteDistanceSafely(route, contextLabel),
     getSplitRules(),
+    getPackageDistanceTolerancePct(),
   ]);
   const pricing = calculateDistanceAdjustedPricing(
     pkg.pricing,
@@ -348,6 +379,7 @@ export async function pricePackageForRoute(
       tripDays,
       perDayCharge: pkg.cab_type.per_day_charge,
       driverTa: pkg.cab_type.driver_ta,
+      tolerancePct,
     }
   );
   return { routeDistance, pricing };

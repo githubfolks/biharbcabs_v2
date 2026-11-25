@@ -3,6 +3,7 @@ import { notify } from './wa-notify';
 import { sendWhatsAppText } from './whatsapp';
 import { CANCELLABLE_STATUSES } from './booking-rules';
 import { releasePlanReservation } from './driver-plans';
+import { recordBookingEvent } from './booking-timeline';
 
 /**
  * Booking cancellations (no customer advance system).
@@ -93,6 +94,21 @@ export async function cancelBooking(input: {
            start_otp_hash = NULL, updated_at = CURRENT_TIMESTAMP
        WHERE id = $5`,
       [input.by, input.adminId ?? null, input.fault, reason, b.id]
+    );
+
+    await recordBookingEvent(
+      {
+        bookingId: Number(b.id),
+        eventType: 'CANCELLED',
+        fromStatus: b.booking_status,
+        toStatus: 'CANCELLED',
+        actorType: input.by === 'STAFF' ? 'ADMIN' : 'CUSTOMER',
+        actorId: input.adminId ?? null,
+        actorLabel: input.by === 'STAFF' && input.adminId ? `Admin #${input.adminId}` : input.by,
+        summary: `Booking cancelled (${input.fault}): ${reason}`,
+        metadata: { by: input.by, fault: input.fault, reason },
+      },
+      client
     );
 
     return b;
