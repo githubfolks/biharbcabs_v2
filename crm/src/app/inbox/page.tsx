@@ -218,7 +218,10 @@ export default function InboxPage() {
                   messages.map((m) => {
                     const isOutbound = m.direction === 'OUTBOUND';
                     let textBody = '';
-                    if (m.payload?.text?.body) textBody = m.payload.text.body;
+                    if (m.payload?.interactive?.button_reply?.title) textBody = m.payload.interactive.button_reply.title;
+                    else if (m.payload?.interactive?.list_reply?.title) textBody = m.payload.interactive.list_reply.title;
+                    else if (m.payload?.text?.body) textBody = m.payload.text.body;
+                    else if (typeof m.payload?.text === 'string') textBody = m.payload.text;
                     else if (m.payload?.interactive?.body?.text) textBody = m.payload.interactive.body.text;
                     else if (m.payload?.body) textBody = m.payload.body;
                     else if (typeof m.payload === 'string') textBody = m.payload;

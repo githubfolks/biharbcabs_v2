@@ -19,6 +19,7 @@ import { checkCategoryAvailability } from '@/lib/availability';
 import { MIN_OVERRIDE_REASON_LENGTH } from '@/lib/booking-rules';
 import { DrivingDistanceResult } from '@/lib/locationiq';
 import { recordBookingEvent } from '@/lib/booking-timeline';
+import { assertRouteServiceable, ServiceAreaError } from '@/lib/service-area';
 
 export const dynamic = 'force-dynamic';
 
@@ -158,6 +159,10 @@ export async function POST(req: NextRequest) {
       distancePricing = priced.pricing;
       resolvedTripDays = distancePricing.tripDays;
       assertWithinPackageDistanceRange(pkg.name, pkg.included_km, distancePricing);
+      await assertRouteServiceable({
+        origin: origin_city,
+        destination: destination_city || null,
+      });
 
       rateCardFare = distancePricing.totalPayment;
       resolvedDistanceKm = distancePricing.billedKm;
@@ -383,7 +388,7 @@ export async function POST(req: NextRequest) {
       distance_pricing: distancePricing,
     });
   } catch (err: any) {
-    const status = err instanceof CatalogError ? err.status : 500;
+    const status = err instanceof CatalogError || err instanceof ServiceAreaError ? err.status : 500;
     return NextResponse.json({ success: false, error: err.message }, { status });
   }
 }

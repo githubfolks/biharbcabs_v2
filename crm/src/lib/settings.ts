@@ -397,3 +397,36 @@ export async function getReturnTripPolicy(): Promise<ReturnTripPolicyCheck> {
   const raw = await getSetting<any>('return_trip_policy', {});
   return checkReturnTripPolicy(raw);
 }
+
+export interface ServiceCoverageConfig {
+  enabled: boolean;
+  origin_cities: string[];
+  destination_cities: string[];
+  allowed_states: string[];
+  blocked_routes: string[];
+}
+
+function toStringList(v: any): string[] {
+  if (Array.isArray(v)) {
+    return v.map((x) => String(x || '').trim()).filter(Boolean);
+  }
+  if (typeof v === 'string') {
+    return v.split(',').map((x) => x.trim()).filter(Boolean);
+  }
+  return [];
+}
+
+/**
+ * Dynamic source/destination serviceability rules stored in crm_settings.service_coverage.
+ * Zero hardcoded cities — configured by admins in System Settings.
+ */
+export async function getServiceCoverageConfig(): Promise<ServiceCoverageConfig> {
+  const raw = await getSetting<any>('service_coverage', {});
+  return {
+    enabled: Boolean(raw?.enabled ?? false),
+    origin_cities: toStringList(raw?.origin_cities),
+    destination_cities: toStringList(raw?.destination_cities),
+    allowed_states: toStringList(raw?.allowed_states),
+    blocked_routes: toStringList(raw?.blocked_routes),
+  };
+}

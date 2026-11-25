@@ -14,6 +14,7 @@ import { notifyOfferedDrivers } from '@/lib/dispatch-notify';
 import { notify } from '@/lib/wa-notify';
 import { sendWhatsAppText } from '@/lib/whatsapp';
 import { recordBookingEvent } from '@/lib/booking-timeline';
+import { assertRouteServiceable, ServiceAreaError } from '@/lib/service-area';
 
 export const dynamic = 'force-dynamic';
 
@@ -116,6 +117,10 @@ export async function POST(req: NextRequest) {
       },
       'Public Booking'
     );
+    await assertRouteServiceable({
+      origin: originCity,
+      destination: destinationCity,
+    });
     const billedKm = adjusted.billedKm;
     const split = adjusted.split;
     const tripDays = adjusted.tripDays;
@@ -256,7 +261,7 @@ export async function POST(req: NextRequest) {
       { status: 201 }
     );
   } catch (err: any) {
-    const status = err instanceof CatalogError ? err.status : 500;
+    const status = err instanceof CatalogError || err instanceof ServiceAreaError ? err.status : 500;
     return NextResponse.json({ success: false, error: err.message }, { status });
   }
 }

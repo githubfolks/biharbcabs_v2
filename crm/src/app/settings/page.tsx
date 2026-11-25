@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Settings, Save, RefreshCw, Sliders, MessageSquare, Database, Star, DollarSign, Award, ShieldCheck, Landmark } from 'lucide-react';
+import { Settings, Save, RefreshCw, Sliders, MessageSquare, Database, Star, DollarSign, Award, ShieldCheck, Landmark, Globe } from 'lucide-react';
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState<Record<string, any>>({});
@@ -862,6 +862,98 @@ export default function SettingsPage() {
               className="px-4 py-2 bg-indigo-600 text-white rounded-md text-xs font-semibold hover:bg-indigo-700"
             >
               Save Revenue Protection &amp; Tax Policy
+            </button>
+          </div>
+        </div>
+
+        {/* Service Coverage & Destination Availability */}
+        <div className="bg-white p-5 rounded-lg border border-slate-200 shadow-sm space-y-4 md:col-span-2">
+          <div className="flex items-center justify-between border-b pb-3">
+            <div className="flex items-center space-x-2">
+              <Globe className="h-5 w-5 text-teal-600" />
+              <div>
+                <h3 className="font-bold text-slate-900">Service Coverage &amp; Destination Availability</h3>
+                <p className="text-xs text-slate-600">Enforced across WhatsApp Bot, CRM New Booking, and Public Website Bookings</p>
+              </div>
+            </div>
+            <label className="flex items-center space-x-2 text-xs font-bold text-slate-800 cursor-pointer">
+              <input
+                type="checkbox"
+                id="sc_enabled"
+                defaultChecked={Boolean(settings.service_coverage?.enabled)}
+                className="h-4 w-4 text-teal-600 rounded"
+              />
+              <span>Enable Validation</span>
+            </label>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700">Serviceable Origin / Pickup Cities (comma-separated)</label>
+              <p className="text-[11px] text-slate-600 mb-1">Leave blank to allow any city inside Allowed States.</p>
+              <input
+                type="text"
+                id="sc_origin_cities"
+                defaultValue={(settings.service_coverage?.origin_cities || []).join(', ')}
+                placeholder="e.g. Patna, Darbhanga, Muzaffarpur, Gaya, Bhagalpur"
+                className="w-full px-3 py-1.5 border rounded-md text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700">Serviceable Destination Cities (comma-separated)</label>
+              <p className="text-[11px] text-slate-600 mb-1">Matches either these cities OR any city inside Allowed States.</p>
+              <input
+                type="text"
+                id="sc_destination_cities"
+                defaultValue={(settings.service_coverage?.destination_cities || []).join(', ')}
+                placeholder="e.g. Varanasi, Ranchi, Siliguri, Deoghar, Gorakhpur"
+                className="w-full px-3 py-1.5 border rounded-md text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700">Allowed States (comma-separated)</label>
+              <p className="text-[11px] text-slate-600 mb-1">Matched against city input and LocationIQ geocoded address.</p>
+              <input
+                type="text"
+                id="sc_allowed_states"
+                defaultValue={(settings.service_coverage?.allowed_states || []).join(', ')}
+                placeholder="e.g. Bihar, Jharkhand"
+                className="w-full px-3 py-1.5 border rounded-md text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700">Blocked Routes (comma-separated, Origin -&gt; Destination)</label>
+              <p className="text-[11px] text-slate-600 mb-1">Optional specific corridors to block even if cities/states are allowed.</p>
+              <input
+                type="text"
+                id="sc_blocked_routes"
+                defaultValue={(settings.service_coverage?.blocked_routes || []).join(', ')}
+                placeholder="e.g. Patna -> Kathmandu"
+                className="w-full px-3 py-1.5 border rounded-md text-sm"
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end pt-2">
+            <button
+              onClick={() => {
+                const splitCsv = (id: string) =>
+                  (document.getElementById(id) as HTMLInputElement).value
+                    .split(',')
+                    .map((s) => s.trim())
+                    .filter(Boolean);
+                handleSaveSetting('service_coverage', {
+                  enabled: (document.getElementById('sc_enabled') as HTMLInputElement).checked,
+                  origin_cities: splitCsv('sc_origin_cities'),
+                  destination_cities: splitCsv('sc_destination_cities'),
+                  allowed_states: splitCsv('sc_allowed_states'),
+                  blocked_routes: splitCsv('sc_blocked_routes'),
+                });
+              }}
+              disabled={savingKey === 'service_coverage'}
+              className="px-4 py-2 bg-teal-600 text-white rounded-md text-xs font-semibold hover:bg-teal-700"
+            >
+              {savingKey === 'service_coverage' ? 'Saving...' : 'Save Service Coverage'}
             </button>
           </div>
         </div>

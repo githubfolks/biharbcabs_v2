@@ -8,6 +8,7 @@ import {
   getPricedPackageById,
 } from '@/lib/pricing-engine';
 import { getPackageDistanceTolerancePct, getSplitRules } from '@/lib/settings';
+import { checkRouteServiceability } from '@/lib/service-area';
 
 export const dynamic = 'force-dynamic';
 
@@ -69,7 +70,12 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    return NextResponse.json({ success: true, route, adjusted_pricing });
+    const service_coverage = await checkRouteServiceability({
+      origin,
+      destination,
+    });
+
+    return NextResponse.json({ success: true, route, adjusted_pricing, service_coverage });
   } catch (err: any) {
     const status = err instanceof LocationError || err instanceof CatalogError ? err.status : 500;
     return NextResponse.json({ success: false, error: err.message }, { status });

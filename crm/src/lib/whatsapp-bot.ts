@@ -46,6 +46,7 @@ import { CANCELLABLE_STATUSES, CancelError, cancelBooking, previewCancellation }
 import { formatPickup, parsePickupTime, PickupTime } from './pickup-time';
 import { recordCustomerRating } from './ratings';
 import { issueStartOtp, otpMessage, reissueOtpForCustomer, startTripWithOtp } from './trip-otp';
+import { checkRouteServiceability } from './service-area';
 
 export interface ConversationState {
   phone: string;
@@ -223,37 +224,69 @@ async function quoteAndOfferVehicles(phone: string, ctx: Record<string, any>): P
     getPackageDistanceTolerancePct(),
   ]);
 
-  const eligiblePackages = packages
-    .map((p) => {
-      const adjusted = calculateDistanceAdjustedPricing(
-        p.pricing,
-        p.included_km,
-        p.cab_type.extra_km_charge,
-        routeDistance?.distance_km ?? null,
-        splitRules,
-        {
-          isRoundTrip,
-          tripDays,
-          perDayCharge: p.cab_type.per_day_charge,
-          driverTa: p.cab_type.driver_ta,
-          tolerancePct,
-        }
-      );
-      return { pkg: p, adjusted };
-    })
-    .filter((entry) => entry.adjusted.withinPackageRange);
+  const scorePackages = (list: typeof packages) =>
+    list
+      .map((p) => {
+        const adjusted = calculateDistanceAdjustedPricing(
+          p.pricing,
+          p.included_km,
+          p.cab_type.extra_km_charge,
+          routeDistance?.distance_km ?? null,
+          splitRules,
+          {
+            isRoundTrip,
+            tripDays,
+            perDayCharge: p.cab_type.per_day_charge,
+            driverTa: p.cab_type.driver_ta,
+            tolerancePct,
+          }
+        );
+        return { pkg: p, adjusted };
+      })
+      .filter((entry) => entry.adjusted.withinPackageRange);
+
+  let eligiblePackages = scorePackages(packages);
+  let fallbackFromOtherTypes = false;
+
+  // If no packages in the chosen bookingType match the route distance, look for other relevant active plans.
+  if (eligiblePackages.length === 0) {
+    const allActive = await listPricedPackages({ activeOnly: true, skipUnpriceable: true });
+    const otherActive = allActive.filter((p) => p.booking_type !== bookingType);
+    const otherEligible = scorePackages(otherActive);
+    if (otherEligible.length > 0) {
+      eligiblePackages = otherEligible;
+      fallbackFromOtherTypes = true;
+    }
+  }
 
   if (eligiblePackages.length === 0) {
     await updateConversation(phone, 'IDLE', {});
+    const [billingInfo, admins] = await Promise.all([getCompanyBillingInfo(), getAdminContacts()]);
+    const supportPhone =
+      (billingInfo?.phone && String(billingInfo.phone).trim()) ||
+      admins.find((a) => a.phone)?.phone ||
+      '';
+    const routeLabel = `${ctx.origin}${ctx.destination ? ` → ${ctx.destination}` : ''}`;
+    const effectiveKm = routeDistance
+      ? Math.round((isRoundTrip ? routeDistance.distance_km * 2 : routeDistance.distance_km) * 10) / 10
+      : null;
+    const distanceReason =
+      effectiveKm !== null
+        ? ` (~${effectiveKm} km${isRoundTrip ? ' round trip' : ''}) — no configured package covers this route distance`
+        : '';
+    const supportLine = supportPhone
+      ? `Please contact our support team at ${supportPhone} for a custom quote.`
+      : `Please contact our support team for a custom quote.`;
+
     await sendWhatsAppText(
       phone,
-      `Thank you for contacting BiharCabs! Our route specialist is preparing the best ${bookingType} rate for ${ctx.origin}${ctx.destination ? ` to ${ctx.destination}` : ''} and will share your plan shortly.`
+      `Sorry, no ${bookingType} plan is available right now for ${routeLabel}${distanceReason}.\n\n${supportLine}`
     );
-    for (const a of await getAdminContacts()) {
+    for (const a of admins) {
       if (a.phone) {
         await sendWhatsAppText(
           a.phone,
-          `⚠️ Custom Quote Needed: Customer ${phone} requested ${bookingType}${isRoundTrip ? ' (Round Trip)' : ''} (${ctx.origin}${ctx.destination ? ` → ${ctx.destination}` : ''}) for ${formatPickup(new Date(ctx.pickup_at))}. Open CRM to book.`
+          `⚠️ No Matching Plan: Customer ${phone} requested ${bookingType}${isRoundTrip ? ' (Round Trip)' : ''} (${routeLabel}${effectiveKm !== null ? `, ~${effectiveKm} km` : ''}) for ${formatPickup(new Date(ctx.pickup_at))}. Open CRM to assist.`
         );
       }
     }
@@ -263,7 +296,8 @@ async function quoteAndOfferVehicles(phone: string, ctx: Record<string, any>): P
   const rows = eligiblePackages.slice(0, 10).map(({ pkg: p, adjusted }) => {
     const fare = adjusted.totalPayment;
     const kmLabel = adjusted.extraKm > 0 ? `${adjusted.billedKm} km` : `${p.included_km} km`;
-    const notes = `${p.cab_type.display_name} • ${kmLabel} / ${p.included_hours} hr • Extra ₹${p.cab_type.extra_hour_charge}/hr`;
+    const typePrefix = fallbackFromOtherTypes ? `[${p.booking_type}] ` : '';
+    const notes = `${typePrefix}${p.cab_type.display_name} • ${kmLabel} / ${p.included_hours} hr • Extra ₹${p.cab_type.extra_hour_charge}/hr`;
     return {
       id: `sel_pkg_${p.id}`,
       title: `${p.name} (₹${fare.toLocaleString('en-IN')})`.slice(0, 24),
@@ -285,11 +319,14 @@ async function quoteAndOfferVehicles(phone: string, ctx: Record<string, any>): P
   const distLine = routeDistance
     ? `\nEst. Distance: ${isRoundTrip ? `${Math.round(routeDistance.distance_km * 20) / 10} km (2x)` : `${routeDistance.distance_km} km`} (${routeDistance.duration_text} one-way)`
     : '';
+  const headerIntro = fallbackFromOtherTypes
+    ? `No ${bookingType} plan matches this route distance, but here are other relevant plans for ${ctx.origin}${ctx.destination ? ` → ${ctx.destination}` : ''}${rtLine}:${distLine}`
+    : `🚖 ${bookingType}${rtLine} Plans: ${ctx.origin}${ctx.destination ? ` → ${ctx.destination}` : ''}${distLine}`;
   await sendWhatsAppList(
     phone,
-    `🚖 ${bookingType}${rtLine} Plans: ${ctx.origin}${ctx.destination ? ` → ${ctx.destination}` : ''}${distLine}\nPickup: ${formatPickup(new Date(ctx.pickup_at))}\n\nAll prices include GST & platform charge. Tap below to select your plan:`,
+    `${headerIntro}\nPickup: ${formatPickup(new Date(ctx.pickup_at))}\n\nAll prices include GST & platform charge. Tap below to select your plan:`,
     'Choose Plan',
-    [{ title: 'Available Cab Plans', rows }],
+    [{ title: fallbackFromOtherTypes ? 'Other Relevant Plans' : 'Available Cab Plans', rows }],
     'BiharCabs Live Plans'
   );
 }
@@ -1115,6 +1152,14 @@ export async function processIncomingWhatsAppMessage(params: {
   // Step 2: Origin Given
   if (conv.state === 'AWAITING_ORIGIN') {
     const origin = rawText.trim();
+    const originCheck = await checkRouteServiceability({ origin });
+    if (!originCheck.serviceable) {
+      await sendWhatsAppText(
+        fromPhone,
+        `${originCheck.reason}\n\nPlease enter another pickup city where we operate, or reply *HI* to start over.`
+      );
+      return;
+    }
     await updateConversation(fromPhone, 'AWAITING_DESTINATION', { ...conv.context_data, origin });
     await sendWhatsAppText(
       fromPhone,
@@ -1130,6 +1175,17 @@ export async function processIncomingWhatsAppMessage(params: {
     if (!conv.context_data.origin || !destination) {
       await resetConversation(fromPhone);
       await sendWhatsAppText(fromPhone, 'Sorry, something went wrong. Please reply *HI* to start your booking again.');
+      return;
+    }
+    const routeCheck = await checkRouteServiceability({
+      origin: conv.context_data.origin,
+      destination,
+    });
+    if (!routeCheck.serviceable) {
+      await sendWhatsAppText(
+        fromPhone,
+        `${routeCheck.reason}\n\nPlease enter another destination city, or reply *HI* to start over.`
+      );
       return;
     }
     await askPickupTime(fromPhone, { ...conv.context_data, destination, trip_type: conv.context_data.trip_type || 'oneway' });

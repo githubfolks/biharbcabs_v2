@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Car, Phone, Send, ArrowLeft, CheckCircle2, MapPin, Navigation, Loader2 } from 'lucide-react';
+import { Car, Phone, Send, ArrowLeft, CheckCircle2, MapPin, Navigation, Loader2, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 import { BOOKING_TYPES } from '@/lib/booking-rules';
 import { getCabCategoryTheme } from '@/lib/cab-theme';
@@ -179,6 +179,7 @@ export default function OperatorNewBookingPage() {
   const [destCoords, setDestCoords] = useState<{ lat: number; lon: number } | null>(null);
   const [distanceInfo, setDistanceInfo] = useState<DistanceInfo | null>(null);
   const [adjustedPricing, setAdjustedPricing] = useState<AdjustedPricing | null>(null);
+  const [serviceCoverage, setServiceCoverage] = useState<{ serviceable: boolean; reason: string | null } | null>(null);
   const [distanceLoading, setDistanceLoading] = useState(false);
   const [distanceError, setDistanceError] = useState<string | null>(null);
   const lastManualRouteRef = useRef<{ origin: string; destination: string } | null>(null);
@@ -256,14 +257,17 @@ export default function OperatorNewBookingPage() {
       if (data.success && data.route) {
         setDistanceInfo(data.route);
         setAdjustedPricing(data.adjusted_pricing || null);
+        setServiceCoverage(data.service_coverage || null);
       } else {
         setDistanceInfo(null);
         setAdjustedPricing(null);
+        setServiceCoverage(null);
         setDistanceError(data.error || 'Could not calculate road distance');
       }
     } catch {
       setDistanceInfo(null);
       setAdjustedPricing(null);
+      setServiceCoverage(null);
       setDistanceError('Could not reach distance calculation service');
     } finally {
       setDistanceLoading(false);
@@ -369,11 +373,16 @@ export default function OperatorNewBookingPage() {
   }, [distanceInfo, selectedPkg, form.is_round_trip]);
 
   const isDistanceOutOfRange = Boolean(adjustedPricing && adjustedPricing.withinPackageRange === false);
+  const isRouteUnserviced = Boolean(serviceCoverage && serviceCoverage.serviceable === false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!selectedPkg) {
       setError('Please select a booking plan/package.');
+      return;
+    }
+    if (isRouteUnserviced && serviceCoverage?.reason) {
+      setError(serviceCoverage.reason);
       return;
     }
     if (isDistanceOutOfRange && adjustedPricing) {
@@ -805,10 +814,17 @@ export default function OperatorNewBookingPage() {
           </div>
         </div>
 
+        {isRouteUnserviced && serviceCoverage?.reason && (
+          <div className="p-3.5 rounded-lg bg-rose-50 border border-rose-300 text-rose-900 text-xs font-semibold flex items-start gap-2">
+            <AlertTriangle className="h-4 w-4 text-rose-600 shrink-0 mt-0.5" />
+            <span>{serviceCoverage.reason}</span>
+          </div>
+        )}
+
         <div className="flex justify-end pt-4 border-t">
           <button
             type="submit"
-            disabled={submitting || !selectedPkg || isDistanceOutOfRange}
+            disabled={submitting || !selectedPkg || isDistanceOutOfRange || isRouteUnserviced}
             className="inline-flex items-center px-5 py-2.5 bg-orange-600 text-white rounded-lg text-sm font-semibold hover:bg-orange-700 disabled:opacity-50"
           >
             <Send className="h-4 w-4 mr-2" />
