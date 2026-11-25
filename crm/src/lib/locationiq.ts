@@ -129,7 +129,9 @@ export async function autocompletePlaces(q: string): Promise<PlaceSuggestion[]> 
 
   let res: Response;
   try {
-    res = await fetch(url, { signal: AbortSignal.timeout(6000) });
+    const headers: Record<string, string> = {};
+    if (cfg.referer) headers['Referer'] = cfg.referer;
+    res = await fetch(url, { headers, signal: AbortSignal.timeout(6000) });
   } catch (err: any) {
     throw new LocationError(
       err?.name === 'TimeoutError' ? 'Location autocomplete timed out.' : 'Unable to reach LocationIQ service.',
@@ -184,7 +186,9 @@ export async function geocodePlace(placeText: string): Promise<{ lat: number; lo
 
   let res: Response;
   try {
-    res = await fetch(url, { signal: AbortSignal.timeout(6000) });
+    const headers: Record<string, string> = {};
+    if (cfg.referer) headers['Referer'] = cfg.referer;
+    res = await fetch(url, { headers, signal: AbortSignal.timeout(6000) });
   } catch (err: any) {
     throw new LocationError(
       err?.name === 'TimeoutError' ? 'Location geocoding timed out.' : 'Unable to reach LocationIQ geocoding service.',
@@ -237,7 +241,9 @@ export async function calculateDrivingDistance(
 
   let res: Response;
   try {
-    res = await fetch(url, { signal: AbortSignal.timeout(8000) });
+    const headers: Record<string, string> = {};
+    if (cfg.referer) headers['Referer'] = cfg.referer;
+    res = await fetch(url, { headers, signal: AbortSignal.timeout(8000) });
   } catch (err: any) {
     throw new LocationError(
       err?.name === 'TimeoutError' ? 'Distance calculation timed out.' : 'Unable to reach LocationIQ directions API.',

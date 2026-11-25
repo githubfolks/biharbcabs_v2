@@ -157,12 +157,51 @@ export function extractFuelPricesFromPayload(
   return out;
 }
 
-export function buildFuelApiUrl(cfg: FuelPriceApiConfig): string {
+/**
+ * Extract a single fuel price from a city/state array response (e.g. IndianAPI:
+ * `[{"city":"Patna","price":"105.18","change":"0.00"}, ...]`) or single object.
+ */
+export function extractSingleFuelPriceFromPayload(
+  payload: unknown,
+  opts: { city?: string; state?: string; explicitPath?: string } = {}
+): number | null {
+  if (opts.explicitPath) {
+    return extractNumberFromNode(getByDotPath(payload, opts.explicitPath));
+  }
+
+  const targetCity = String(opts.city || '').trim().toLowerCase();
+  const targetState = String(opts.state || '').trim().toLowerCase();
+
+  const list = Array.isArray(payload)
+    ? payload
+    : payload && typeof payload === 'object' && Array.isArray((payload as any).data)
+      ? (payload as any).data
+      : null;
+
+  if (list) {
+    const match = list.find((item: any) => {
+      if (!item || typeof item !== 'object') return false;
+      const c = String(item.city || item.district || item.location || '').trim().toLowerCase();
+      const s = String(item.state || '').trim().toLowerCase();
+      return (targetCity && c === targetCity) || (targetState && s === targetState);
+    });
+    if (match) return extractNumberFromNode(match);
+    return null;
+  }
+
+  return extractNumberFromNode(payload);
+}
+
+export function buildFuelApiUrl(cfg: FuelPriceApiConfig, fuelType?: string): string {
   const raw = String(cfg.endpoint_url || '').trim();
   if (!raw) throw new FuelSyncError('Fuel Price API endpoint URL is not configured in System Settings.', 400);
   const state = encodeURIComponent(String(cfg.state || '').trim().toLowerCase());
   const city = encodeURIComponent(String(cfg.city || '').trim().toLowerCase());
-  return raw.replace(/\{state\}/gi, state).replace(/\{city\}/gi, city);
+  let url = raw.replace(/\{state\}/gi, state).replace(/\{city\}/gi, city);
+  if (fuelType) {
+    url = url.replace(/\{fuel_type\}/gi, encodeURIComponent(fuelType.toLowerCase()));
+  }
+  return url;
 }
 
 async function performSync(opts: { force?: boolean; adminId?: number | null }): Promise<FuelSyncResult> {
@@ -195,7 +234,6 @@ async function performSync(opts: { force?: boolean; adminId?: number | null }): 
     throw new FuelSyncError('Fuel Price API endpoint URL is not configured. Save it in System Settings first.', 400);
   }
 
-  const url = buildFuelApiUrl(cfg);
   const headers: Record<string, string> = { Accept: 'application/json' };
   if (cfg.api_host) {
     headers['X-RapidAPI-Host'] = cfg.api_host;
@@ -208,35 +246,80 @@ async function performSync(opts: { force?: boolean; adminId?: number | null }): 
     }
   }
 
-  let res: Response;
-  try {
-    res = await fetch(url, { headers, signal: AbortSignal.timeout(8000) });
-  } catch (err: any) {
-    const msg = err?.name === 'TimeoutError' ? 'Fuel Price API timed out.' : 'Unable to reach Fuel Price API.';
-    await updateSetting('fuel_price_sync_state', { ...existingState, last_error: msg }, 'Daily fuel price API sync state');
-    throw new FuelSyncError(msg, 502);
-  }
+  let extracted: ExtractedFuelPrices = {};
+  let sourceUrl = '';
 
-  if (!res.ok) {
-    const msg = `Fuel Price API returned HTTP ${res.status}.`;
-    await updateSetting('fuel_price_sync_state', { ...existingState, last_error: msg }, 'Daily fuel price API sync state');
-    throw new FuelSyncError(msg, 502);
-  }
+  if (/\{fuel_type\}/i.test(cfg.endpoint_url)) {
+    // Per-fuel endpoint mode (e.g. IndianAPI: /live_fuel_price?fuel_type={fuel_type}&location_type=city)
+    sourceUrl = buildFuelApiUrl(cfg, 'petrol');
+    const fuelTargets: Array<{ key: keyof ExtractedFuelPrices; slug: string; path?: string }> = [
+      { key: 'PETROL', slug: 'petrol', path: cfg.petrol_path || undefined },
+      { key: 'DIESEL', slug: 'diesel', path: cfg.diesel_path || undefined },
+      { key: 'CNG', slug: 'cng', path: cfg.cng_path || undefined },
+    ];
+    let lastHttpErr: string | null = null;
 
-  let payload: unknown;
-  try {
-    payload = await res.json();
-  } catch {
-    const msg = 'Fuel Price API returned non-JSON response.';
-    await updateSetting('fuel_price_sync_state', { ...existingState, last_error: msg }, 'Daily fuel price API sync state');
-    throw new FuelSyncError(msg, 502);
-  }
+    await Promise.all(
+      fuelTargets.map(async ({ key, slug, path }) => {
+        try {
+          const url = buildFuelApiUrl(cfg, slug);
+          const res = await fetch(url, { headers, signal: AbortSignal.timeout(8000) });
+          if (!res.ok) {
+            lastHttpErr = `Fuel Price API returned HTTP ${res.status} for ${slug}.`;
+            return;
+          }
+          const payload = await res.json();
+          const price = extractSingleFuelPriceFromPayload(payload, {
+            city: cfg.city,
+            state: cfg.state,
+            explicitPath: path,
+          });
+          if (price !== null) extracted[key] = price;
+        } catch (err: any) {
+          lastHttpErr = err?.name === 'TimeoutError' ? 'Fuel Price API timed out.' : 'Unable to reach Fuel Price API.';
+        }
+      })
+    );
 
-  const extracted = extractFuelPricesFromPayload(payload, {
-    petrol_path: cfg.petrol_path,
-    diesel_path: cfg.diesel_path,
-    cng_path: cfg.cng_path,
-  });
+    if (Object.keys(extracted).length === 0) {
+      const msg =
+        lastHttpErr ||
+        `No valid Petrol, Diesel, or CNG prices were found for "${cfg.city || cfg.state}" in the API response.`;
+      await updateSetting('fuel_price_sync_state', { ...existingState, last_error: msg }, 'Daily fuel price API sync state');
+      throw new FuelSyncError(msg, 502);
+    }
+  } else {
+    sourceUrl = buildFuelApiUrl(cfg);
+    let res: Response;
+    try {
+      res = await fetch(sourceUrl, { headers, signal: AbortSignal.timeout(8000) });
+    } catch (err: any) {
+      const msg = err?.name === 'TimeoutError' ? 'Fuel Price API timed out.' : 'Unable to reach Fuel Price API.';
+      await updateSetting('fuel_price_sync_state', { ...existingState, last_error: msg }, 'Daily fuel price API sync state');
+      throw new FuelSyncError(msg, 502);
+    }
+
+    if (!res.ok) {
+      const msg = `Fuel Price API returned HTTP ${res.status}.`;
+      await updateSetting('fuel_price_sync_state', { ...existingState, last_error: msg }, 'Daily fuel price API sync state');
+      throw new FuelSyncError(msg, 502);
+    }
+
+    let payload: unknown;
+    try {
+      payload = await res.json();
+    } catch {
+      const msg = 'Fuel Price API returned non-JSON response.';
+      await updateSetting('fuel_price_sync_state', { ...existingState, last_error: msg }, 'Daily fuel price API sync state');
+      throw new FuelSyncError(msg, 502);
+    }
+
+    extracted = extractFuelPricesFromPayload(payload, {
+      petrol_path: cfg.petrol_path,
+      diesel_path: cfg.diesel_path,
+      cng_path: cfg.cng_path,
+    });
+  }
 
   const entries = Object.entries(extracted) as Array<[keyof ExtractedFuelPrices, number]>;
   if (entries.length === 0) {
@@ -261,7 +344,7 @@ async function performSync(opts: { force?: boolean; adminId?: number | null }): 
   const newState: FuelPriceSyncState = {
     last_synced_date_ist: dateIst,
     synced_at: new Date().toISOString(),
-    source_url: url,
+    source_url: sourceUrl,
     updated_fuels: Object.fromEntries(entries),
     last_error: null,
   };

@@ -1,6 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildFuelApiUrl, extractFuelPricesFromPayload, todayIstDate } from '../lib/fuel-price-sync';
+import {
+  buildFuelApiUrl,
+  extractFuelPricesFromPayload,
+  extractSingleFuelPriceFromPayload,
+  todayIstDate,
+} from '../lib/fuel-price-sync';
 
 test('extractFuelPricesFromPayload handles RapidAPI nested retailPrice schema', () => {
   const payload = {
@@ -59,4 +64,13 @@ test('buildFuelApiUrl substitutes {state} and {city} templates', () => {
   });
   assert.equal(url, 'https://example.com/v1/fuel/bihar/patna');
   assert.match(todayIstDate(), /^\d{4}-\d{2}-\d{2}$/);
+});
+
+test('extractSingleFuelPriceFromPayload matches target city from IndianAPI array response', () => {
+  const payload = [
+    { city: 'Agra', price: '101.54', change: '0.00' },
+    { city: 'Patna', price: '105.58', change: '0.00' },
+  ];
+  assert.equal(extractSingleFuelPriceFromPayload(payload, { city: 'patna' }), 105.58);
+  assert.equal(extractSingleFuelPriceFromPayload(payload, { city: 'nonexistent' }), null);
 });

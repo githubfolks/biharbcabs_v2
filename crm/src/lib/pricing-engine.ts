@@ -546,8 +546,9 @@ export async function createPackage(input: {
   if (!Number.isInteger(cabTypeId) || cabTypeId <= 0) throw new CatalogError('Valid cab_type_id is required.', 400);
   if (!(km > 0) || !(hours > 0)) throw new CatalogError('included_km and included_hours must be greater than zero.', 400);
 
-  const cabCheck = await query(`SELECT id FROM crm_cab_types WHERE id = $1`, [cabTypeId]);
+  const cabCheck = await query(`SELECT id, is_active FROM crm_cab_types WHERE id = $1`, [cabTypeId]);
   if (cabCheck.rows.length === 0) throw new CatalogError('Selected cab type does not exist.', 404);
+  if (!cabCheck.rows[0].is_active) throw new CatalogError('Selected cab type is inactive. Activate it before creating a package.', 400);
 
   const res = await query(
     `INSERT INTO crm_packages (name, booking_type, sub_type, cab_type_id, included_km, included_hours, description, is_active, sort_order)
@@ -583,6 +584,11 @@ export async function updatePackage(id: number, input: Partial<PackageRow>): Pro
 
   if (!name || !BOOKING_TYPES.includes(bookingType as any) || !(km > 0) || !(hours > 0)) {
     throw new CatalogError('Invalid package fields.', 400);
+  }
+  if (cabTypeId !== Number(e.cab_type_id)) {
+    const cabCheck = await query(`SELECT id, is_active FROM crm_cab_types WHERE id = $1`, [cabTypeId]);
+    if (cabCheck.rows.length === 0) throw new CatalogError('Selected cab type does not exist.', 404);
+    if (!cabCheck.rows[0].is_active) throw new CatalogError('Selected cab type is inactive. Activate it first.', 400);
   }
 
   const res = await query(

@@ -225,7 +225,7 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-xs font-semibold text-slate-700">LocationIQ API Key</label>
               <input
@@ -246,6 +246,16 @@ export default function SettingsPage() {
                 className="w-full mt-1 px-3 py-1.5 border rounded-md text-sm font-mono"
               />
             </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700">HTTP Referer (if key is domain-restricted)</label>
+              <input
+                type="text"
+                defaultValue={settings.locationiq_config?.referer ?? ''}
+                id="locationiq_referer"
+                placeholder="https://biharcabs.com/"
+                className="w-full mt-1 px-3 py-1.5 border rounded-md text-sm font-mono"
+              />
+            </div>
           </div>
 
           <div className="flex justify-end pt-2">
@@ -253,7 +263,8 @@ export default function SettingsPage() {
               onClick={() => {
                 const apiKey = (document.getElementById('locationiq_api_key') as HTMLInputElement).value.trim();
                 const countryCodes = (document.getElementById('locationiq_country_codes') as HTMLInputElement).value.trim() || 'in';
-                handleSaveSetting('locationiq_config', { api_key: apiKey, country_codes: countryCodes });
+                const referer = (document.getElementById('locationiq_referer') as HTMLInputElement).value.trim();
+                handleSaveSetting('locationiq_config', { api_key: apiKey, country_codes: countryCodes, referer });
               }}
               disabled={savingKey === 'locationiq_config'}
               className="px-4 py-2 bg-blue-600 text-white rounded-md text-xs font-semibold hover:bg-blue-700"
@@ -304,12 +315,22 @@ export default function SettingsPage() {
                 autoComplete="off"
                 defaultValue={settings.fuel_price_api_config?.api_key ?? ''}
                 id="fuel_api_key"
-                placeholder="RapidAPI key or Bearer token"
+                placeholder="Your API key"
                 className="w-full mt-1 px-3 py-1.5 border rounded-md text-sm font-mono"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-700">RapidAPI Host Header (optional — for RapidAPI)</label>
+              <label className="block text-xs font-semibold text-slate-700">Custom Auth Header (optional — e.g. x-api-key for IndianAPI; blank = Bearer)</label>
+              <input
+                type="text"
+                defaultValue={settings.fuel_price_api_config?.auth_header ?? ''}
+                id="fuel_api_auth_header"
+                placeholder="x-api-key"
+                className="w-full mt-1 px-3 py-1.5 border rounded-md text-sm font-mono"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700">RapidAPI Host Header (optional — for RapidAPI only)</label>
               <input
                 type="text"
                 defaultValue={settings.fuel_price_api_config?.api_host ?? ''}
@@ -380,6 +401,7 @@ export default function SettingsPage() {
                   enabled: (document.getElementById('fuel_api_enabled') as HTMLInputElement).checked,
                   endpoint_url: (document.getElementById('fuel_api_endpoint_url') as HTMLInputElement).value.trim(),
                   api_key: (document.getElementById('fuel_api_key') as HTMLInputElement).value.trim(),
+                  auth_header: (document.getElementById('fuel_api_auth_header') as HTMLInputElement).value.trim(),
                   api_host: (document.getElementById('fuel_api_host') as HTMLInputElement).value.trim(),
                   state: (document.getElementById('fuel_api_state') as HTMLInputElement).value.trim() || 'bihar',
                   city: (document.getElementById('fuel_api_city') as HTMLInputElement).value.trim() || 'patna',

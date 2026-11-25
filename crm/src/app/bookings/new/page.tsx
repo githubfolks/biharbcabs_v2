@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Car, Phone, Send, ArrowLeft, CheckCircle2, MapPin, Navigation, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { BOOKING_TYPES } from '@/lib/booking-rules';
+import { getCabCategoryTheme } from '@/lib/cab-theme';
 
 interface PlaceSuggestion {
   display_name: string;
@@ -513,31 +514,35 @@ export default function OperatorNewBookingPage() {
                 const active = String(p.id) === selectedPackageId;
                 const avail = p.availability;
                 const unavailable = Boolean(avail && !avail.is_available);
+                const theme = getCabCategoryTheme(p.cab_type?.category);
                 return (
                   <button
                     type="button"
                     key={p.id}
                     disabled={unavailable}
                     onClick={() => !unavailable && setSelectedPackageId(String(p.id))}
-                    className={`text-left p-3.5 rounded-lg border transition ${
+                    className={`text-left p-4 rounded-xl border-2 transition ${
                       unavailable
-                        ? 'border-slate-200 bg-slate-50 opacity-60 cursor-not-allowed'
+                        ? 'border-slate-200 bg-slate-100 opacity-60 cursor-not-allowed'
                         : active
-                          ? 'border-orange-600 bg-orange-50/50 ring-2 ring-orange-200'
-                          : 'border-slate-200 hover:border-slate-300'
+                          ? `${theme.card} ring-2 ring-orange-500 border-orange-600 shadow-md`
+                          : theme.card
                     }`}
                   >
                     <div className="flex justify-between items-start gap-2">
                       <div>
-                        <div className="font-bold text-slate-900 text-sm">{p.name}</div>
-                        <div className="text-xs text-slate-600">{p.cab_type.display_name}</div>
+                        <span className={`inline-block px-2 py-0.5 rounded-full text-[11px] font-bold mb-1 ${theme.badge}`}>
+                          {p.cab_type.display_name}
+                        </span>
+                        <div className="font-bold text-slate-950 text-base">{p.name}</div>
+                        <div className="text-xs text-slate-800 font-mono">Per Day (12h): ₹{p.cab_type.per_day_charge}</div>
                       </div>
-                      <div className="text-right shrink-0">
-                        <div className="font-bold text-orange-700 font-mono">₹{p.pricing.totalPayment.toLocaleString('en-IN')}</div>
-                        <div className="text-[10px] text-slate-500">incl. {p.pricing.gstPct}% GST + ₹{Number(p.pricing.techFeeAmount || 0)} fee</div>
+                      <div className="text-right shrink-0 bg-white/90 px-2.5 py-1 rounded-lg border border-slate-200">
+                        <div className="font-bold text-orange-800 font-mono text-base">₹{p.pricing.totalPayment.toLocaleString('en-IN')}</div>
+                        <div className="text-[11px] text-slate-700 font-medium">incl. {p.pricing.gstPct}% GST + ₹{Number(p.pricing.techFeeAmount || 0)} fee</div>
                       </div>
                     </div>
-                    <div className="text-[11px] text-slate-500 mt-2 font-mono">
+                    <div className="text-xs text-slate-800 mt-2.5 font-mono font-medium">
                       {p.included_km} km / {p.included_hours} hrs &bull; Extra: ₹{p.cab_type.extra_hour_charge}/hr, ₹{p.cab_type.extra_km_charge}/km
                     </div>
                     {avail ? (

@@ -320,6 +320,7 @@ export async function getDriverPlansPolicy(): Promise<DriverPlansPolicy> {
 export interface LocationIqConfig {
   api_key: string;
   country_codes: string;
+  referer: string;
 }
 
 /**
@@ -330,7 +331,8 @@ export async function getLocationIqConfig(): Promise<LocationIqConfig> {
   const raw = await getSetting<any>('locationiq_config', {});
   const apiKey = String(raw?.api_key || process.env.LOCATIONIQ_API_KEY || '').trim();
   const countryCodes = String(raw?.country_codes || 'in').trim();
-  return { api_key: apiKey, country_codes: countryCodes || 'in' };
+  const referer = String(raw?.referer || process.env.LOCATIONIQ_REFERER || '').trim();
+  return { api_key: apiKey, country_codes: countryCodes || 'in', referer };
 }
 
 export interface FuelPriceApiConfig {
