@@ -19,6 +19,8 @@ export const PERMISSIONS = {
   'bookings.create': OPS,
   'bookings.cancel': ALL,
   'bookings.override_fare': SUPER,
+  'customers.view': ALL,
+  'customers.manage': OPS,
   'catalog.view': ALL,
   'catalog.manage': SUPER,
   'plans.view': ALL,

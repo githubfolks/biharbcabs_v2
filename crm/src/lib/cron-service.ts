@@ -10,8 +10,14 @@ import {
   getWakeupUnconfirmedAlertMinutes,
   getCompanyBillingInfo,
   getRevenueProtectionPolicy,
+  getSetting,
 } from './settings';
-import { checkAndEscalateSlaBreaches, BookingDetails, releaseExpiredReturnWindows } from './dispatch-engine';
+import {
+  broadcastRideToDrivers,
+  checkAndEscalateSlaBreaches,
+  BookingDetails,
+  releaseExpiredReturnWindows,
+} from './dispatch-engine';
 import { notifyOfferedDrivers } from './dispatch-notify';
 import { notify, notifyAdmins } from './wa-notify';
 import { expireDriverReturns } from './return-trips';
@@ -19,6 +25,7 @@ import { sendWhatsAppText, sendWhatsAppButtons } from './whatsapp';
 import { recordBookingEvent } from './booking-timeline';
 
 export interface FrequentCronResult {
+  ridesRebroadcasted: number;
   slaBreachesEscalated: number;
   wakeupChecksSent: number;
   unconfirmedWakeupAlerts: number;
@@ -38,6 +45,69 @@ export interface DailyCronResult {
   loginAttemptsPurged: number;
   cancellationDocumentsIssued: number;
   fuelPricesSynced: boolean;
+}
+
+/**
+ * 0. Auto-Rebroadcast Unassigned Rides (before SLA breach)
+ * Reaches newly free drivers if a booking stays in AWAITING_DRIVER past the configured threshold.
+ */
+export async function runUnassignedRideRebroadcast(): Promise<number> {
+  const policy = await getSetting<{ enabled?: boolean; after_minutes?: number; max_rebroadcasts?: number }>(
+    'unassigned_rebroadcast_policy',
+    { enabled: true, after_minutes: 5, max_rebroadcasts: 1 }
+  );
+  if (policy?.enabled === false) return 0;
+
+  const afterMinutes = Math.max(1, Number(policy?.after_minutes ?? 5));
+  const maxRebroadcasts = Math.max(0, Number(policy?.max_rebroadcasts ?? 1));
+  if (maxRebroadcasts === 0) return 0;
+
+  const candidates = await query(
+    `SELECT id, booking_code, origin_city, destination_city, auto_rebroadcast_count
+     FROM crm_bookings
+     WHERE booking_status = 'AWAITING_DRIVER'
+       AND assigned_driver_id IS NULL
+       AND auto_rebroadcast_count < $1
+       AND COALESCE(last_rebroadcast_at, driver_broadcast_at, created_at) <= CURRENT_TIMESTAMP - ($2 * INTERVAL '1 minute')
+       AND ((pickup_date + pickup_time) AT TIME ZONE 'Asia/Kolkata') > CURRENT_TIMESTAMP
+     ORDER BY created_at ASC
+     LIMIT 20`,
+    [maxRebroadcasts, afterMinutes]
+  );
+
+  let rebroadcasted = 0;
+  for (const row of candidates.rows) {
+    const bookingId = Number(row.id);
+    try {
+      const dispatchResult = await broadcastRideToDrivers(bookingId);
+      await query(
+        `UPDATE crm_bookings
+         SET auto_rebroadcast_count = auto_rebroadcast_count + 1,
+             last_rebroadcast_at = CURRENT_TIMESTAMP,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = $1`,
+        [bookingId]
+      );
+      if (dispatchResult.offersCreated > 0) {
+        await notifyOfferedDrivers(bookingId, dispatchResult);
+        rebroadcasted += 1;
+      }
+      await recordBookingEvent({
+        bookingId,
+        eventType: 'AUTO_REBROADCAST',
+        actorType: 'SYSTEM',
+        actorLabel: 'Dispatch Cron',
+        summary:
+          dispatchResult.offersCreated > 0
+            ? `Auto-rebroadcast wave #${Number(row.auto_rebroadcast_count) + 1} sent to ${dispatchResult.offersCreated} additional driver(s)`
+            : `Auto-rebroadcast wave #${Number(row.auto_rebroadcast_count) + 1} checked — no new eligible drivers available`,
+        metadata: { wave: Number(row.auto_rebroadcast_count) + 1, offersCreated: dispatchResult.offersCreated },
+      });
+    } catch (err: any) {
+      console.error(`[Cron] Auto-rebroadcast failed for booking #${row.booking_code}:`, err?.message);
+    }
+  }
+  return rebroadcasted;
 }
 
 /**
@@ -327,8 +397,12 @@ export async function runReturnTripTasks(): Promise<{ released: number; expired:
  * a sent time, so repeating a run does not repeat its messages.
  */
 export async function executeFrequentCronTasks(): Promise<FrequentCronResult> {
-  // Runs before SLA escalation so a ride leaves its priority window before it can be escalated.
+  // Runs before SLA escalation so a ride leaves its priority window and gets a second wave before escalating.
   const returnTrips = await runReturnTripTasks();
+  const ridesRebroadcasted = await runUnassignedRideRebroadcast().catch((err) => {
+    console.error('[Cron] Unassigned ride rebroadcast failed:', err?.message);
+    return 0;
+  });
   const breached = await runSlaEscalation();
   const wakeups = await runDriverWakeupChecks();
   const unconfirmed = await runUnconfirmedWakeupAlerts();
@@ -351,6 +425,7 @@ export async function executeFrequentCronTasks(): Promise<FrequentCronResult> {
   });
 
   return {
+    ridesRebroadcasted,
     slaBreachesEscalated: breached.length,
     wakeupChecksSent: wakeups,
     unconfirmedWakeupAlerts: unconfirmed,

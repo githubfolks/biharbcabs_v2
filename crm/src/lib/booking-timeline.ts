@@ -4,6 +4,7 @@ import { query } from './db';
 export type BookingEventType =
   | 'BOOKING_CREATED'
   | 'DRIVER_BROADCAST'
+  | 'AUTO_REBROADCAST'
   | 'DRIVER_OFFER_DECLINED'
   | 'DRIVER_ASSIGNED'
   | 'DRIVER_REASSIGNED'

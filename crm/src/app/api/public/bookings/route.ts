@@ -79,6 +79,17 @@ export async function POST(req: NextRequest) {
     if (!customerName || !customerPhone) {
       return NextResponse.json({ success: false, error: 'Valid customer name and 10-digit Indian mobile number are required.' }, { status: 400 });
     }
+    // Blocklist check: customers tagged BLOCKED in CRM cannot submit public bookings
+    const blockedCheck = await query(
+      `SELECT tag FROM crm_customers WHERE phone = $1 LIMIT 1`,
+      [customerPhone]
+    );
+    if (blockedCheck.rows[0]?.tag === 'BLOCKED') {
+      return NextResponse.json(
+        { success: false, error: 'Online booking is restricted for this phone number. Please contact BiharCabs support.' },
+        { status: 403 }
+      );
+    }
     if (!originCity || !pickupAddress || !/^\d{4}-\d{2}-\d{2}$/.test(pickupDate) || !/^\d{2}:\d{2}/.test(pickupTime)) {
       return NextResponse.json({ success: false, error: 'Origin city, pickup address, pickup date (YYYY-MM-DD), and pickup time (HH:MM) are required.' }, { status: 400 });
     }

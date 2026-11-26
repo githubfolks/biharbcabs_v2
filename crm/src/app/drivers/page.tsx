@@ -5,6 +5,7 @@ import { UserCheck, ShieldAlert, Car, PlusCircle, RefreshCw, Wallet, Phone, Chec
 import { allowedActions, DriverStatusAction, REASON_MAX, REASON_MIN } from '@/lib/driver-status-rules';
 import DriverEditDialog, { DynamicCabOption } from '@/components/DriverEditDialog';
 import DriverWalletDialog from '@/components/DriverWalletDialog';
+import FleetComplianceBanner from '@/components/FleetComplianceBanner';
 import { hasPermission } from '@/lib/permissions';
 
 /** Staff-facing line about the WhatsApp message sent after a change (null: none is sent). */
@@ -370,6 +371,8 @@ export default function DriversPage() {
           </button>
         </div>
       </div>
+
+      <FleetComplianceBanner />
 
       <div className="flex flex-col sm:flex-row gap-2">
         <input

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { 
-  Car, MessageSquare, Users, Wallet, Sliders, LogOut, User, Database, ChevronRight, Menu, X, Package, PlusCircle, Smartphone, ShieldCheck, ClipboardList,
+  Car, MessageSquare, Users, Wallet, Sliders, LogOut, User, Database, ChevronRight, Menu, X, Package, PlusCircle, Smartphone, ShieldCheck, ClipboardList, UserCheck,
 } from 'lucide-react';
 import { Permission, hasPermission } from '@/lib/permissions';
 
@@ -172,6 +172,13 @@ export default function SidebarLayout({ children }: SidebarLayoutProps) {
       icon: Users,
       active: pathname.startsWith('/drivers'),
       permission: 'drivers.view',
+    },
+    {
+      href: '/customers',
+      label: 'Customers CRM',
+      icon: UserCheck,
+      active: pathname.startsWith('/customers'),
+      permission: 'customers.view',
     },
     {
       href: '/finance',
