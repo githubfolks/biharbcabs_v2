@@ -12,8 +12,10 @@ require_once __DIR__ . '/includes/class-calculator.php';
 require_once __DIR__ . '/includes/class-rate-card.php';
 require_once __DIR__ . '/includes/class-rest.php';
 require_once __DIR__ . '/includes/class-admin.php';
+require_once __DIR__ . '/includes/class-seo-routes.php';
 
 add_action('rest_api_init', array('BCGE_Rest', 'register'));
+BCGE_Seo_Routes::init();
 
 if (is_admin()) {
     BCGE_Admin::init();

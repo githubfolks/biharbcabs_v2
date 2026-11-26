@@ -6,6 +6,7 @@ import { BOOKING_TYPES, CAB_CATEGORIES, FUEL_TYPES } from '@/lib/booking-rules';
 import { getCabCategoryTheme } from '@/lib/cab-theme';
 import { hasPermission } from '@/lib/permissions';
 import PricingRulesPanel from '@/components/PricingRulesPanel';
+import SeoRoutesPanel from '@/components/SeoRoutesPanel';
 
 export default function CatalogPage() {
   const [role, setRole] = useState<string | null>(null);
@@ -1149,6 +1150,9 @@ export default function CatalogPage() {
 
       {/* Peak-Season, Night & Festival Surge Pricing Rules */}
       <PricingRulesPanel canManage={canManageCatalog} />
+
+      {/* Dynamic Route SEO Pages (WordPress <-> CRM) */}
+      <SeoRoutesPanel canManage={canManageCatalog} />
     </div>
   );
 }

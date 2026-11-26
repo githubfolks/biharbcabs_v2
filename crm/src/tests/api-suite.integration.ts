@@ -562,6 +562,35 @@ describe(`BiharCabs CRM Full API Test Suite (${BASE_URL})`, () => {
       });
       assert.equal(badPub.status, 400);
     });
+
+    it('Dynamic SEO Routes: public list/detail & admin CRUD lifecycle', async () => {
+      const pubList = await apiFetch('/api/public/seo-routes');
+      assert.equal(pubList.status, 200);
+      assert.ok(Array.isArray(pubList.json?.routes));
+      assert.ok(pubList.json.routes.length >= 3, 'Expected seeded SEO routes');
+
+      const pubDetail = await apiFetch('/api/public/seo-routes/patna-to-darbhanga-cab');
+      assert.equal(pubDetail.status, 200);
+      assert.equal(pubDetail.json?.route?.origin_city, 'Patna');
+      assert.ok(Array.isArray(pubDetail.json?.plans));
+
+      assert.equal((await apiFetch('/api/seo-routes')).status, 401);
+      const created = await apiFetch('/api/seo-routes', {
+        method: 'POST',
+        cookie: superCookie,
+        body: {
+          slug: `api-test-route-${RUN_ID.slice(-6)}`,
+          origin_city: 'Patna',
+          destination_city: 'Muzaffarpur',
+          booking_type: 'OUTSTATION',
+          distance_km: 75,
+        },
+      });
+      assert.equal(created.status, 201);
+      const rid = Number(created.json?.route?.id);
+      const del = await apiFetch(`/api/seo-routes/${rid}`, { method: 'DELETE', cookie: superCookie });
+      assert.equal(del.status, 200);
+    });
   });
 
   // ============================================================================
