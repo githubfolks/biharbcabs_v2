@@ -107,6 +107,24 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Reject past pickup date/time (evaluated in IST +05:30, with 1-minute grace for current minute).
+    const cleanDate = String(pickup_date).trim();
+    const cleanTime = String(pickup_time).trim();
+    const normalizedTime = /^\d{2}:\d{2}$/.test(cleanTime) ? `${cleanTime}:00` : cleanTime;
+    const pickupDateTime = new Date(`${cleanDate}T${normalizedTime}+05:30`);
+    if (Number.isNaN(pickupDateTime.getTime())) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid pickup_date or pickup_time format.' },
+        { status: 400 }
+      );
+    }
+    if (pickupDateTime.getTime() < Date.now() - 60_000) {
+      return NextResponse.json(
+        { success: false, error: 'Pickup date and time cannot be in the past. Please select a current or future date and time.' },
+        { status: 400 }
+      );
+    }
+
     // Resolve pricing server-side from the selected CRM package (or super-admin custom fare override).
     let pkg = null;
     if (package_id !== undefined && package_id !== null && String(package_id).trim() !== '') {
