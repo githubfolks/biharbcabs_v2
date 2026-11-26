@@ -1,0 +1,119 @@
+# Production / Staging Docker Compose override for Oracle Cloud (OL9 aarch64)
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+#
+# Key differences from local docker-compose.yml:
+#   - Binds WordPress (8081) and CRM (3001) to 127.0.0.1 only (Nginx handles HTTPS on 80/443).
+#   - Removes host port binding for MariaDB (internal Docker network only).
+#   - Disables the local wpcli container so it NEVER rewrites URLs to http://localhost:8081.
+#   - Moves all MariaDB & WordPress credentials and URLs to root .env (no hardcoded local defaults).
+#   - Adds container log rotation, memory limits (tuned for 2 OCPU / 12 GB RAM), and backup status mount.
+#   - Native PostgreSQL remains on the Oracle Linux host OS (port 5432), reached via host.docker.internal.
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
+services:
+  db:
+    ports: !reset []
+    environment:
+      MYSQL_DATABASE: ${WP_DB_NAME:?Set WP_DB_NAME in .env}
+      MYSQL_USER: ${WP_DB_USER:?Set WP_DB_USER in .env}
+      MYSQL_PASSWORD: ${WP_DB_PASSWORD:?Set WP_DB_PASSWORD in .env}
+      MYSQL_ROOT_PASSWORD: ${WP_DB_ROOT_PASSWORD:?Set WP_DB_ROOT_PASSWORD in .env}
+    command:
+      - --innodb-buffer-pool-size=512M
+      - --max-connections=100
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    volumes: !override
+      - db_data:/var/lib/mysql
+    deploy:
+      resources:
+        limits:
+          memory: 1536M
+    logging: *default-logging
+
+  wordpress:
+    ports: !override
+      - "127.0.0.1:8081:80"
+    environment:
+      WORDPRESS_DB_HOST: db:3306
+      WORDPRESS_DB_NAME: ${WP_DB_NAME:?Set WP_DB_NAME in .env}
+      WORDPRESS_DB_USER: ${WP_DB_USER:?Set WP_DB_USER in .env}
+      WORDPRESS_DB_PASSWORD: ${WP_DB_PASSWORD:?Set WP_DB_PASSWORD in .env}
+      WP_HOME: ${WP_HOME:?Set WP_HOME in .env (e.g. https://staging.biharcabs.com)}
+      WP_SITEURL: ${WP_SITEURL:?Set WP_SITEURL in .env (e.g. https://staging.biharcabs.com)}
+      WP_ENVIRONMENT_TYPE: ${WP_ENVIRONMENT_TYPE:-staging}
+    volumes: !override
+      - ./public_html:/var/www/html:Z
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS -o /dev/null http://127.0.0.1:80/wp-includes/version.php || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    deploy:
+      resources:
+        limits:
+          memory: 1536M
+    logging: *default-logging
+
+  # Disabled in staging/production: never auto-rewrite DB URLs to localhost:8081.
+  # Run one-off WP-CLI commands explicitly via:
+  #   docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile cli run --rm wpcli <subcommand>
+  wpcli:
+    profiles:
+      - cli
+    restart: "no"
+    environment:
+      WORDPRESS_DB_HOST: db:3306
+      WORDPRESS_DB_NAME: ${WP_DB_NAME:?Set WP_DB_NAME in .env}
+      WORDPRESS_DB_USER: ${WP_DB_USER:?Set WP_DB_USER in .env}
+      WORDPRESS_DB_PASSWORD: ${WP_DB_PASSWORD:?Set WP_DB_PASSWORD in .env}
+    volumes: !override
+      - ./public_html:/var/www/html:Z
+    entrypoint: ["wp", "--path=/var/www/html"]
+
+  crm:
+    ports: !override
+      - "127.0.0.1:3001:3001"
+    environment:
+      NODE_ENV: production
+      NODE_OPTIONS: "--max-old-space-size=1536"
+      CLIENT_IP_HEADER: ${CLIENT_IP_HEADER:-x-real-ip}
+      CRM_BACKUP_STATUS_FILE: /backups/last_backup.json
+    volumes: !override
+      - ./crm/uploads:/app/uploads:Z
+      - ${BACKUP_STATUS_DIR:-/var/backups/biharcabs}:/backups:ro,Z
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:3001/login || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 2048M
+    logging: *default-logging
+
+  n8n:
+    ports: !override
+      - "127.0.0.1:5678:5678"
+    environment:
+      N8N_HOST: 127.0.0.1
+      N8N_PORT: 5678
+      N8N_PROTOCOL: http
+      N8N_SECURE_COOKIE: "false"
+      EXECUTIONS_DATA_PRUNE: "true"
+      EXECUTIONS_DATA_MAX_AGE: "336"
+    deploy:
+      resources:
+        limits:
+          memory: 1536M
+    logging: *default-logging
