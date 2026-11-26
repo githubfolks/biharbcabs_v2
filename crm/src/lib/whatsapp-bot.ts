@@ -46,6 +46,7 @@ import { insertWithBookingCode } from './booking-code';
 import { CANCELLABLE_STATUSES, CancelError, cancelBooking, previewCancellation } from './cancellations';
 import { formatPickup, parsePickupTime, PickupTime } from './pickup-time';
 import { recordCustomerRating } from './ratings';
+import { classifyRatingOutcome, upsertSupportTicket } from './support-tickets';
 import { issueStartOtp, otpMessage, reissueOtpForCustomer, startTripWithOtp } from './trip-otp';
 import { checkRouteServiceability } from './service-area';
 
@@ -821,7 +822,32 @@ export async function processIncomingWhatsAppMessage(params: {
     const bookingId = parseInt(parts[2], 10);
     const score = parseInt(parts[3], 10);
 
+    const own = await query(
+      `SELECT b.id, b.booking_code, b.customer_id, b.assigned_driver_id, c.full_name AS customer_name
+       FROM crm_bookings b JOIN crm_customers c ON c.id = b.customer_id
+       WHERE b.id = $1 AND c.phone = $2 AND b.booking_status IN ('COMPLETED_SETTLED', 'COMPLETED_UNBILLED')`,
+      [bookingId, fromPhone]
+    );
+    if (own.rows.length === 0) {
+      await sendWhatsAppText(fromPhone, 'This trip cannot be rated from your number.');
+      return;
+    }
+    const bk = own.rows[0];
+
     await recordCustomerRating({ bookingId, rating: score });
+    const outcome = classifyRatingOutcome(score);
+    if (outcome.route === 'COMPLAINT_TICKET') {
+      await upsertSupportTicket({
+        bookingId,
+        customerId: Number(bk.customer_id),
+        driverId: bk.assigned_driver_id ? Number(bk.assigned_driver_id) : null,
+        source: 'LOW_RATING',
+        priority: outcome.priority,
+        rating: score,
+        summary: `Customer ${bk.customer_name || fromPhone} rated trip #${bk.booking_code} ${score}★ — awaiting issue category / callback.`,
+        alertAdmins: true,
+      });
+    }
 
     await sendWhatsAppList(
       fromPhone,
@@ -851,15 +877,40 @@ export async function processIncomingWhatsAppMessage(params: {
     const score = parseInt(parts[3], 10);
     const category = parts.slice(4).join('_');
 
+    const own = await query(
+      `SELECT b.id, b.booking_code, b.customer_id, b.assigned_driver_id, c.full_name AS customer_name
+       FROM crm_bookings b JOIN crm_customers c ON c.id = b.customer_id
+       WHERE b.id = $1 AND c.phone = $2 AND b.booking_status IN ('COMPLETED_SETTLED', 'COMPLETED_UNBILLED')`,
+      [bookingId, fromPhone]
+    );
+    if (own.rows.length === 0) {
+      await sendWhatsAppText(fromPhone, 'This trip cannot be rated from your number.');
+      return;
+    }
+    const bk = own.rows[0];
+
     await recordCustomerRating({
       bookingId,
       rating: score,
       feedbackCategory: category,
     });
 
+    const outcome = classifyRatingOutcome(score);
+    await upsertSupportTicket({
+      bookingId,
+      customerId: Number(bk.customer_id),
+      driverId: bk.assigned_driver_id ? Number(bk.assigned_driver_id) : null,
+      source: 'LOW_RATING',
+      priority: outcome.priority,
+      rating: score,
+      category,
+      summary: `Customer ${bk.customer_name || fromPhone} rated #${bk.booking_code} ${score}★ — Issue: ${category.replace(/_/g, ' ')}.`,
+      alertAdmins: true,
+    });
+
     await sendWhatsAppText(
       fromPhone,
-      `🙏 Thank you for letting us know. Your report regarding *${category.replace(/_/g, ' ')}* has been logged and escalated to our Senior Operations Manager.\n\nWe will review this trip with the driver to ensure strict BiharCabs service standards are enforced.`
+      `🙏 Thank you for letting us know. Your report regarding *${category.replace(/_/g, ' ')}* has been logged and escalated to our Senior Operations Manager.\n\nWe will review this trip with the driver and call you shortly to ensure strict BiharCabs service standards.`
     );
     return;
   }

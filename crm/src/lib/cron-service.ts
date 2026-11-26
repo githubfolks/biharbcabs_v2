@@ -23,6 +23,8 @@ import { notify, notifyAdmins } from './wa-notify';
 import { expireDriverReturns } from './return-trips';
 import { sendWhatsAppText, sendWhatsAppButtons } from './whatsapp';
 import { recordBookingEvent } from './booking-timeline';
+import { runScheduledFounderDigest } from './founder-digest';
+import { runPostTripRatingPrompts } from './support-tickets';
 
 export interface FrequentCronResult {
   ridesRebroadcasted: number;
@@ -38,6 +40,8 @@ export interface FrequentCronResult {
   failedMessagesReported: number;
   gstDocumentsSent: number;
   gstDocumentsFailed: number;
+  founderDigestSent: number;
+  ratingPromptsSent: number;
 }
 
 export interface DailyCronResult {
@@ -418,6 +422,16 @@ export async function executeFrequentCronTasks(): Promise<FrequentCronResult> {
     console.error('[Cron] GST document delivery failed:', err?.message);
     return { sent: 0, failed: 0, retrying: 0, waitingForGstin: false };
   });
+  // Founder WhatsApp Digest (8:00 AM morning recap & 8:00 PM evening live summary in IST).
+  const founderDigest = await runScheduledFounderDigest().catch((err) => {
+    console.error('[Cron] Founder WhatsApp Digest failed:', err?.message);
+    return { slot: null, sent: 0 };
+  });
+  // Post-trip rating prompts (15 min after trip completion for rides not yet prompted/rated).
+  const ratingPromptsSent = await runPostTripRatingPrompts().catch((err) => {
+    console.error('[Cron] Post-trip rating prompts failed:', err?.message);
+    return 0;
+  });
   // Last, so it reports messages that failed in the jobs above.
   const failedMessages = await runFailedMessageDigest().catch((err) => {
     console.error('[Cron] Failed-message summary failed:', err?.message);
@@ -438,6 +452,8 @@ export async function executeFrequentCronTasks(): Promise<FrequentCronResult> {
     failedMessagesReported: failedMessages,
     gstDocumentsSent: gstDocs.sent,
     gstDocumentsFailed: gstDocs.failed,
+    founderDigestSent: founderDigest.sent,
+    ratingPromptsSent,
   };
 }
 

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Settings, Save, RefreshCw, Sliders, MessageSquare, Database, Star, DollarSign, Award, ShieldCheck, Landmark, Globe } from 'lucide-react';
+import FounderDigestSettingsCard from '@/components/FounderDigestSettingsCard';
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState<Record<string, any>>({});
@@ -1102,6 +1103,9 @@ export default function SettingsPage() {
           </div>
         </div>
       </div>
+
+      {/* Founder WhatsApp Digest (8:00 AM & 8:00 PM IST) */}
+      <FounderDigestSettingsCard canEdit={true} />
     </div>
   );
 }

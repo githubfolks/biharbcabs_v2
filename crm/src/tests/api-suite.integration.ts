@@ -562,6 +562,17 @@ describe(`BiharCabs CRM Full API Test Suite (${BASE_URL})`, () => {
       const r = await apiFetch('/api/finance/reports?report=invalid_xyz', { cookie: superCookie });
       assert.equal(r.status, 400);
     });
+
+    it('GET /api/finance/founder-digest previews both MORNING (8 AM) and EVENING (8 PM) summaries', async () => {
+      const [m, e] = await Promise.all([
+        apiFetch('/api/finance/founder-digest?slot=MORNING', { cookie: superCookie }),
+        apiFetch('/api/finance/founder-digest?slot=EVENING', { cookie: superCookie }),
+      ]);
+      assert.equal(m.status, 200);
+      assert.match(String(m.json?.message || ''), /Morning Founder Digest \(8:00 AM\)/);
+      assert.equal(e.status, 200);
+      assert.match(String(e.json?.message || ''), /Evening Founder Digest \(8:00 PM\)/);
+    });
   });
 
   // ============================================================================
@@ -584,6 +595,34 @@ describe(`BiharCabs CRM Full API Test Suite (${BASE_URL})`, () => {
       ]);
       assert.equal(msgs.status, 200);
       assert.equal(fails.status, 200);
+    });
+
+    it('Support Tickets lifecycle: unauth 401, create, list, resolve (and cleanup)', async () => {
+      const unauth = await apiFetch('/api/support-tickets');
+      assert.equal(unauth.status, 401);
+
+      const created = await apiFetch('/api/support-tickets', {
+        method: 'POST',
+        cookie: superCookie,
+        body: { priority: 'HIGH', category: 'BEHAVIOR', summary: `API test complaint ${RUN_ID}` },
+      });
+      assert.equal(created.status, 201);
+      const ticketId = Number(created.json?.id);
+      assert.ok(ticketId > 0);
+
+      const list = await apiFetch('/api/support-tickets?status=OPEN', { cookie: superCookie });
+      assert.equal(list.status, 200);
+      assert.ok(list.json?.tickets?.some((t: any) => t.id === ticketId));
+
+      const resolved = await apiFetch(`/api/support-tickets/${ticketId}`, {
+        method: 'PATCH',
+        cookie: superCookie,
+        body: { status: 'RESOLVED', resolution_notes: 'Resolved in automated API test' },
+      });
+      assert.equal(resolved.status, 200);
+      assert.equal(resolved.json?.ticket?.status, 'RESOLVED');
+
+      await query(`DELETE FROM crm_support_tickets WHERE id = $1`, [ticketId]);
     });
 
     it('Cron and Webhook endpoints reject unauthorized/unsigned requests', async () => {

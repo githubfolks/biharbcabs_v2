@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { hasPermission } from '@/lib/permissions';
 import FailedMessagesPanel from '@/components/FailedMessagesPanel';
+import SupportTicketsPanel from '@/components/SupportTicketsPanel';
 import BookingTimelineDrawer from '@/components/BookingTimelineDrawer';
 import { CANCELLABLE_STATUSES } from '@/lib/booking-rules';
 
@@ -196,6 +197,7 @@ export default function DispatchBoard() {
       </div>
 
       {role && hasPermission(role, 'bookings.view') && <FailedMessagesPanel canResolve={hasPermission(role, 'notifications.resolve')} />}
+      {role && hasPermission(role, 'bookings.view') && <SupportTicketsPanel />}
 
       {/* Filter Tabs */}
       <div className="border-b border-slate-200 flex space-x-2">
