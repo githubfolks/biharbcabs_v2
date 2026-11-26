@@ -93,6 +93,16 @@ export async function resolveDigestRecipients(config: FounderDigestConfig): Prom
   );
 }
 
+export interface ScheduledBookingItem {
+  bookingCode: string;
+  pickupTime: string;
+  originCity: string;
+  destinationCity: string | null;
+  customerName: string;
+  driverName: string | null;
+  bookingStatus: string;
+}
+
 export interface FounderDigestSummary {
   slot: DigestSlot;
   periodLabel: string;
@@ -109,6 +119,7 @@ export interface FounderDigestSummary {
   netPlatformRevenue: number;
   topCity: string | null;
   upcomingPickupsCount: number;
+  upcomingBookings: ScheduledBookingItem[];
   overdueDuesTotal: number;
   driversOwingCount: number;
   expiringDocsCount: number;
@@ -163,10 +174,20 @@ export async function buildFounderDigestSummary(
       [fromTs, toTs]
     ),
     query(
-      `SELECT COUNT(*)::int AS cnt
-       FROM crm_bookings
-       WHERE pickup_date = $1::date
-         AND booking_status IN ('AWAITING_DRIVER', 'DRIVER_ASSIGNED', 'TRIP_STARTED')`,
+      `SELECT
+         b.booking_code,
+         TO_CHAR(b.pickup_time, 'HH24:MI') AS pickup_hm,
+         b.origin_city,
+         b.destination_city,
+         b.booking_status,
+         COALESCE(c.full_name, c.phone) AS customer_name,
+         d.full_name AS driver_name
+       FROM crm_bookings b
+       JOIN crm_customers c ON c.id = b.customer_id
+       LEFT JOIN crm_drivers d ON d.id = b.assigned_driver_id
+       WHERE b.pickup_date = $1::date
+         AND b.booking_status IN ('AWAITING_DRIVER', 'ESCALATED_NO_DRIVER', 'DRIVER_ASSIGNED', 'TRIP_STARTED')
+       ORDER BY b.pickup_time ASC, b.id ASC`,
       [upcomingDate]
     ),
     query(
@@ -199,6 +220,16 @@ export async function buildFounderDigestSummary(
     incentivesPaid: round2(incentivesRes.rows[0]?.incentives),
   });
 
+  const upcomingBookings: ScheduledBookingItem[] = upcomingRes.rows.map((u) => ({
+    bookingCode: u.booking_code,
+    pickupTime: String(u.pickup_hm || '').slice(0, 5),
+    originCity: u.origin_city,
+    destinationCity: u.destination_city || null,
+    customerName: u.customer_name || 'Customer',
+    driverName: u.driver_name || null,
+    bookingStatus: u.booking_status,
+  }));
+
   return {
     slot,
     periodLabel: slot === 'MORNING' ? `Yesterday (${periodDate})` : `Today so far (${periodDate})`,
@@ -212,9 +243,10 @@ export async function buildFounderDigestSummary(
     cancelledRides: Number(b.cancelled_rides || 0),
     gmv: round2(b.gmv),
     gstLiability: round2(b.gst_liability),
-    netPlatformRevenue,
+    netPlatformRevenue: netPlatformRevenue,
     topCity: topCityRes.rows[0]?.origin_city || null,
-    upcomingPickupsCount: Number(upcomingRes.rows[0]?.cnt || 0),
+    upcomingPickupsCount: upcomingBookings.length,
+    upcomingBookings,
     overdueDuesTotal: round2(r.overdue_dues),
     driversOwingCount: Number(r.drivers_owing || 0),
     expiringDocsCount: Number(r.expiring_docs || 0),
@@ -232,6 +264,22 @@ export function formatFounderDigestMessage(s: FounderDigestSummary): string {
       ? `☀️ *BiharCabs Morning Founder Digest (8:00 AM)*`
       : `🌙 *BiharCabs Evening Founder Digest (8:00 PM)*`;
 
+  const MAX_LISTED = 10;
+  const scheduledLines: string[] = [];
+  if (s.upcomingBookings && s.upcomingBookings.length > 0) {
+    for (const item of s.upcomingBookings.slice(0, MAX_LISTED)) {
+      const driverTag = item.driverName ? `Driver: ${item.driverName}` : '⚠️ UNASSIGNED';
+      scheduledLines.push(
+        `  • ${item.pickupTime} #${item.bookingCode} | ${item.originCity} → ${item.destinationCity || 'Local'} | ${item.customerName} (${driverTag})`
+      );
+    }
+    if (s.upcomingBookings.length > MAX_LISTED) {
+      scheduledLines.push(`  … and ${s.upcomingBookings.length - MAX_LISTED} more scheduled`);
+    }
+  } else {
+    scheduledLines.push(`  • No pickups scheduled yet.`);
+  }
+
   const lines = [
     header,
     `📅 *${s.periodLabel}*`,
@@ -246,8 +294,10 @@ export function formatFounderDigestMessage(s: FounderDigestSummary): string {
     `• Net Platform Revenue: ${fmtInr(s.netPlatformRevenue)}`,
     `• GST Liability: ${fmtInr(s.gstLiability)}`,
     ``,
-    `📋 *Upcoming & Live Ops Alerts*`,
-    `• Pickups Scheduled (${s.upcomingLabel}): ${s.upcomingPickupsCount}`,
+    `🗓️ *Scheduled Pickups — ${s.upcomingLabel} (${s.upcomingPickupsCount})*`,
+    ...scheduledLines,
+    ``,
+    `📋 *Live Ops Alerts*`,
     `• Unassigned Rides Right Now: ${s.unassignedNow}`,
     `• Driver Dues Owed: ${fmtInr(s.overdueDuesTotal)} (${s.driversOwingCount} driver${s.driversOwingCount === 1 ? '' : 's'})`,
     `• Fleet Docs Expiring (≤7d): ${s.expiringDocsCount}`,

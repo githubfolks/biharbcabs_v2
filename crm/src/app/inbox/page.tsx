@@ -1,7 +1,100 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { MessageSquare, Send, User, Car, Phone, RefreshCw, Clock, ArrowLeft } from 'lucide-react';
+import Link from 'next/link';
+import { MessageSquare, Send, User, Car, Phone, RefreshCw, Clock, ArrowLeft, Smartphone } from 'lucide-react';
+
+function formatInboxPayload(rawPayload: any, messageType?: string): {
+  header?: string;
+  body: string;
+  buttons?: string[];
+} {
+  let p = rawPayload;
+  if (typeof p === 'string') {
+    const trimmed = p.trim();
+    if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+      try {
+        p = JSON.parse(trimmed);
+      } catch {
+        return { body: trimmed };
+      }
+    } else {
+      return { body: trimmed };
+    }
+  }
+  if (!p || typeof p !== 'object') {
+    return { body: `[${messageType || 'message'}]` };
+  }
+
+  // Inbound interactive replies
+  if (p.interactive?.button_reply) {
+    return { body: p.interactive.button_reply.title || p.interactive.button_reply.id || 'Button tapped' };
+  }
+  if (p.interactive?.list_reply) {
+    const lr = p.interactive.list_reply;
+    return { body: lr.description ? `${lr.title} — ${lr.description}` : (lr.title || lr.id || 'Option selected') };
+  }
+
+  // Inbound template quick-reply button
+  if (p.button?.text || p.button?.payload) {
+    return { body: p.button.text || p.button.payload };
+  }
+
+  // Outbound / inbound interactive buttons or list
+  if (p.interactive?.body?.text) {
+    const buttons: string[] = [];
+    if (Array.isArray(p.interactive?.action?.buttons)) {
+      for (const b of p.interactive.action.buttons) {
+        const label = b?.reply?.title || b?.title;
+        if (label) buttons.push(label);
+      }
+    }
+    if (Array.isArray(p.interactive?.action?.sections)) {
+      for (const sec of p.interactive.action.sections) {
+        for (const row of sec?.rows || []) {
+          if (row?.title) buttons.push(row.title);
+        }
+      }
+    }
+    return {
+      header: p.interactive?.header?.text || undefined,
+      body: p.interactive.body.text,
+      buttons: buttons.length > 0 ? buttons : undefined,
+    };
+  }
+
+  // Meta Template message
+  if (p.template?.name) {
+    const bodyComp = (p.template.components || []).find((c: any) => c?.type === 'body');
+    const params = (bodyComp?.parameters || [])
+      .map((param: any) => param?.text || param?.payload || '')
+      .filter(Boolean);
+    return {
+      header: `Template: ${p.template.name}`,
+      body: params.length > 0 ? params.join(' • ') : 'Sent WhatsApp template message',
+    };
+  }
+
+  // Standard text message
+  if (p.text?.body) return { body: p.text.body };
+  if (typeof p.text === 'string') return { body: p.text };
+  if (typeof p.body === 'string') return { body: p.body };
+
+  // Image / Document / Location
+  if (p.image) {
+    return { body: p.image.caption ? `📷 Photo: ${p.image.caption}` : '📷 Photo attachment' };
+  }
+  if (p.document) {
+    const fname = p.document.filename ? ` (${p.document.filename})` : '';
+    return { body: p.document.caption ? `📄 Document${fname}: ${p.document.caption}` : `📄 Document${fname}` };
+  }
+  if (p.location) {
+    const label = p.location.name || p.location.address || `${p.location.latitude}, ${p.location.longitude}`;
+    return { body: `📍 Location: ${label}` };
+  }
+
+  return { body: `[${messageType || p.type || 'WhatsApp event'}]` };
+}
 
 export default function InboxPage() {
   const [threads, setThreads] = useState<any[]>([]);
@@ -97,16 +190,25 @@ export default function InboxPage() {
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Live WhatsApp Inbox</h1>
           <p className="text-sm text-slate-500">Real-time customer inquiries, driver broadcasts, and manual takeover</p>
         </div>
-        <button
-          onClick={() => {
-            loadThreads();
-            if (selectedPhone) loadMessages(selectedPhone);
-          }}
-          className="inline-flex items-center px-3 py-1.5 border border-slate-300 shadow-sm text-xs font-semibold rounded-md text-slate-700 bg-white hover:bg-slate-50"
-        >
-          <RefreshCw className={`h-3.5 w-3.5 mr-1.5 ${loading ? 'animate-spin' : ''}`} />
-          Refresh
-        </button>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/simulator"
+            className="inline-flex items-center px-3 py-1.5 border border-orange-300 shadow-sm text-xs font-semibold rounded-md text-orange-800 bg-orange-50 hover:bg-orange-100 transition"
+          >
+            <Smartphone className="h-3.5 w-3.5 mr-1.5 text-orange-600" />
+            WA Simulator
+          </Link>
+          <button
+            onClick={() => {
+              loadThreads();
+              if (selectedPhone) loadMessages(selectedPhone);
+            }}
+            className="inline-flex items-center px-3 py-1.5 border border-slate-300 shadow-sm text-xs font-semibold rounded-md text-slate-700 bg-white hover:bg-slate-50"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 mr-1.5 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
+          </button>
+        </div>
       </div>
 
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex h-[calc(100dvh-11rem)] min-h-[420px] md:h-[720px]">
@@ -217,15 +319,7 @@ export default function InboxPage() {
                 ) : (
                   messages.map((m) => {
                     const isOutbound = m.direction === 'OUTBOUND';
-                    let textBody = '';
-                    if (m.payload?.interactive?.button_reply?.title) textBody = m.payload.interactive.button_reply.title;
-                    else if (m.payload?.interactive?.list_reply?.title) textBody = m.payload.interactive.list_reply.title;
-                    else if (m.payload?.text?.body) textBody = m.payload.text.body;
-                    else if (typeof m.payload?.text === 'string') textBody = m.payload.text;
-                    else if (m.payload?.interactive?.body?.text) textBody = m.payload.interactive.body.text;
-                    else if (m.payload?.body) textBody = m.payload.body;
-                    else if (typeof m.payload === 'string') textBody = m.payload;
-                    else textBody = JSON.stringify(m.payload);
+                    const formatted = formatInboxPayload(m.payload, m.message_type);
 
                     return (
                       <div
@@ -239,12 +333,22 @@ export default function InboxPage() {
                               : 'bg-white border border-slate-200 text-slate-800 rounded-tl-none'
                           }`}
                         >
-                          <div className="whitespace-pre-wrap [overflow-wrap:anywhere]">{textBody}</div>
-                          {m.payload?.interactive?.action?.buttons && (
-                            <div className="mt-2 pt-2 border-t border-emerald-500/40 flex flex-wrap gap-1">
-                              {m.payload.interactive.action.buttons.map((b: any, idx: number) => (
-                                <span key={idx} className="bg-emerald-700 text-white text-[10px] px-2 py-0.5 rounded">
-                                  {b.reply?.title || b.title}
+                          {formatted.header && (
+                            <div className={`text-[11px] font-bold mb-1 ${isOutbound ? 'text-emerald-100' : 'text-slate-600'}`}>
+                              {formatted.header}
+                            </div>
+                          )}
+                          <div className="whitespace-pre-wrap [overflow-wrap:anywhere]">{formatted.body}</div>
+                          {formatted.buttons && formatted.buttons.length > 0 && (
+                            <div className={`mt-2 pt-2 border-t flex flex-wrap gap-1 ${isOutbound ? 'border-emerald-500/40' : 'border-slate-200'}`}>
+                              {formatted.buttons.map((label, idx) => (
+                                <span
+                                  key={idx}
+                                  className={`text-[10px] px-2 py-0.5 rounded font-medium ${
+                                    isOutbound ? 'bg-emerald-700 text-white' : 'bg-slate-100 text-slate-700'
+                                  }`}
+                                >
+                                  {label}
                                 </span>
                               ))}
                             </div>

@@ -82,7 +82,11 @@ test('formatFounderDigestMessage renders distinct 8 AM and 8 PM headers with met
     gstLiability: 1850,
     netPlatformRevenue: 3100,
     topCity: 'Patna',
-    upcomingPickupsCount: 5,
+    upcomingPickupsCount: 2,
+    upcomingBookings: [
+      { bookingCode: 'BC-1001', pickupTime: '09:30', originCity: 'Patna', destinationCity: 'Darbhanga', customerName: 'Amit', driverName: 'Suresh', bookingStatus: 'DRIVER_ASSIGNED' },
+      { bookingCode: 'BC-1002', pickupTime: '14:00', originCity: 'Katihar', destinationCity: 'Purnia', customerName: 'Neha', driverName: null, bookingStatus: 'AWAITING_DRIVER' },
+    ],
     overdueDuesTotal: 1200,
     driversOwingCount: 2,
     expiringDocsCount: 1,
@@ -91,6 +95,8 @@ test('formatFounderDigestMessage renders distinct 8 AM and 8 PM headers with met
   assert.match(morningMsg, /Morning Founder Digest \(8:00 AM\)/);
   assert.match(morningMsg, /Patna/);
   assert.match(morningMsg, /28,500\.00/);
+  assert.match(morningMsg, /09:30 #BC-1001.*Driver: Suresh/);
+  assert.match(morningMsg, /14:00 #BC-1002.*⚠️ UNASSIGNED/);
 
   const eveningMsg = formatFounderDigestMessage({
     slot: 'EVENING',
@@ -107,7 +113,10 @@ test('formatFounderDigestMessage renders distinct 8 AM and 8 PM headers with met
     gstLiability: 920,
     netPlatformRevenue: 1650,
     topCity: 'Katihar',
-    upcomingPickupsCount: 4,
+    upcomingPickupsCount: 1,
+    upcomingBookings: [
+      { bookingCode: 'BC-2001', pickupTime: '06:00', originCity: 'Patna', destinationCity: 'Patna Airport', customerName: 'Vikram', driverName: 'Ramesh', bookingStatus: 'DRIVER_ASSIGNED' },
+    ],
     overdueDuesTotal: 800,
     driversOwingCount: 1,
     expiringDocsCount: 0,
@@ -115,4 +124,5 @@ test('formatFounderDigestMessage renders distinct 8 AM and 8 PM headers with met
   });
   assert.match(eveningMsg, /Evening Founder Digest \(8:00 PM\)/);
   assert.match(eveningMsg, /Open Failed WA Messages: 2/);
+  assert.match(eveningMsg, /06:00 #BC-2001.*Patna Airport/);
 });

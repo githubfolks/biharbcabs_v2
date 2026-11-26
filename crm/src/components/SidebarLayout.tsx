@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { 
-  Car, MessageSquare, Users, Wallet, Sliders, LogOut, User, Database, ChevronRight, Menu, X, Package, PlusCircle, Smartphone, ShieldCheck, ClipboardList, UserCheck, Building2, Handshake,
+  Car, MessageSquare, Users, Wallet, Sliders, LogOut, User, Database, ChevronRight, Menu, X, Package, PlusCircle, ShieldCheck, ClipboardList, UserCheck, Building2, Handshake, Flame, Globe,
 } from 'lucide-react';
 import { Permission, hasPermission } from '@/lib/permissions';
 
@@ -151,19 +151,25 @@ export default function SidebarLayout({ children }: SidebarLayoutProps) {
       permission: 'catalog.view',
     },
     {
+      href: '/surge-rules',
+      label: 'Surge & Peak Rules',
+      icon: Flame,
+      active: pathname.startsWith('/surge-rules'),
+      permission: 'catalog.view',
+    },
+    {
+      href: '/seo-routes',
+      label: 'SEO Route Pages',
+      icon: Globe,
+      active: pathname.startsWith('/seo-routes'),
+      permission: 'catalog.view',
+    },
+    {
       href: '/inbox',
       label: 'WhatsApp Inbox',
       icon: MessageSquare,
       badge: 'Live',
       active: pathname.startsWith('/inbox'),
-      permission: 'inbox.use',
-    },
-    {
-      href: '/simulator',
-      label: 'WA Simulator',
-      icon: Smartphone,
-      badge: 'Test',
-      active: pathname.startsWith('/simulator'),
       permission: 'inbox.use',
     },
     {
