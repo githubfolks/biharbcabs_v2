@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { handleRouteError } from '@/lib/route-errors';
 import { query } from '@/lib/db';
 import { consumeRateLimit, rateLimitExceededResponse } from '@/lib/rate-limit';
 import { upsertSupportTicket } from '@/lib/support-tickets';
@@ -76,6 +77,6 @@ export async function POST(req: NextRequest, { params }: { params: { token: stri
       message: 'Emergency SOS alert sent to BiharCabs Operations Desk. Our team is calling you immediately.',
     });
   } catch (err: any) {
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+    return handleRouteError(err, 'API public/trip/[token]/sos');
   }
 }

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { handleRouteError } from '@/lib/route-errors';
 import { requireAdmin } from '@/lib/auth';
 import { getAllSettings, updateSetting } from '@/lib/settings';
 import { checkReturnTripPolicy } from '@/lib/return-trip-pricing';
@@ -15,7 +16,7 @@ export async function GET(req: NextRequest) {
     const settings = await getAllSettings(true);
     return NextResponse.json({ success: true, settings: maskSettings(settings) });
   } catch (err: any) {
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+    return handleRouteError(err, 'API settings');
   }
 }
 
@@ -67,6 +68,6 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, settings: maskSettings(updated) });
   } catch (err: any) {
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+    return handleRouteError(err, 'API settings');
   }
 }

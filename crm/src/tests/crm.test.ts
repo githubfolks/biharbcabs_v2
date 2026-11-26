@@ -69,13 +69,14 @@ describe('BiharCabs Operational CRM Core Engine Tests', () => {
     const ridePct = Number((await getAllSettings(true)).company_billing_info.tax_percentage);
     const split = await calculateRideSplitWithTaxes(3000);
     const r2 = (n: number) => Math.round(n * 100) / 100;
-    const commission = Math.round((3000 * policy.platform_commission_pct) / 100);
-    const gst = r2(((commission + policy.tech_fee_amount) * policy.gst_on_commission_pct) / 100);
-    const rideGst = r2((3000 * ridePct) / (100 + ridePct));
+    const fareExclFee = r2(3000 - policy.tech_fee_amount);
+    const rideGst = r2((fareExclFee * ridePct) / (100 + ridePct));
+    const taxable = r2(fareExclFee - rideGst);
+    const commission = r2((taxable * policy.platform_commission_pct) / 100);
     assert.strictEqual(split.platformCommission, commission);
-    assert.strictEqual(split.gstAmount, gst);
+    assert.strictEqual(split.gstAmount, 0);
     assert.strictEqual(split.rideGstAmount, rideGst);
-    assert.strictEqual(split.totalCompanyDuesZ, r2(rideGst + commission + policy.tech_fee_amount + gst));
+    assert.strictEqual(split.totalCompanyDuesZ, r2(rideGst + commission + policy.tech_fee_amount));
     assert.strictEqual(split.driverGrossEarnings, r2(3000 - split.totalCompanyDuesZ));
   });
 
@@ -258,11 +259,20 @@ describe('BiharCabs Operational CRM Core Engine Tests', () => {
     let conv = await getConversation(testPhone);
     assert.strictEqual(conv.state, 'AWAITING_TRIP_TYPE');
 
-    // Step 2: Choose One-Way
+    // Step 2: Choose One-Way (Outstation asks trip direction before origin)
     await processIncomingWhatsAppMessage({
       fromPhone: testPhone,
       buttonId: 'tt_oneway',
       buttonText: '🚖 One-Way Drop',
+    });
+    conv = await getConversation(testPhone);
+    assert.strictEqual(conv.state, 'AWAITING_TRIP_DIRECTION');
+
+    // Step 2b: Confirm One-Way direction
+    await processIncomingWhatsAppMessage({
+      fromPhone: testPhone,
+      buttonId: 'dir_oneway',
+      buttonText: '➡️ One-Way',
     });
     conv = await getConversation(testPhone);
     assert.strictEqual(conv.state, 'AWAITING_ORIGIN');
@@ -506,11 +516,11 @@ describe('BiharCabs Operational CRM Core Engine Tests', () => {
   });
 
   it('11. Revenue Protection & Tax Settlement: Verifies CA GST + commission + tech fee math and dynamic driver credit limits', async () => {
-    // 1. Mathematically audit ₹2000 ride split (commission on pre-GST fare)
+    // 1. Mathematically audit ₹2000 ride split (₹10 platform fee excluded before 5% ride GST & commission)
     const split = await calculateRideSplitWithTaxes(2000);
     assert.strictEqual(split.customerTotalFare, 2000);
-    assert.strictEqual(split.rideGstAmount, 95.24); // 5% included in the fare, borne by the driver
-    assert.strictEqual(split.rideTaxableValue, 1904.76);
+    assert.strictEqual(split.rideGstAmount, 94.76); // 5% included in ₹1990 (2000 - 10 tech fee)
+    assert.strictEqual(split.rideTaxableValue, 1895.24);
     assert.strictEqual(split.techFeeAmount, 10);
     assert.strictEqual(Math.round((split.totalCompanyDuesZ + split.driverGrossEarnings) * 100) / 100, 2000);
 
@@ -635,13 +645,23 @@ describe('BiharCabs Operational CRM Core Engine Tests', () => {
       [driverId, `BR-01-SM-${ts.toString().slice(-4)}`]
     );
 
-    // 2. Run unpaid dues cron -> Driver is NOT blocked! Soft degraded to RESTRICTED_DIGITAL_ONLY
-    const restrictedCount = await runUnpaidDuesGuardrails();
-    assert.ok(restrictedCount >= 1, 'Restricted driver count updated');
+    // 2. Run unpaid dues cron with digital-only soft mode enabled -> Soft degraded to RESTRICTED_DIGITAL_ONLY
+    const originalSoftPolicy = await getRevenueProtectionPolicy();
+    try {
+      if (!originalSoftPolicy.enable_digital_only_soft_mode) {
+        await updateSetting('revenue_protection_policy', { ...originalSoftPolicy, enable_digital_only_soft_mode: true }, 'Test soft mode');
+      }
+      const restrictedCount = await runUnpaidDuesGuardrails();
+      assert.ok(restrictedCount >= 1, 'Restricted driver count updated');
 
-    const checkRes = await query(`SELECT onboarding_status, is_available FROM crm_drivers WHERE id = $1`, [driverId]);
-    assert.strictEqual(checkRes.rows[0].onboarding_status, 'RESTRICTED_DIGITAL_ONLY');
-    assert.strictEqual(checkRes.rows[0].is_available, true, 'Driver remains available for prepaid rides');
+      const checkRes = await query(`SELECT onboarding_status, is_available FROM crm_drivers WHERE id = $1`, [driverId]);
+      assert.strictEqual(checkRes.rows[0].onboarding_status, 'RESTRICTED_DIGITAL_ONLY');
+      assert.strictEqual(checkRes.rows[0].is_available, true, 'Driver remains available for prepaid rides');
+    } finally {
+      if (!originalSoftPolicy.enable_digital_only_soft_mode) {
+        await updateSetting('revenue_protection_policy', originalSoftPolicy, 'Restore soft mode');
+      }
+    }
 
     // 3. Test Cash Ride Exclusion: Restricted driver cannot receive standard cash rides
     const cashCandidates = await findEligibleDrivers('Patna', 'sedan', { pickupAt: new Date() });
@@ -819,7 +839,7 @@ describe('BiharCabs Operational CRM Core Engine Tests', () => {
     }
 
     assert.strictEqual(tier, 'STANDARD');
-    assert.strictEqual(dynamicLimit, 1000);
+    assert.strictEqual(dynamicLimit, limits.standard);
 
     // 3. Create customer & booking with tax split
     const cRes = await query(
@@ -830,9 +850,8 @@ describe('BiharCabs Operational CRM Core Engine Tests', () => {
 
     const fare = 3000;
     const taxSplit = await calculateRideSplitWithTaxes(fare);
-    // 3% = 90. Tech fee 10. 18% GST on both = 18. Ride GST 5% included = 142.86. Share = 260.86. Advance 300. Cash due 2700.
-    assert.strictEqual(taxSplit.techFeeAmount, 10);
-    assert.strictEqual(taxSplit.rideGstAmount, 142.86);
+    assert.strictEqual(taxSplit.techFeeAmount, revPolicy.tech_fee_amount);
+    assert.strictEqual(taxSplit.rideGstAmount, 142.38);
 
     const bRes = await query(
       `INSERT INTO crm_bookings (
@@ -868,9 +887,9 @@ describe('BiharCabs Operational CRM Core Engine Tests', () => {
       WHERE b.id = $1
     `, [bookingId]);
 
-    assert.strictEqual(Number(kpiRes.rows[0].total_commission_revenue), 260.86);
-    assert.strictEqual(Number(kpiRes.rows[0].total_gst_statutory_collected), 160.86); // 18 + 142.86
-    assert.strictEqual(Number(kpiRes.rows[0].total_tech_fees_collected), 10);
+    assert.strictEqual(Number(kpiRes.rows[0].total_commission_revenue), taxSplit.totalCompanyDuesZ);
+    assert.strictEqual(Number(kpiRes.rows[0].total_gst_statutory_collected), Math.round((taxSplit.gstAmount + taxSplit.rideGstAmount) * 100) / 100);
+    assert.strictEqual(Number(kpiRes.rows[0].total_tech_fees_collected), revPolicy.tech_fee_amount);
     assert.ok(Number(kpiRes.rows[0].total_security_reserve_held) >= 200);
     assert.ok(Number(kpiRes.rows[0].total_driver_dues_outstanding) >= 150);
 
@@ -903,26 +922,29 @@ describe('BiharCabs Operational CRM Core Engine Tests', () => {
 
     await updateSetting('revenue_protection_policy', updatedPolicyConfig, 'Updated 10% unit economics policy');
 
-    // 3. Verify getRevenueProtectionPolicy immediately returns updated values from DB
-    const freshPolicy = await getRevenueProtectionPolicy();
-    assert.strictEqual(freshPolicy.platform_commission_pct, 10.0);
-    assert.strictEqual(freshPolicy.customer_convenience_fee, 39.0);
-    assert.strictEqual(freshPolicy.dynamic_credit_limits.standard, 1200.0);
+    try {
+      // 3. Verify getRevenueProtectionPolicy immediately returns updated values from DB
+      const freshPolicy = await getRevenueProtectionPolicy();
+      assert.strictEqual(freshPolicy.platform_commission_pct, 10.0);
+      assert.strictEqual(freshPolicy.customer_convenience_fee, 39.0);
+      assert.strictEqual(freshPolicy.dynamic_credit_limits.standard, 1200.0);
 
-    // 4. Verify calculateRideSplitWithTaxes() immediately recalculates on ₹2,000 fare
-    // At 10%: commission 200, tech fee 10, GST 18% on both = 37.80, ride GST 5% included in the fare = 95.24.
-    // BiharCabs' share = 95.24 + 200 + 10 + 37.80 = 343.04; driver keeps 1656.96.
-    const split10 = await calculateRideSplitWithTaxes(2000);
-    assert.strictEqual(split10.platformCommission, 200);
-    assert.strictEqual(split10.techFeeAmount, 10);
-    assert.strictEqual(split10.gstAmount, 37.8);
-    assert.strictEqual(split10.rideGstAmount, 95.24);
-    assert.strictEqual(split10.rideTaxableValue, 1904.76);
-    assert.strictEqual(split10.totalCompanyDuesZ, 343.04);
-    assert.strictEqual(split10.driverGrossEarnings, 1656.96);
-
-    // 5. Restore original policy
-    await updateSetting('revenue_protection_policy', originalPolicy, 'Restored original policy');
+      // 4. Verify calculateRideSplitWithTaxes() immediately recalculates on ₹2,000 fare
+      // Platform fee 10 -> fare excl fee 1990 -> 5% ride GST = 94.76, taxable = 1895.24.
+      // At 10%: commission = 189.52, extra GST on commission = 0.
+      // BiharCabs' share = 94.76 + 189.52 + 10 = 294.28; driver keeps 1705.72.
+      const split10 = await calculateRideSplitWithTaxes(2000);
+      assert.strictEqual(split10.platformCommission, 189.52);
+      assert.strictEqual(split10.techFeeAmount, 10);
+      assert.strictEqual(split10.gstAmount, 0);
+      assert.strictEqual(split10.rideGstAmount, 94.76);
+      assert.strictEqual(split10.rideTaxableValue, 1895.24);
+      assert.strictEqual(split10.totalCompanyDuesZ, 294.28);
+      assert.strictEqual(split10.driverGrossEarnings, 1705.72);
+    } finally {
+      // 5. Always restore original policy even if an assertion fails
+      await updateSetting('revenue_protection_policy', originalPolicy, 'Restored original policy');
+    }
     const restoredPolicy = await getRevenueProtectionPolicy();
     assert.strictEqual(restoredPolicy.platform_commission_pct, originalPolicy.platform_commission_pct);
   });

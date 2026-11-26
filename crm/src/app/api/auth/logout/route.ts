@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { handleRouteError } from '@/lib/route-errors';
 import { revokeSession, validateSession, SESSION_COOKIE_NAME } from '@/lib/auth';
 import { recordAuditLog } from '@/lib/audit-log';
 
@@ -26,7 +27,7 @@ export async function POST(req: NextRequest) {
     response.cookies.delete(SESSION_COOKIE_NAME);
     return response;
   } catch (err: any) {
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+    return handleRouteError(err, 'API auth/logout');
   }
 }
 

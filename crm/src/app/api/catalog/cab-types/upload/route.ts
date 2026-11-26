@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { handleRouteError } from '@/lib/route-errors';
 import { requireAdmin } from '@/lib/auth';
 import crypto from 'crypto';
 import fs from 'fs/promises';
@@ -58,6 +59,6 @@ export async function POST(req: NextRequest) {
       { status: 201 }
     );
   } catch (err: any) {
-    return NextResponse.json({ success: false, error: err?.message || 'Image upload failed' }, { status: 500 });
+    return handleRouteError(err, 'API catalog/cab-types/upload');
   }
 }

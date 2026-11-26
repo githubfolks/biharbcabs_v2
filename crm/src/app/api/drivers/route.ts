@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { handleRouteError } from '@/lib/route-errors';
 import { requireAdmin } from '@/lib/auth';
 import { query, withTransaction } from '@/lib/db';
 import { getRevenueProtectionPolicy } from '@/lib/settings';
@@ -246,6 +247,6 @@ export async function POST(req: NextRequest) {
     if (err instanceof VehicleTakenError || err instanceof PhoneTakenError) {
       return NextResponse.json({ success: false, error: err.message }, { status: 409 });
     }
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+    return handleRouteError(err, 'API drivers');
   }
 }

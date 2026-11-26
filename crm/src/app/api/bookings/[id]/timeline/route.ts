@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { handleRouteError } from '@/lib/route-errors';
 import { requireAdmin } from '@/lib/auth';
 import { withTransaction } from '@/lib/db';
 import { getBookingTimeline, recordBookingEvent } from '@/lib/booking-timeline';
@@ -24,7 +25,7 @@ export async function GET(
     }
     return NextResponse.json({ success: true, ...timeline });
   } catch (err: any) {
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+    return handleRouteError(err, 'API bookings/[id]/timeline');
   }
 }
 
@@ -118,6 +119,6 @@ export async function POST(
     const timeline = await getBookingTimeline(bookingId);
     return NextResponse.json({ success: true, ...timeline });
   } catch (err: any) {
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+    return handleRouteError(err, 'API bookings/[id]/timeline');
   }
 }

@@ -1,3 +1,4 @@
+import { DomainError } from './route-errors';
 import PDFDocument from 'pdfkit';
 import { query } from './db';
 import { getCompanyBillingInfo } from './settings';
@@ -18,9 +19,9 @@ import { round2 } from './fare-split';
 export type GstDocumentKind = 'TI' | 'RV' | 'RF' | 'CC';
 export const GST_DOCUMENT_KINDS: readonly GstDocumentKind[] = ['TI', 'RV', 'RF', 'CC'];
 
-export class GstPdfError extends Error {
-  constructor(message: string, public status = 409) {
-    super(message);
+export class GstPdfError extends DomainError {
+  constructor(message: string, status = 409) {
+    super(message, status);
   }
 }
 

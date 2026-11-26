@@ -1,3 +1,4 @@
+import { DomainError } from './route-errors';
 import { query } from './db';
 import { notifyAdmins } from './wa-notify';
 import { TEMPLATE_DEFS, TemplateKey } from './wa-templates';
@@ -13,9 +14,9 @@ import { TEMPLATE_DEFS, TemplateKey } from './wa-templates';
 const SUMMARY_LINES = 5;
 const LIST_LIMIT = 100;
 
-export class NotificationFailureError extends Error {
-  constructor(message: string, public status: number) {
-    super(message);
+export class NotificationFailureError extends DomainError {
+  constructor(message: string, status: number) {
+    super(message, status);
   }
 }
 

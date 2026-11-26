@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { handleRouteError } from '@/lib/route-errors';
 import { query } from '@/lib/db';
 import { requireAdmin } from '@/lib/auth';
 import { recordAuditLog } from '@/lib/audit-log';
@@ -28,7 +29,7 @@ export async function GET(req: NextRequest) {
       })),
     });
   } catch (err: any) {
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+    return handleRouteError(err, 'API catalog/pricing-rules');
   }
 }
 
@@ -87,6 +88,6 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, rule: { ...rule, id: Number(rule.id) } }, { status: 201 });
   } catch (err: any) {
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+    return handleRouteError(err, 'API catalog/pricing-rules');
   }
 }

@@ -1,3 +1,4 @@
+import { DomainError } from './route-errors';
 /**
  * A driver's wallet: current balances and the ledger entries recorded against them, newest first.
  *
@@ -8,9 +9,9 @@
  */
 import { query } from './db';
 
-export class DriverWalletError extends Error {
-  constructor(message: string, public status: number) {
-    super(message);
+export class DriverWalletError extends DomainError {
+  constructor(message: string, status: number) {
+    super(message, status);
   }
 }
 

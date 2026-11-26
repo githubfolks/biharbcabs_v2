@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { handleRouteError } from '@/lib/route-errors';
 import { requireAdmin } from '@/lib/auth';
 import { PlanError, createSubscriptionPlan, listSubscriptionPlans } from '@/lib/driver-plans';
 
@@ -12,7 +13,7 @@ export async function GET(req: NextRequest) {
     const plans = await listSubscriptionPlans({ activeOnly });
     return NextResponse.json({ success: true, plans });
   } catch (err: any) {
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+    return handleRouteError(err, 'API driver-plans');
   }
 }
 
@@ -24,7 +25,6 @@ export async function POST(req: NextRequest) {
     const plan = await createSubscriptionPlan(body);
     return NextResponse.json({ success: true, plan }, { status: 201 });
   } catch (err: any) {
-    const status = err instanceof PlanError ? err.status : 500;
-    return NextResponse.json({ success: false, error: err.message }, { status });
+    return handleRouteError(err, 'API driver-plans');
   }
 }

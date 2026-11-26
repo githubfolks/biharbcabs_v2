@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { handleRouteError } from '@/lib/route-errors';
 import { requireAdmin } from '@/lib/auth';
 import { CancelError, cancelBooking, previewCancellation } from '@/lib/cancellations';
 import { recordAuditLog } from '@/lib/audit-log';
@@ -6,10 +7,7 @@ import { recordAuditLog } from '@/lib/audit-log';
 export const dynamic = 'force-dynamic';
 
 const badId = () => NextResponse.json({ success: false, error: 'Invalid booking id' }, { status: 400 });
-const failure = (err: any) =>
-  err instanceof CancelError
-    ? NextResponse.json({ success: false, error: err.message }, { status: err.status })
-    : NextResponse.json({ success: false, error: err.message }, { status: 500 });
+const failure = (err: unknown) => handleRouteError(err, 'API bookings/[id]/cancel');
 
 /** What cancelling now would refund, for ?fault=CUSTOMER|BIHARCABS. */
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {

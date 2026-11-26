@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { handleRouteError } from '@/lib/route-errors';
 import { awardDriverIncentive } from '@/lib/billing';
 import { requireAdmin } from '@/lib/auth';
 
@@ -35,6 +36,6 @@ export async function POST(
       ...result,
     });
   } catch (err: any) {
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+    return handleRouteError(err, 'API drivers/[id]/incentives');
   }
 }

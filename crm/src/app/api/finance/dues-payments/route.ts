@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { handleRouteError } from '@/lib/route-errors';
 import { requireAdmin } from '@/lib/auth';
 import { DuesError, listDriversOwing, recordManualDuesPayment } from '@/lib/driver-dues';
 import { notify } from '@/lib/wa-notify';
@@ -14,7 +15,7 @@ export async function GET(req: NextRequest) {
   try {
     return NextResponse.json({ success: true, drivers: await listDriversOwing() });
   } catch (err: any) {
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+    return handleRouteError(err, 'API finance/dues-payments');
   }
 }
 
@@ -51,6 +52,6 @@ export async function POST(req: NextRequest) {
     if (err instanceof DuesError) {
       return NextResponse.json({ success: false, error: err.message }, { status: err.status });
     }
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+    return handleRouteError(err, 'API finance/dues-payments');
   }
 }

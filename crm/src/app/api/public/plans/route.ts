@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { handleRouteError } from '@/lib/route-errors';
 import {
   CatalogError,
   calculateDistanceAdjustedPricing,
@@ -200,7 +201,6 @@ export async function GET(req: NextRequest) {
       plans: matchedPlans,
     });
   } catch (err: any) {
-    const status = err instanceof CatalogError ? err.status : 500;
-    return NextResponse.json({ success: false, error: err.message }, { status });
+    return handleRouteError(err, 'API public/plans');
   }
 }

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { handleRouteError } from '@/lib/route-errors';
 import { requireAdmin } from '@/lib/auth';
 import {
   CatalogError,
@@ -79,8 +80,7 @@ export async function GET(req: NextRequest) {
       packages: enriched,
     });
   } catch (err: any) {
-    const status = err instanceof CatalogError ? err.status : 500;
-    return NextResponse.json({ success: false, error: err.message }, { status });
+    return handleRouteError(err, 'API catalog/packages');
   }
 }
 
@@ -92,7 +92,6 @@ export async function POST(req: NextRequest) {
     const pkg = await createPackage(body);
     return NextResponse.json({ success: true, package: pkg }, { status: 201 });
   } catch (err: any) {
-    const status = err instanceof CatalogError ? err.status : 500;
-    return NextResponse.json({ success: false, error: err.message }, { status });
+    return handleRouteError(err, 'API catalog/packages');
   }
 }

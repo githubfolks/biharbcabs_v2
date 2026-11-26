@@ -1,3 +1,4 @@
+import { DomainError } from './route-errors';
 import crypto from 'crypto';
 import { PoolClient } from 'pg';
 import { query, withTransaction } from './db';
@@ -20,9 +21,9 @@ const MAX_REFERENCE_LENGTH = 100;
 /** Statuses set because of unpaid dues; other suspensions (documents, ratings) are never lifted here. */
 const DUES_STATUSES = ['RESTRICTED_DIGITAL_ONLY', 'SUSPENDED_UNPAID_DUES'];
 
-export class DuesError extends Error {
-  constructor(message: string, readonly status: number) {
-    super(message);
+export class DuesError extends DomainError {
+  constructor(message: string, status: number) {
+    super(message, status);
   }
 }
 

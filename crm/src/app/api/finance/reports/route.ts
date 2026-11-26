@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { handleRouteError } from '@/lib/route-errors';
 import { requireAdmin } from '@/lib/auth';
 import { recordAuditLog } from '@/lib/audit-log';
 import {
@@ -77,6 +78,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ success: true, ...data });
   } catch (err: any) {
     console.error('[FinanceReports] Error:', err?.message);
-    return NextResponse.json({ success: false, error: err?.message || 'Could not generate report' }, { status: 500 });
+    return handleRouteError(err, 'API finance/reports');
   }
 }

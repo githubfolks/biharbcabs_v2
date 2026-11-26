@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { handleRouteError } from '@/lib/route-errors';
 import { query } from '@/lib/db';
 import { requireAdmin } from '@/lib/auth';
 import { recordAuditLog } from '@/lib/audit-log';
@@ -62,7 +63,7 @@ export async function GET(req: NextRequest) {
       summary: countRes.rows[0] || { open_count: 0, in_progress_count: 0, resolved_count: 0 },
     });
   } catch (err: any) {
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+    return handleRouteError(err, 'API support-tickets');
   }
 }
 
@@ -100,6 +101,6 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, id: result.id }, { status: 201 });
   } catch (err: any) {
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+    return handleRouteError(err, 'API support-tickets');
   }
 }

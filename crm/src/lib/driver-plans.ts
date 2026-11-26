@@ -1,3 +1,4 @@
+import { DomainError } from './route-errors';
 import crypto from 'crypto';
 import { PoolClient } from 'pg';
 import { query, withTransaction } from './db';
@@ -16,9 +17,9 @@ import { nextDocumentNumber } from './gst-documents';
  * - Zero hardcoded prices or fare limits: all plans are configured dynamically in crm_subscription_plans.
  */
 
-export class PlanError extends Error {
-  constructor(message: string, readonly status: number) {
-    super(message);
+export class PlanError extends DomainError {
+  constructor(message: string, status: number) {
+    super(message, status);
   }
 }
 

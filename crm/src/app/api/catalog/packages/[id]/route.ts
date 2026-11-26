@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { handleRouteError } from '@/lib/route-errors';
 import { requireAdmin } from '@/lib/auth';
 import { CatalogError, updatePackage } from '@/lib/pricing-engine';
 
@@ -16,7 +17,6 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     const pkg = await updatePackage(id, body);
     return NextResponse.json({ success: true, package: pkg });
   } catch (err: any) {
-    const status = err instanceof CatalogError ? err.status : 500;
-    return NextResponse.json({ success: false, error: err.message }, { status });
+    return handleRouteError(err, 'API catalog/packages/[id]');
   }
 }

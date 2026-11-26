@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { handleRouteError } from '@/lib/route-errors';
 import { requireAdmin } from '@/lib/auth';
 import { resolveDrivingDistance, LocationError } from '@/lib/locationiq';
 import {
@@ -77,7 +78,6 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ success: true, route, adjusted_pricing, service_coverage });
   } catch (err: any) {
-    const status = err instanceof LocationError || err instanceof CatalogError ? err.status : 500;
-    return NextResponse.json({ success: false, error: err.message }, { status });
+    return handleRouteError(err, 'API location/distance');
   }
 }

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { handleRouteError } from '@/lib/route-errors';
 import { requireAdmin } from '@/lib/auth';
 import { FuelSyncError, syncFuelPricesFromApi } from '@/lib/fuel-price-sync';
 import { listFuelPrices } from '@/lib/pricing-engine';
@@ -19,7 +20,6 @@ export async function POST(req: NextRequest) {
       fuelPrices,
     });
   } catch (err: any) {
-    const status = err instanceof FuelSyncError ? err.status : 500;
-    return NextResponse.json({ success: false, error: err.message }, { status });
+    return handleRouteError(err, 'API catalog/fuel-prices/sync');
   }
 }

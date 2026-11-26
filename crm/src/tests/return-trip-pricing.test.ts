@@ -41,19 +41,20 @@ describe('return trip discount', () => {
   });
 
   it('company pays up to its commission and the driver covers the rest', () => {
-    // Full fare 3000: ride GST 142.86, taxable 2857.14, commission 85.71, fee 10, GST on both 17.23 -> share 255.80, driver 2744.20
+    // Full fare 3000: platform fee 10 -> fare excl fee 2990 -> ride GST 142.38, taxable 2847.62,
+    // commission (3%) 85.43, extra GST on commission 0 -> share 237.81, driver 2762.19
     const s = split(3000);
-    assert.strictEqual(s.totalCompanyDuesZ, 255.8);
+    assert.strictEqual(s.totalCompanyDuesZ, 237.81);
     const r = applyReturnDiscount(s, policy(), rules)!;
     assert.strictEqual(r.discountAmount, 300);
-    assert.strictEqual(r.companyShare, 85.71);
+    assert.strictEqual(r.companyShare, 85.43);
     assert.strictEqual(r.split.platformCommission, 0);
-    assert.strictEqual(r.split.gstAmount, 1.8, 'GST on the tech fee remains');
+    assert.strictEqual(r.split.gstAmount, 0, 'no extra GST on commission under current policy');
     assert.strictEqual(r.split.customerTotalFare, 2700);
-    assert.strictEqual(r.split.rideGstAmount, 128.57, 'ride GST on the discounted fare');
-    assert.strictEqual(r.split.totalCompanyDuesZ, 140.37);
-    assert.strictEqual(r.split.driverGrossEarnings, 2559.63);
-    assert.strictEqual(r.driverShare, 184.57);
+    assert.strictEqual(r.split.rideGstAmount, 128.1, 'ride GST on the discounted fare (excl. ₹10 platform fee)');
+    assert.strictEqual(r.split.totalCompanyDuesZ, 138.1);
+    assert.strictEqual(r.split.driverGrossEarnings, 2561.9);
+    assert.strictEqual(r.driverShare, 200.29);
     // The discount is covered by BiharCabs' commission, the driver, and the GST that falls with the fare.
     const taxSaved = (s.gstAmount - r.split.gstAmount) + (s.rideGstAmount - r.split.rideGstAmount);
     assert.strictEqual(Math.round((r.companyShare + r.driverShare + taxSaved) * 100) / 100, 300);
@@ -63,9 +64,9 @@ describe('return trip discount', () => {
     const s = split(3000);
     const r = applyReturnDiscount(s, policy({ discount_type: 'FLAT', discount_value: 50 }), rules)!;
     assert.strictEqual(r.companyShare, 50);
-    assert.strictEqual(r.split.platformCommission, 35.71);
-    assert.strictEqual(r.split.gstAmount, 8.23, '18% of commission 35.71 + fee 10');
-    assert.ok(r.driverShare < 0, 'driver gains slightly because GST falls with the commission and the fare');
+    assert.strictEqual(r.split.platformCommission, 35.43);
+    assert.strictEqual(r.split.gstAmount, 0, 'no extra GST on commission under current policy');
+    assert.ok(r.driverShare < 0, 'driver gains slightly because ride GST falls with the fare');
   });
 
   it('customer pays exactly the discounted fare, and money adds up', () => {

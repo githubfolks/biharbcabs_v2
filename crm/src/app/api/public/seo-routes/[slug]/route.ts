@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { handleRouteError } from '@/lib/route-errors';
 import { query } from '@/lib/db';
 import {
   calculateDistanceAdjustedPricing,
@@ -89,6 +90,6 @@ export async function GET(req: NextRequest, { params }: { params: { slug: string
       plans,
     });
   } catch (err: any) {
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+    return handleRouteError(err, 'API public/seo-routes/[slug]');
   }
 }

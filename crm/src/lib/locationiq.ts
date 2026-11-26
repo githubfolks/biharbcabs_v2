@@ -1,3 +1,4 @@
+import { DomainError } from './route-errors';
 import crypto from 'crypto';
 import { query } from './db';
 import { getLocationIqConfig } from './settings';
@@ -8,9 +9,9 @@ import { getLocationIqConfig } from './settings';
  * API key is stored dynamically in crm_settings ('locationiq_config') or LOCATIONIQ_API_KEY env.
  */
 
-export class LocationError extends Error {
-  constructor(message: string, readonly status: number) {
-    super(message);
+export class LocationError extends DomainError {
+  constructor(message: string, status: number) {
+    super(message, status);
   }
 }
 

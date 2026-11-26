@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { handleRouteError } from '@/lib/route-errors';
 import { query } from '@/lib/db';
 import { getSetting } from '@/lib/settings';
 import { consumeRateLimit, getPublicClientIp, rateLimitExceededResponse } from '@/lib/rate-limit';
@@ -95,6 +96,6 @@ export async function GET(req: NextRequest, { params }: { params: { token: strin
       },
     });
   } catch (err: any) {
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+    return handleRouteError(err, 'API public/trip/[token]');
   }
 }

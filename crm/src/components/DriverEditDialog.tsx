@@ -107,9 +107,14 @@ export default function DriverEditDialog({
       .then((data) => {
         if (data.success && Array.isArray(data.cabTypes)) {
           setCabOptions(data.cabTypes);
+        } else {
+          setMsg('vehicles', { kind: 'error', text: data.error || 'Could not load cab types for vehicle selector.' });
         }
       })
-      .catch(() => {});
+      .catch((err) => {
+        console.error('[DriverEditDialog] Failed to load cab types:', err);
+        setMsg('vehicles', { kind: 'error', text: 'Could not load cab types. Refresh to add a vehicle.' });
+      });
   }, []);
   const [newVehicle, setNewVehicle] = useState<any>(emptyVehicle);
   const [removing, setRemoving] = useState<{ id: number; reason: string } | null>(null);

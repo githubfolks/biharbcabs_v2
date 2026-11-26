@@ -1,3 +1,4 @@
+import { DomainError } from './route-errors';
 import { query, withTransaction } from './db';
 import { notify } from './wa-notify';
 import { sendWhatsAppText } from './whatsapp';
@@ -15,9 +16,9 @@ export { CANCELLABLE_STATUSES };
 export type CancellationFault = 'CUSTOMER' | 'BIHARCABS';
 const MIN_REASON_LENGTH = 5;
 
-export class CancelError extends Error {
-  constructor(message: string, readonly status: number) {
-    super(message);
+export class CancelError extends DomainError {
+  constructor(message: string, status: number) {
+    super(message, status);
   }
 }
 

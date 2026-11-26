@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { handleRouteError } from '@/lib/route-errors';
 import { requireAdmin } from '@/lib/auth';
 import { query } from '@/lib/db';
 import { sendWhatsAppText } from '@/lib/whatsapp';
@@ -65,7 +66,7 @@ export async function GET(req: NextRequest) {
       threads: threadsRes.rows,
     });
   } catch (err: any) {
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+    return handleRouteError(err, 'API whatsapp/messages');
   }
 }
 
@@ -92,7 +93,7 @@ export async function POST(req: NextRequest) {
     const result = await sendWhatsAppText(phone, text);
     return NextResponse.json(result);
   } catch (err: any) {
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+    return handleRouteError(err, 'API whatsapp/messages');
   }
 }
 

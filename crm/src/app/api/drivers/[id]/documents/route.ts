@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { handleRouteError } from '@/lib/route-errors';
 import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
@@ -62,7 +63,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       })),
     });
   } catch (err: any) {
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+    return handleRouteError(err, 'API drivers/[id]/documents');
   }
 }
 
@@ -155,6 +156,6 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       { status: 201 }
     );
   } catch (err: any) {
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+    return handleRouteError(err, 'API drivers/[id]/documents');
   }
 }

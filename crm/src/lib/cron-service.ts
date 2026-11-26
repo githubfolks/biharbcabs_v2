@@ -1,4 +1,4 @@
-import { query } from './db';
+import { getDbPool, query } from './db';
 import { purgeOldLoginAttempts } from './login-security';
 import { reconcileStalePaymentLinks } from './razorpay-webhook';
 import { syncDriverPlanSuspension } from './driver-plans';
@@ -26,7 +26,14 @@ import { recordBookingEvent } from './booking-timeline';
 import { runScheduledFounderDigest } from './founder-digest';
 import { runPostTripRatingPrompts } from './support-tickets';
 
+export interface CronJobError {
+  job: string;
+  error: string;
+}
+
 export interface FrequentCronResult {
+  skipped?: boolean;
+  reason?: string;
   ridesRebroadcasted: number;
   slaBreachesEscalated: number;
   wakeupChecksSent: number;
@@ -42,13 +49,63 @@ export interface FrequentCronResult {
   gstDocumentsFailed: number;
   founderDigestSent: number;
   ratingPromptsSent: number;
+  errors: CronJobError[];
 }
 
 export interface DailyCronResult {
+  skipped?: boolean;
+  reason?: string;
   documentsExpiringWarned: number;
   loginAttemptsPurged: number;
-  cancellationDocumentsIssued: number;
   fuelPricesSynced: boolean;
+  errors: CronJobError[];
+}
+
+const CRON_LOCK_FREQUENT = 84729101;
+const CRON_LOCK_DAILY = 84729102;
+
+/**
+ * Run a cron function under a PostgreSQL session advisory lock so overlapping n8n/cron triggers
+ * cannot double-send wake-up checks or duplicate alerts.
+ */
+async function withCronAdvisoryLock<T>(
+  lockKey: number,
+  onLocked: () => T,
+  fn: () => Promise<T>
+): Promise<T> {
+  const client = await getDbPool().connect();
+  let acquired = false;
+  try {
+    const res = await client.query<{ locked: boolean }>('SELECT pg_try_advisory_lock($1) AS locked', [lockKey]);
+    acquired = Boolean(res.rows[0]?.locked);
+    if (!acquired) {
+      return onLocked();
+    }
+    return await fn();
+  } finally {
+    if (acquired) {
+      await client.query('SELECT pg_advisory_unlock($1)', [lockKey]).catch((err) => {
+        console.error(`[Cron] Failed to release advisory lock ${lockKey}:`, err?.message || err);
+      });
+    }
+    client.release();
+  }
+}
+
+async function runCronStep<T>(
+  job: string,
+  fn: () => Promise<T>,
+  fallback: T,
+  errors: CronJobError[]
+): Promise<T> {
+  try {
+    return await fn();
+  } catch (err: any) {
+    const msg = err?.message || String(err);
+    console.error(`[Cron] Job "${job}" failed:`, err);
+    errors.push({ job, error: msg });
+    return fallback;
+  }
 }
 
 /**
@@ -153,9 +210,10 @@ export async function runDriverWakeupChecks(): Promise<number> {
 
   for (const b of res.rows) {
     const targetPhone = b.whatsapp_phone || b.driver_phone;
-    if (targetPhone) {
+    if (!targetPhone) continue;
+    try {
       const when = `${new Date(b.pickup_date).toLocaleDateString('en-IN')} ${String(b.pickup_time).slice(0, 5)}`;
-      await notify(targetPhone, 'driver_wakeup', {
+      const sendRes = await notify(targetPhone, 'driver_wakeup', {
         ref: Number(b.id),
         params: [`#${b.booking_code}`, when, b.pickup_address],
         freeform: () =>
@@ -166,6 +224,11 @@ export async function runDriverWakeupChecks(): Promise<number> {
             'BiharCabs Driver Wake-up Check'
           ),
       });
+
+      if (!sendRes.success) {
+        console.error(`[Cron] Wake-up check failed for booking #${b.booking_code}: ${sendRes.error}`);
+        continue;
+      }
 
       await query(
         `UPDATE crm_bookings SET wakeup_sent_at = CURRENT_TIMESTAMP WHERE id = $1`,
@@ -180,6 +243,8 @@ export async function runDriverWakeupChecks(): Promise<number> {
         metadata: { hoursBefore },
       });
       sentCount++;
+    } catch (err: any) {
+      console.error(`[Cron] Wake-up check threw for booking #${b.booking_code}:`, err?.message || err);
     }
   }
 
@@ -387,87 +452,143 @@ export async function runUnpaidDuesGuardrails(): Promise<number> {
  * Return trips: rides whose returning-driver priority window ended go to regular drivers,
  * and driver return statuses past their time are closed.
  */
-export async function runReturnTripTasks(): Promise<{ released: number; expired: number }> {
-  const released = await releaseExpiredReturnWindows();
+export async function runReturnTripTasks(): Promise<{ released: number; expired: number; errors: string[] }> {
+  const { released, errors } = await releaseExpiredReturnWindows();
   for (const r of released) {
-    await notifyOfferedDrivers(r.bookingId, r.result);
+    try {
+      await notifyOfferedDrivers(r.bookingId, r.result);
+    } catch (err: any) {
+      const msg = `notifyOfferedDrivers(${r.bookingId}): ${err?.message || err}`;
+      console.error(`[Cron] ${msg}`);
+      errors.push(msg);
+    }
   }
   const expired = await expireDriverReturns();
-  return { released: released.length, expired };
+  return { released: released.length, expired, errors };
 }
 
 /**
- * Frequent jobs (every few minutes, POST /api/dispatch/cron). Each one changes a status or records
- * a sent time, so repeating a run does not repeat its messages.
+ * Frequent jobs (every few minutes, POST /api/dispatch/cron). Protected by a PostgreSQL advisory
+ * lock so overlapping triggers do not collide, and every job is isolated so one failure never stops
+ * the rest. Any job failures are returned in `errors[]`.
  */
 export async function executeFrequentCronTasks(): Promise<FrequentCronResult> {
-  // Runs before SLA escalation so a ride leaves its priority window and gets a second wave before escalating.
-  const returnTrips = await runReturnTripTasks();
-  const ridesRebroadcasted = await runUnassignedRideRebroadcast().catch((err) => {
-    console.error('[Cron] Unassigned ride rebroadcast failed:', err?.message);
-    return 0;
-  });
-  const breached = await runSlaEscalation();
-  const wakeups = await runDriverWakeupChecks();
-  const unconfirmed = await runUnconfirmedWakeupAlerts();
-  const suspended = await runExpiredDocumentSuspensions();
-  const dues = await runUnpaidDuesGuardrails();
-  // Payment links whose Razorpay expiry webhook never arrived; a Razorpay problem must not stop the other jobs.
-  const links = await reconcileStalePaymentLinks().catch((err) => {
-    console.error('[Cron] Payment link reconciliation failed:', err?.message);
-    return { checked: 0, closed: 0, paidAlerts: 0 };
-  });
-  // GST documents to customers (per CA); a WhatsApp or Meta problem must not stop the other jobs.
-  const gstDocs = await sendPendingGstDocuments().catch((err) => {
-    console.error('[Cron] GST document delivery failed:', err?.message);
-    return { sent: 0, failed: 0, retrying: 0, waitingForGstin: false };
-  });
-  // Founder WhatsApp Digest (8:00 AM morning recap & 8:00 PM evening live summary in IST).
-  const founderDigest = await runScheduledFounderDigest().catch((err) => {
-    console.error('[Cron] Founder WhatsApp Digest failed:', err?.message);
-    return { slot: null, sent: 0 };
-  });
-  // Post-trip rating prompts (15 min after trip completion for rides not yet prompted/rated).
-  const ratingPromptsSent = await runPostTripRatingPrompts().catch((err) => {
-    console.error('[Cron] Post-trip rating prompts failed:', err?.message);
-    return 0;
-  });
-  // Last, so it reports messages that failed in the jobs above.
-  const failedMessages = await runFailedMessageDigest().catch((err) => {
-    console.error('[Cron] Failed-message summary failed:', err?.message);
-    return 0;
-  });
+  return withCronAdvisoryLock(
+    CRON_LOCK_FREQUENT,
+    () => ({
+      skipped: true,
+      reason: 'already_running',
+      ridesRebroadcasted: 0,
+      slaBreachesEscalated: 0,
+      wakeupChecksSent: 0,
+      unconfirmedWakeupAlerts: 0,
+      documentsExpiredSuspended: 0,
+      unpaidDuesSuspended: 0,
+      returnWindowsReleased: 0,
+      driverReturnsExpired: 0,
+      paymentLinksClosed: 0,
+      paymentLinkPaidAlerts: 0,
+      failedMessagesReported: 0,
+      gstDocumentsSent: 0,
+      gstDocumentsFailed: 0,
+      founderDigestSent: 0,
+      ratingPromptsSent: 0,
+      errors: [],
+    }),
+    async () => {
+      const errors: CronJobError[] = [];
 
-  return {
-    ridesRebroadcasted,
-    slaBreachesEscalated: breached.length,
-    wakeupChecksSent: wakeups,
-    unconfirmedWakeupAlerts: unconfirmed,
-    documentsExpiredSuspended: suspended,
-    unpaidDuesSuspended: dues,
-    returnWindowsReleased: returnTrips.released,
-    driverReturnsExpired: returnTrips.expired,
-    paymentLinksClosed: links.closed,
-    paymentLinkPaidAlerts: links.paidAlerts,
-    failedMessagesReported: failedMessages,
-    gstDocumentsSent: gstDocs.sent,
-    gstDocumentsFailed: gstDocs.failed,
-    founderDigestSent: founderDigest.sent,
-    ratingPromptsSent,
-  };
+      // Runs before SLA escalation so a ride leaves its priority window and gets a second wave before escalating.
+      const returnTrips = await runCronStep(
+        'returnTrips',
+        () => runReturnTripTasks(),
+        { released: 0, expired: 0, errors: [] },
+        errors
+      );
+      for (const e of returnTrips.errors) {
+        errors.push({ job: 'returnTrips', error: e });
+      }
+
+      const ridesRebroadcasted = await runCronStep('unassignedRideRebroadcast', () => runUnassignedRideRebroadcast(), 0, errors);
+      const breached = await runCronStep('slaEscalation', () => runSlaEscalation(), [] as BookingDetails[], errors);
+      const wakeups = await runCronStep('driverWakeupChecks', () => runDriverWakeupChecks(), 0, errors);
+      const unconfirmed = await runCronStep('unconfirmedWakeupAlerts', () => runUnconfirmedWakeupAlerts(), 0, errors);
+      const suspended = await runCronStep('expiredDocumentSuspensions', () => runExpiredDocumentSuspensions(), 0, errors);
+      const dues = await runCronStep('unpaidDuesGuardrails', () => runUnpaidDuesGuardrails(), 0, errors);
+      const links = await runCronStep(
+        'reconcileStalePaymentLinks',
+        () => reconcileStalePaymentLinks(),
+        { checked: 0, closed: 0, paidAlerts: 0 },
+        errors
+      );
+      const gstDocs = await runCronStep(
+        'sendPendingGstDocuments',
+        () => sendPendingGstDocuments(),
+        { sent: 0, failed: 0, retrying: 0, waitingForGstin: false },
+        errors
+      );
+      const founderDigest = await runCronStep(
+        'founderDigest',
+        () => runScheduledFounderDigest(),
+        { slot: null, sent: 0 },
+        errors
+      );
+      const ratingPromptsSent = await runCronStep('postTripRatingPrompts', () => runPostTripRatingPrompts(), 0, errors);
+      // Last, so it reports messages that failed in the jobs above.
+      const failedMessages = await runCronStep('failedMessageDigest', () => runFailedMessageDigest(), 0, errors);
+
+      return {
+        ridesRebroadcasted,
+        slaBreachesEscalated: breached.length,
+        wakeupChecksSent: wakeups,
+        unconfirmedWakeupAlerts: unconfirmed,
+        documentsExpiredSuspended: suspended,
+        unpaidDuesSuspended: dues,
+        returnWindowsReleased: returnTrips.released,
+        driverReturnsExpired: returnTrips.expired,
+        paymentLinksClosed: links.closed,
+        paymentLinkPaidAlerts: links.paidAlerts,
+        failedMessagesReported: failedMessages,
+        gstDocumentsSent: gstDocs.sent,
+        gstDocumentsFailed: gstDocs.failed,
+        founderDigestSent: founderDigest.sent,
+        ratingPromptsSent,
+        errors,
+      };
+    }
+  );
 }
 
 /** Daily jobs (once a day, POST /api/dispatch/cron/daily). */
 export async function executeDailyCronTasks(): Promise<DailyCronResult> {
-  const fuelSync = await syncFuelPricesFromApi({ force: false }).catch((err) => {
-    console.error('[Cron] Daily fuel price sync failed:', err?.message);
-    return { synced: false };
-  });
-  return {
-    documentsExpiringWarned: await runDocumentExpiryWarnings(),
-    loginAttemptsPurged: await purgeOldLoginAttempts(),
-    cancellationDocumentsIssued: 0,
-    fuelPricesSynced: Boolean(fuelSync.synced),
-  };
+  return withCronAdvisoryLock(
+    CRON_LOCK_DAILY,
+    () => ({
+      skipped: true,
+      reason: 'already_running',
+      documentsExpiringWarned: 0,
+      loginAttemptsPurged: 0,
+      fuelPricesSynced: false,
+      errors: [],
+    }),
+    async () => {
+      const errors: CronJobError[] = [];
+      const fuelSync = await runCronStep<{ synced: boolean }>(
+        'fuelPriceSync',
+        () => syncFuelPricesFromApi({ force: false }),
+        { synced: false },
+        errors
+      );
+      const documentsExpiringWarned = await runCronStep('documentExpiryWarnings', () => runDocumentExpiryWarnings(), 0, errors);
+      const loginAttemptsPurged = await runCronStep('purgeOldLoginAttempts', () => purgeOldLoginAttempts(), 0, errors);
+
+      return {
+        documentsExpiringWarned,
+        loginAttemptsPurged,
+        fuelPricesSynced: Boolean(fuelSync.synced),
+        errors,
+      };
+    }
+  );
 }
 

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { handleRouteError } from '@/lib/route-errors';
 import { requireAdmin } from '@/lib/auth';
 import { getDriverRatingProfile, disputeRating } from '@/lib/ratings';
 
@@ -23,7 +24,7 @@ export async function GET(
 
     return NextResponse.json({ success: true, profile });
   } catch (err: any) {
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+    return handleRouteError(err, 'API drivers/[id]/ratings');
   }
 }
 
@@ -57,6 +58,6 @@ export async function POST(
 
     return NextResponse.json({ success: false, error: 'Unsupported action' }, { status: 400 });
   } catch (err: any) {
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+    return handleRouteError(err, 'API drivers/[id]/ratings');
   }
 }

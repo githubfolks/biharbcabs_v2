@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { handleRouteError } from '@/lib/route-errors';
 import { requireAdmin } from '@/lib/auth';
 import { CatalogError, updateCabType } from '@/lib/pricing-engine';
 
@@ -16,7 +17,6 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     const cabType = await updateCabType(id, body);
     return NextResponse.json({ success: true, cabType });
   } catch (err: any) {
-    const status = err instanceof CatalogError ? err.status : 500;
-    return NextResponse.json({ success: false, error: err.message }, { status });
+    return handleRouteError(err, 'API catalog/cab-types/[id]');
   }
 }

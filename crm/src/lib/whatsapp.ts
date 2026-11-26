@@ -30,7 +30,16 @@ export async function logWhatsAppMessage(
 }
 
 /**
- * Internal helper to dispatch payload to Meta Graph API or simulate when offline.
+ * Simulation is only allowed when explicitly opted-in via WHATSAPP_SIMULATION_MODE=true
+ * and NEVER in production (NODE_ENV === 'production').
+ */
+export function isWhatsAppSimulationAllowed(): boolean {
+  return process.env.NODE_ENV !== 'production' && process.env.WHATSAPP_SIMULATION_MODE === 'true';
+}
+
+/**
+ * Internal helper to dispatch payload to Meta Graph API.
+ * Fails explicitly when Meta credentials are not configured unless explicit non-prod simulation is enabled.
  */
 async function dispatchToMetaApi(
   toPhone: string,
@@ -48,9 +57,15 @@ async function dispatchToMetaApi(
   };
 
   if (!config.access_token || !config.phone_number_id) {
-    console.log(`[WhatsApp Sim] -> To: ${cleanPhone} | Type: ${messageType}`, JSON.stringify(messagePayload));
-    await logWhatsAppMessage('OUTBOUND', cleanPhone, messageType, fullPayload, 'SENT');
-    return { success: true, messageId: `local-sim-${Date.now()}-${Math.random().toString(36).slice(2, 10)}` };
+    if (isWhatsAppSimulationAllowed()) {
+      console.log(`[WhatsApp Sim] -> To: ${cleanPhone} | Type: ${messageType}`, JSON.stringify(messagePayload));
+      await logWhatsAppMessage('OUTBOUND', cleanPhone, messageType, fullPayload, 'SENT');
+      return { success: true, messageId: `local-sim-${Date.now()}-${Math.random().toString(36).slice(2, 10)}` };
+    }
+    const errMsg = 'WhatsApp is not configured (missing access_token or phone_number_id)';
+    console.error(`[WhatsApp] Refusing to simulate unconfigured send to ${cleanPhone}: ${errMsg}`);
+    await logWhatsAppMessage('OUTBOUND', cleanPhone, messageType, fullPayload, 'FAILED', errMsg);
+    return { success: false, error: errMsg };
   }
 
   const url = `https://graph.facebook.com/${config.api_version}/${config.phone_number_id}/messages`;
@@ -62,9 +77,10 @@ async function dispatchToMetaApi(
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(fullPayload),
+      signal: AbortSignal.timeout(15000),
     });
 
-    const data = await res.json();
+    const data = await res.json().catch(() => ({}));
     if (!res.ok) {
       const errMsg = data.error?.message || `HTTP ${res.status}`;
       await logWhatsAppMessage('OUTBOUND', cleanPhone, messageType, fullPayload, 'FAILED', errMsg);
@@ -75,8 +91,9 @@ async function dispatchToMetaApi(
     await logWhatsAppMessage('OUTBOUND', cleanPhone, messageType, fullPayload, 'SENT');
     return { success: true, messageId };
   } catch (err: any) {
-    await logWhatsAppMessage('OUTBOUND', cleanPhone, messageType, fullPayload, 'FAILED', err.message);
-    return { success: false, error: err.message };
+    const errMsg = err?.message || String(err);
+    await logWhatsAppMessage('OUTBOUND', cleanPhone, messageType, fullPayload, 'FAILED', errMsg);
+    return { success: false, error: errMsg };
   }
 }
 
@@ -186,8 +203,13 @@ export async function sendWhatsAppDocument(
 export async function uploadWhatsAppMedia(file: Buffer, fileName: string, mimeType: string): Promise<{ success: boolean; mediaId?: string; error?: string }> {
   const config = await getMetaWhatsAppConfig();
   if (!config.access_token || !config.phone_number_id) {
-    console.log(`[WhatsApp Sim] -> Media upload ${fileName} (${file.length} bytes)`);
-    return { success: true, mediaId: `local-sim-media-${Date.now()}-${Math.random().toString(36).slice(2, 10)}` };
+    if (isWhatsAppSimulationAllowed()) {
+      console.log(`[WhatsApp Sim] -> Media upload ${fileName} (${file.length} bytes)`);
+      return { success: true, mediaId: `local-sim-media-${Date.now()}-${Math.random().toString(36).slice(2, 10)}` };
+    }
+    const errMsg = 'WhatsApp is not configured (missing access_token or phone_number_id)';
+    console.error(`[WhatsApp] Refusing to simulate unconfigured media upload ${fileName}: ${errMsg}`);
+    return { success: false, error: errMsg };
   }
   const form = new FormData();
   form.append('messaging_product', 'whatsapp');
@@ -243,10 +265,7 @@ export async function sendWhatsAppTemplate(
   return dispatchToMetaApi(toPhone, 'template', { template: templatePayload });
 }
 
-/**
- * Parse an incoming Meta webhook event payload.
- */
-export function parseIncomingWebhook(body: any): {
+export interface ParsedIncomingWebhookMessage {
   messageId?: string;
   fromPhone?: string;
   customerName?: string;
@@ -259,62 +278,84 @@ export function parseIncomingWebhook(body: any): {
   /** For a tap on a template button: id of the template message that was tapped. */
   contextId?: string;
   rawPayload: any;
-} | null {
-  const entry = body?.entry?.[0];
-  const changes = entry?.changes?.[0];
-  const value = changes?.value;
-  const message = value?.messages?.[0];
-  const contact = value?.contacts?.[0];
+}
 
-  if (!message) {
-    return null;
-  }
+/**
+ * Parse all incoming messages from a Meta webhook event payload (handles multi-entry/multi-message deliveries).
+ */
+export function parseIncomingWebhookMessages(body: any): ParsedIncomingWebhookMessage[] {
+  const results: ParsedIncomingWebhookMessage[] = [];
+  const entries = Array.isArray(body?.entry) ? body.entry : [];
 
-  const fromPhone = message.from;
-  const customerName = contact?.profile?.name || undefined;
-  const messageType = message.type;
+  for (const entry of entries) {
+    const changes = Array.isArray(entry?.changes) ? entry.changes : [];
+    for (const change of changes) {
+      const value = change?.value;
+      const messages = Array.isArray(value?.messages) ? value.messages : [];
+      const contacts = Array.isArray(value?.contacts) ? value.contacts : [];
 
-  let text: string | undefined;
-  let buttonId: string | undefined;
-  let buttonText: string | undefined;
-  let mediaId: string | undefined;
-  let mediaMime: string | undefined;
+      for (const message of messages) {
+        if (!message || typeof message !== 'object') continue;
 
-  if (messageType === 'text') {
-    text = message.text?.body;
-  } else if (messageType === 'image') {
-    mediaId = message.image?.id;
-    mediaMime = message.image?.mime_type;
-    text = message.image?.caption;
-  } else if (messageType === 'document') {
-    mediaId = message.document?.id;
-    mediaMime = message.document?.mime_type;
-    text = message.document?.caption;
-  } else if (messageType === 'interactive') {
-    const interactive = message.interactive;
-    if (interactive.type === 'button_reply') {
-      buttonId = interactive.button_reply?.id;
-      buttonText = interactive.button_reply?.title;
-    } else if (interactive.type === 'list_reply') {
-      buttonId = interactive.list_reply?.id;
-      buttonText = interactive.list_reply?.title;
+        const fromPhone = message.from;
+        const matchedContact =
+          contacts.find((c: any) => c?.wa_id && c.wa_id === fromPhone) || contacts[0];
+        const customerName = matchedContact?.profile?.name || undefined;
+        const messageType = message.type;
+
+        let text: string | undefined;
+        let buttonId: string | undefined;
+        let buttonText: string | undefined;
+        let mediaId: string | undefined;
+        let mediaMime: string | undefined;
+
+        if (messageType === 'text') {
+          text = message.text?.body;
+        } else if (messageType === 'image') {
+          mediaId = message.image?.id;
+          mediaMime = message.image?.mime_type;
+          text = message.image?.caption;
+        } else if (messageType === 'document') {
+          mediaId = message.document?.id;
+          mediaMime = message.document?.mime_type;
+          text = message.document?.caption;
+        } else if (messageType === 'interactive') {
+          const interactive = message.interactive;
+          if (interactive?.type === 'button_reply') {
+            buttonId = interactive.button_reply?.id;
+            buttonText = interactive.button_reply?.title;
+          } else if (interactive?.type === 'list_reply') {
+            buttonId = interactive.list_reply?.id;
+            buttonText = interactive.list_reply?.title;
+          }
+        } else if (messageType === 'button') {
+          buttonId = message.button?.payload;
+          buttonText = message.button?.text;
+        }
+
+        results.push({
+          messageId: typeof message.id === 'string' ? message.id : undefined,
+          fromPhone,
+          customerName,
+          messageType,
+          text,
+          buttonId,
+          buttonText,
+          mediaId,
+          mediaMime,
+          contextId: typeof message.context?.id === 'string' ? message.context.id : undefined,
+          rawPayload: message,
+        });
+      }
     }
-  } else if (messageType === 'button') {
-    buttonId = message.button?.payload;
-    buttonText = message.button?.text;
   }
 
-  return {
-    messageId: typeof message.id === 'string' ? message.id : undefined,
-    fromPhone,
-    customerName,
-    messageType,
-    text,
-    buttonId,
-    buttonText,
-    mediaId,
-    mediaMime,
-    contextId: typeof message.context?.id === 'string' ? message.context.id : undefined,
-    rawPayload: message,
-  };
+  return results;
+}
+
+/**
+ * Parse the first incoming Meta webhook event payload (kept for callers expecting a single message).
+ */
+export function parseIncomingWebhook(body: any): ParsedIncomingWebhookMessage | null {
+  return parseIncomingWebhookMessages(body)[0] ?? null;
 }

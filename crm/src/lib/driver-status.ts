@@ -1,3 +1,4 @@
+import { DomainError } from './route-errors';
 /**
  * Manual driver status changes by staff (migration 30): activate, suspend, offboard.
  * Allowed changes are in driver-status-rules.ts. Each change needs a reason and is recorded in
@@ -15,9 +16,9 @@ import {
   REASON_MIN,
 } from './driver-status-rules';
 
-export class DriverStatusError extends Error {
-  constructor(message: string, public status: number) {
-    super(message);
+export class DriverStatusError extends DomainError {
+  constructor(message: string, status: number) {
+    super(message, status);
   }
 }
 

@@ -129,3 +129,25 @@ When working on any project:
 > **Build for production, verify with evidence, fail honestly, protect data, and optimize for business value.**
 
 Technical elegance is valuable, but **reliability, security, maintainability, execution speed, and commercial viability take priority.**
+
+
+## 14. Production Reliability & Pre-Commit Gate (Learned Guardrails)
+
+- **Mandatory full-suite verification before commit:** Never rely solely on a targeted single-file test run. Before committing or declaring changes ready in `crm/`, run:
+  1. `npx tsc --noEmit`
+  2. Full unit suite: `npm test` (never skip existing suites after schema/pricing/bot changes)
+  3. Live API integration suite: `npm run test:api` (after rebuilding/restarting when routes or services changed)
+- **Centralized API error handling:** All API route handlers must route unexpected errors through `handleRouteError(err, label)` in `crm/src/lib/route-errors.ts`. Never return raw `err.message` on `500` responses (especially on public routes). Safe user-facing `4xx` errors must extend `DomainError`.
+- **No silent simulation or empty catches:**
+  - Unconfigured integrations (Meta WhatsApp, Razorpay, etc.) must fail explicitly (`success: false`) and log `FAILED` — simulation is only allowed behind an explicit opt-in env flag and is strictly forbidden when `NODE_ENV === 'production'`.
+  - Never use silent `.catch(() => {})` or `.catch(() => null)` without logging (`console.error`) and, in UI components, displaying an honest error state to the user.
+  - External HTTP calls (including Meta Graph API) must always specify an explicit timeout (`AbortSignal.timeout`).
+- **Cron & batch job resilience:**
+  - Protect scheduled job entrypoints with PostgreSQL advisory locks (`pg_try_advisory_lock`) to prevent overlapping runs.
+  - Isolate both per-job and per-row errors so one malformed booking or failed message cannot stall remaining rows or downstream jobs.
+  - Collect job failures in `errors[]`, return non-2xx (`500`), and alert admins when any job fails.
+  - Mark alerts/notifications as sent (`wakeup_sent_at`, `reconcile_alerted_at`, etc.) **only after** delivery succeeds.
+- **Database & authentication failure hygiene:**
+  - Never hardcode developer usernames or fallback credentials in `db.ts`; fail fast if `DATABASE_URL` / `PGUSER` is missing.
+  - In `withTransaction`, catch and log `ROLLBACK` errors without masking the original error, and discard broken connections via `client.release(rollbackErr)`.
+  - Database errors during session validation must log server-side and return `503` (service unavailable), never `401` (which falsely signs admins out).

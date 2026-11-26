@@ -1,3 +1,4 @@
+import { DomainError } from './route-errors';
 import { query, withTransaction } from './db';
 import { getCompanyBillingInfo, getSetting, invalidateSettingsCache } from './settings';
 import { isGstStateCode, stateCodeFromGstin } from './gst-states';
@@ -15,9 +16,9 @@ import { round2 } from './fare-split';
 
 export type PlaceOfSupplyBasis = 'RECIPIENT_GSTIN' | 'PICKUP_CITY' | 'STAFF';
 
-export class PlaceOfSupplyError extends Error {
-  constructor(message: string, public status = 409) {
-    super(message);
+export class PlaceOfSupplyError extends DomainError {
+  constructor(message: string, status = 409) {
+    super(message, status);
   }
 }
 

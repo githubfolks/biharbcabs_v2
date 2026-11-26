@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { handleRouteError } from '@/lib/route-errors';
 import { autocompletePlaces, LocationError } from '@/lib/locationiq';
 import {
   consumeRateLimit,
@@ -30,7 +31,6 @@ export async function GET(req: NextRequest) {
     const suggestions = await autocompletePlaces(q);
     return NextResponse.json({ success: true, suggestions });
   } catch (err: any) {
-    const status = err instanceof LocationError ? err.status : 500;
-    return NextResponse.json({ success: false, error: err.message, suggestions: [] }, { status });
+    return handleRouteError(err, 'API public/location/autocomplete', 'Location lookup failed', { suggestions: [] });
   }
 }

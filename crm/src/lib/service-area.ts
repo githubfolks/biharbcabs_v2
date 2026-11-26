@@ -1,14 +1,15 @@
 import { geocodePlace } from './locationiq';
 import { getAdminContacts, getCompanyBillingInfo, getServiceCoverageConfig, ServiceCoverageConfig } from './settings';
 
-export class ServiceAreaError extends Error {
-  readonly status = 422;
+import { DomainError } from './route-errors';
+
+export class ServiceAreaError extends DomainError {
   readonly code: 'ORIGIN_NOT_SERVICED' | 'DESTINATION_NOT_SERVICED' | 'ROUTE_BLOCKED';
   constructor(
     message: string,
     code: 'ORIGIN_NOT_SERVICED' | 'DESTINATION_NOT_SERVICED' | 'ROUTE_BLOCKED'
   ) {
-    super(message);
+    super(message, 422);
     this.code = code;
   }
 }

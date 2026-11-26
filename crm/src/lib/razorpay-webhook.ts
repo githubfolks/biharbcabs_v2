@@ -216,11 +216,15 @@ export async function reconcileStalePaymentLinks(): Promise<{ checked: number; c
       }
       closed++;
     } else if (remoteStatus === 'paid' && !link.reconcile_alerted_at) {
-      await query(`UPDATE crm_payment_links SET reconcile_alerted_at = CURRENT_TIMESTAMP WHERE id = $1`, [link.id]);
-      await notifyAdmins(
+      const alerted = await notifyAdmins(
         `⚠️ Razorpay reports ${link.purpose} link ${link.provider_link_id} (driver #${link.driver_id}, ₹${(link.amount_paise / 100).toFixed(2)}) as PAID, but the webhook was not received. Verify in Razorpay.`
       );
-      paidAlerts++;
+      if (alerted > 0) {
+        await query(`UPDATE crm_payment_links SET reconcile_alerted_at = CURRENT_TIMESTAMP WHERE id = $1`, [link.id]);
+        paidAlerts++;
+      } else {
+        console.error(`[Razorpay Reconcile] Admin alert for paid link ${link.provider_link_id} did not deliver; will retry next run.`);
+      }
     }
   }
 

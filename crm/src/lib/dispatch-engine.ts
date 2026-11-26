@@ -472,11 +472,15 @@ export async function broadcastRideToDrivers(
 
 /**
  * Bookings whose return-trip exclusive window has ended without a driver accepting.
- * Each is broadcast to regular drivers; returns them with the new candidates for notification.
+ * Each is broadcast to regular drivers; per-booking errors are isolated so one bad booking
+ * cannot stall the rest of the queue or subsequent cron jobs.
  */
-export async function releaseExpiredReturnWindows(): Promise<Array<{ bookingId: number; result: Awaited<ReturnType<typeof broadcastRideToDrivers>> }>> {
+export async function releaseExpiredReturnWindows(): Promise<{
+  released: Array<{ bookingId: number; result: Awaited<ReturnType<typeof broadcastRideToDrivers>> }>;
+  errors: string[];
+}> {
   const due = await query(
-    `SELECT id FROM crm_bookings
+    `SELECT id, booking_code FROM crm_bookings
      WHERE booking_status = 'AWAITING_DRIVER'
        AND assigned_driver_id IS NULL
        AND return_exclusive_until IS NOT NULL
@@ -484,10 +488,27 @@ export async function releaseExpiredReturnWindows(): Promise<Array<{ bookingId: 
        AND return_window_released_at IS NULL`
   );
   const released = [];
+  const errors: string[] = [];
   for (const row of due.rows) {
-    released.push({ bookingId: Number(row.id), result: await broadcastRideToDrivers(Number(row.id), { releaseReturnWindow: true }) });
+    const bookingId = Number(row.id);
+    try {
+      released.push({
+        bookingId,
+        result: await broadcastRideToDrivers(bookingId, { releaseReturnWindow: true }),
+      });
+    } catch (err: any) {
+      const msg = `Booking #${row.booking_code || bookingId}: ${err?.message || err}`;
+      console.error(`[Dispatch] releaseExpiredReturnWindows failed for ${msg}`);
+      errors.push(msg);
+      // Mark released so a permanently malformed booking (e.g. missing pickup time) does not
+      // fail on every subsequent cron run forever.
+      await query(
+        `UPDATE crm_bookings SET return_window_released_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = $1`,
+        [bookingId]
+      ).catch((markErr) => console.error(`[Dispatch] Failed to mark return_window_released_at for #${bookingId}:`, markErr));
+    }
   }
-  return released;
+  return { released, errors };
 }
 
 /**

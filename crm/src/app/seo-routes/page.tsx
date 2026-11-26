@@ -14,7 +14,9 @@ export default function SeoRoutesPage() {
       .then((d) => {
         if (d?.authenticated && d?.user?.role) setRole(d.user.role);
       })
-      .catch(() => {});
+      .catch((err) => {
+        console.error('[SeoRoutesPage] Failed to load current user role:', err);
+      });
   }, []);
 
   return (

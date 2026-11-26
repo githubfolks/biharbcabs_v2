@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { handleRouteError } from '@/lib/route-errors';
 import { requireAdmin } from '@/lib/auth';
 import { PayoutError, listDriversOwed, recordDriverPayout } from '@/lib/payouts';
 import { recordAuditLog } from '@/lib/audit-log';
@@ -12,7 +13,7 @@ export async function GET(req: NextRequest) {
   try {
     return NextResponse.json({ success: true, drivers: await listDriversOwed() });
   } catch (err: any) {
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+    return handleRouteError(err, 'API finance/payouts');
   }
 }
 
@@ -48,6 +49,6 @@ export async function POST(req: NextRequest) {
     if (err instanceof PayoutError) {
       return NextResponse.json({ success: false, error: err.message }, { status: err.status });
     }
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+    return handleRouteError(err, 'API finance/payouts');
   }
 }

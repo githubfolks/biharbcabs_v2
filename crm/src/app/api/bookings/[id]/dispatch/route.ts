@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { handleRouteError } from '@/lib/route-errors';
 import { requireAdmin } from '@/lib/auth';
 import { ASSIGNABLE_STATUSES, broadcastRideToDrivers, checkDriverEligibility } from '@/lib/dispatch-engine';
 import { releasePlanReservation, reservePlanForBookingIfApplicable } from '@/lib/driver-plans';
@@ -134,7 +135,7 @@ export async function POST(
       { status: 400 }
     );
   } catch (err: any) {
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+    return handleRouteError(err, 'API bookings/[id]/dispatch');
   }
 }
 

@@ -71,9 +71,14 @@ export default function DriversPage() {
       .then((data) => {
         if (data.success && Array.isArray(data.cabTypes)) {
           setCabTypes(data.cabTypes);
+        } else {
+          setNoticeFlash({ ok: false, text: data.error || 'Could not load cab types for onboarding.' });
         }
       })
-      .catch(() => {});
+      .catch((err) => {
+        console.error('[DriversPage] Failed to load cab types:', err);
+        setNoticeFlash({ ok: false, text: 'Could not load cab types. Refresh before onboarding a driver.' });
+      });
   }, []);
 
   // Expiry dates start empty: the admin must enter the dates printed on the documents.

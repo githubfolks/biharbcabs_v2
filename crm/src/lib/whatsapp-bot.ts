@@ -377,7 +377,10 @@ export async function processIncomingWhatsAppMessage(params: {
   const lowerText = rawText.toLowerCase();
 
   const conv = await getConversation(fromPhone);
-  const intents = await getWhatsAppIntents().catch(() => null);
+  const intents = await getWhatsAppIntents().catch((err) => {
+    console.error('[WhatsApp Bot] Failed to load whatsapp_intents setting:', err?.message || err);
+    return null;
+  });
 
   // =========================================================================
   // 0A. INBOUND DRIVER MEDIA: ODOMETER PHOTO PROOF & SELF-SERVICE KYC VAULT

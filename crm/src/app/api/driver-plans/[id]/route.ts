@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { handleRouteError } from '@/lib/route-errors';
 import { requireAdmin } from '@/lib/auth';
 import { PlanError, updateSubscriptionPlan } from '@/lib/driver-plans';
 
@@ -16,7 +17,6 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     const plan = await updateSubscriptionPlan(id, body);
     return NextResponse.json({ success: true, plan });
   } catch (err: any) {
-    const status = err instanceof PlanError ? err.status : 500;
-    return NextResponse.json({ success: false, error: err.message }, { status });
+    return handleRouteError(err, 'API driver-plans/[id]');
   }
 }

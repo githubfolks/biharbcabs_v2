@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { handleRouteError } from '@/lib/route-errors';
 import { requireAdmin } from '@/lib/auth';
 import { CatalogError, createCabType, listCabTypes } from '@/lib/pricing-engine';
 
@@ -12,7 +13,7 @@ export async function GET(req: NextRequest) {
     const cabTypes = await listCabTypes({ activeOnly });
     return NextResponse.json({ success: true, cabTypes });
   } catch (err: any) {
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+    return handleRouteError(err, 'API catalog/cab-types');
   }
 }
 
@@ -24,7 +25,6 @@ export async function POST(req: NextRequest) {
     const cabType = await createCabType(body);
     return NextResponse.json({ success: true, cabType }, { status: 201 });
   } catch (err: any) {
-    const status = err instanceof CatalogError ? err.status : 500;
-    return NextResponse.json({ success: false, error: err.message }, { status });
+    return handleRouteError(err, 'API catalog/cab-types');
   }
 }

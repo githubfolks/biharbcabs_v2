@@ -1,3 +1,4 @@
+import { DomainError } from './route-errors';
 import { query } from './db';
 import { getLocationIqConfig, getPackageDistanceTolerancePct, getSplitRules } from './settings';
 import { FareSplit, SplitRules, round2, splitPreGstFare } from './fare-split';
@@ -11,9 +12,9 @@ import { ensureDailyFuelPricesSynced } from './fuel-price-sync';
  * Zero hardcoded pricing values: all inputs come from crm_fuel_prices, crm_cab_types, crm_packages, and crm_settings.
  */
 
-export class CatalogError extends Error {
-  constructor(message: string, readonly status: number) {
-    super(message);
+export class CatalogError extends DomainError {
+  constructor(message: string, status: number) {
+    super(message, status);
   }
 }
 

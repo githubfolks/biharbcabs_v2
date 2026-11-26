@@ -14,11 +14,15 @@ export function getDbPool(): Pool {
         connectionTimeoutMillis: 5000,
       });
     } else {
+      const pgUser = process.env.PGUSER;
+      if (!pgUser) {
+        throw new Error('Database configuration missing: set DATABASE_URL or PGUSER');
+      }
       pool = new Pool({
         host: process.env.PGHOST || 'localhost',
         port: parseInt(process.env.PGPORT || '5432', 10),
         database: process.env.PGDATABASE || 'biharcabs_crm',
-        user: process.env.PGUSER || 'vikram',
+        user: pgUser,
         password: process.env.PGPASSWORD || undefined,
         max: 20,
         idleTimeoutMillis: 30000,
@@ -62,16 +66,22 @@ export async function withTransaction<T>(
 ): Promise<T> {
   const p = getDbPool();
   const client = await p.connect();
+  let releaseErr: Error | undefined;
   try {
     await client.query('BEGIN');
     const result = await callback(client);
     await client.query('COMMIT');
     return result;
   } catch (error) {
-    await client.query('ROLLBACK');
+    try {
+      await client.query('ROLLBACK');
+    } catch (rollbackErr: any) {
+      console.error('[PostgreSQL] ROLLBACK failed after transaction error:', rollbackErr);
+      releaseErr = rollbackErr instanceof Error ? rollbackErr : new Error(String(rollbackErr));
+    }
     throw error;
   } finally {
-    client.release();
+    client.release(releaseErr);
   }
 }
 

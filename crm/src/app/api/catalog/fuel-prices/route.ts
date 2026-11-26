@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { handleRouteError } from '@/lib/route-errors';
 import { requireAdmin } from '@/lib/auth';
 import { CatalogError, listFuelPrices, updateFuelPrice } from '@/lib/pricing-engine';
 import { getFuelPriceApiConfig, getFuelPriceSyncState } from '@/lib/settings';
@@ -22,7 +23,7 @@ export async function GET(req: NextRequest) {
       autoSyncEnabled: Boolean(apiCfg.enabled && apiCfg.endpoint_url),
     });
   } catch (err: any) {
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+    return handleRouteError(err, 'API catalog/fuel-prices');
   }
 }
 
@@ -36,7 +37,6 @@ export async function PUT(req: NextRequest) {
     const fuelPrices = await listFuelPrices();
     return NextResponse.json({ success: true, updated, fuelPrices });
   } catch (err: any) {
-    const status = err instanceof CatalogError ? err.status : 500;
-    return NextResponse.json({ success: false, error: err.message }, { status });
+    return handleRouteError(err, 'API catalog/fuel-prices');
   }
 }

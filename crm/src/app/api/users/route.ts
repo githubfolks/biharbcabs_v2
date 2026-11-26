@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { handleRouteError } from '@/lib/route-errors';
 import { query } from '@/lib/db';
 import { hashPassword, requireAdmin } from '@/lib/auth';
 import { ROLES, Role } from '@/lib/permissions';
@@ -33,7 +34,7 @@ export async function GET(req: NextRequest) {
     );
     return NextResponse.json({ success: true, users: res.rows, roles: ROLES });
   } catch (err: any) {
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+    return handleRouteError(err, 'API users');
   }
 }
 
@@ -91,6 +92,6 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, user: { ...user, active_sessions: 0 } }, { status: 201 });
   } catch (err: any) {
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+    return handleRouteError(err, 'API users');
   }
 }

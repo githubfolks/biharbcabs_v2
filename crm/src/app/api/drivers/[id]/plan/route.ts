@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { handleRouteError } from '@/lib/route-errors';
 import { requireAdmin } from '@/lib/auth';
 import { getDriverPlanSummary } from '@/lib/driver-plans';
 
@@ -15,6 +16,6 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     const summary = await getDriverPlanSummary(driverId);
     return NextResponse.json({ success: true, ...summary });
   } catch (err: any) {
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+    return handleRouteError(err, 'API drivers/[id]/plan');
   }
 }

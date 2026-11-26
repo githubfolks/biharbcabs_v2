@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { handleRouteError } from '@/lib/route-errors';
 import { query } from '@/lib/db';
 import { calculateRideSplitWithTaxes, broadcastRideToDrivers } from '@/lib/dispatch-engine';
 import { requireAdmin } from '@/lib/auth';
@@ -61,7 +62,7 @@ export async function GET(req: NextRequest) {
     const res = await query(sql, params);
     return NextResponse.json({ success: true, bookings: res.rows });
   } catch (err: any) {
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+    return handleRouteError(err, 'API bookings');
   }
 }
 
@@ -406,7 +407,6 @@ export async function POST(req: NextRequest) {
       distance_pricing: distancePricing,
     });
   } catch (err: any) {
-    const status = err instanceof CatalogError || err instanceof ServiceAreaError ? err.status : 500;
-    return NextResponse.json({ success: false, error: err.message }, { status });
+    return handleRouteError(err, 'API bookings');
   }
 }

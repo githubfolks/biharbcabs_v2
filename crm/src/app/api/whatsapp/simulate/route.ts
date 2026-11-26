@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { handleRouteError } from '@/lib/route-errors';
 import { requireAdmin } from '@/lib/auth';
 import { query } from '@/lib/db';
 import { logWhatsAppMessage } from '@/lib/whatsapp';
@@ -91,6 +92,6 @@ export async function POST(req: NextRequest) {
     });
   } catch (err: any) {
     console.error('[WhatsApp Simulator] Error:', err);
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+    return handleRouteError(err, 'API whatsapp/simulate');
   }
 }

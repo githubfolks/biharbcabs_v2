@@ -124,7 +124,19 @@ export async function getCurrentAdmin(): Promise<AdminUser | null> {
  */
 export async function requireAdmin(req: NextRequest, permission: Permission): Promise<AdminUser | NextResponse> {
   const token = req.cookies.get(SESSION_COOKIE_NAME)?.value;
-  const admin = token ? await validateSession(token).catch(() => null) : null;
+  if (!token) {
+    return NextResponse.json({ success: false, error: 'Not signed in' }, { status: 401 });
+  }
+  let admin: AdminUser | null;
+  try {
+    admin = await validateSession(token);
+  } catch (err) {
+    console.error('[Auth] Session validation failed (database error):', err);
+    return NextResponse.json(
+      { success: false, error: 'Authentication service temporarily unavailable' },
+      { status: 503 }
+    );
+  }
   if (!admin) {
     return NextResponse.json({ success: false, error: 'Not signed in' }, { status: 401 });
   }

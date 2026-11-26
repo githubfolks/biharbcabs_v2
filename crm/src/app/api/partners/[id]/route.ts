@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { handleRouteError } from '@/lib/route-errors';
 import { query } from '@/lib/db';
 import { requireAdmin } from '@/lib/auth';
 import { recordAuditLog } from '@/lib/audit-log';
@@ -82,6 +83,6 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
     return NextResponse.json({ success: true, partner: { ...upd.rows[0], id: Number(upd.rows[0].id) } });
   } catch (err: any) {
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+    return handleRouteError(err, 'API partners/[id]');
   }
 }

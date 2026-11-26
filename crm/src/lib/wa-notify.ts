@@ -157,17 +157,33 @@ export async function resolveTemplateButton(contextId: string | undefined, label
   return button ? button.action.replace('{ref}', String(row.ref_id)) : undefined;
 }
 
-/** Alert every admin contact (template outside the window). Failures are logged, never thrown. */
+/** Alert every admin contact (template outside the window). Per-admin failures are isolated & logged. */
 export async function notifyAdmins(message: string): Promise<number> {
-  let sent = 0;
+  let contacts: Array<{ name?: string; phone?: string }> = [];
   try {
-    for (const admin of await getAdminContacts()) {
-      if (!admin.phone) continue;
-      const r = await notify(admin.phone, 'admin_alert', { params: [message], freeform: () => sendWhatsAppText(admin.phone, message) });
-      if (r.success) sent++;
-    }
+    contacts = (await getAdminContacts()).filter((a) => Boolean(a?.phone));
   } catch (err: any) {
-    console.error('[WhatsApp] Admin alert failed:', err?.message);
+    console.error('[WhatsApp] Failed to load admin contacts for alert:', err?.message || err);
+    return 0;
+  }
+
+  if (contacts.length === 0) {
+    console.warn('[WhatsApp] notifyAdmins called with no admin contacts configured; alert dropped.');
+    return 0;
+  }
+
+  let sent = 0;
+  for (const admin of contacts) {
+    if (!admin.phone) continue;
+    try {
+      const r = await notify(admin.phone, 'admin_alert', {
+        params: [message],
+        freeform: () => sendWhatsAppText(admin.phone!, message),
+      });
+      if (r.success) sent++;
+    } catch (err: any) {
+      console.error(`[WhatsApp] Admin alert to ${clean(admin.phone)} failed:`, err?.message || err);
+    }
   }
   return sent;
 }

@@ -1,3 +1,4 @@
+import { DomainError } from './route-errors';
 import { query, withTransaction } from './db';
 import { notify } from './wa-notify';
 import { sendWhatsAppText } from './whatsapp';
@@ -13,9 +14,9 @@ export type PayoutChannel = (typeof PAYOUT_CHANNELS)[number];
 const MIN_REFERENCE_LENGTH = 6;
 const MAX_REFERENCE_LENGTH = 100;
 
-export class PayoutError extends Error {
-  constructor(message: string, readonly status: number) {
-    super(message);
+export class PayoutError extends DomainError {
+  constructor(message: string, status: number) {
+    super(message, status);
   }
 }
 

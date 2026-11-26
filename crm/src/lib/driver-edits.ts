@@ -1,3 +1,4 @@
+import { DomainError } from './route-errors';
 /**
  * Editing a driver's details, payout details and vehicles after onboarding (migration 31).
  * Every change is recorded in crm_driver_edits with the admin and the old and new values, in the same
@@ -7,9 +8,9 @@ import { PoolClient } from 'pg';
 import { query, withTransaction } from './db';
 import { isIsoDate, isUpiId } from './driver-onboarding';
 
-export class DriverEditError extends Error {
-  constructor(message: string, public status: number) {
-    super(message);
+export class DriverEditError extends DomainError {
+  constructor(message: string, status: number) {
+    super(message, status);
   }
 }
 

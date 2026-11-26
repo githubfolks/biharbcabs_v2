@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { handleRouteError } from '@/lib/route-errors';
 import { requireAdmin } from '@/lib/auth';
 import { query } from '@/lib/db';
 import { completeTripAndSettle, FinalBillingInput } from '@/lib/billing';
@@ -77,7 +78,7 @@ export async function GET(req: NextRequest) {
       summary,
     });
   } catch (err: any) {
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+    return handleRouteError(err, 'API finance/ledger');
   }
 }
 
@@ -94,6 +95,6 @@ export async function POST(req: NextRequest) {
     const result = await completeTripAndSettle(body);
     return NextResponse.json({ success: true, result });
   } catch (err: any) {
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+    return handleRouteError(err, 'API finance/ledger');
   }
 }

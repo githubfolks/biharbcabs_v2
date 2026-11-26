@@ -1,3 +1,4 @@
+import { DomainError } from './route-errors';
 import { query } from './db';
 import { round2 } from './fare-split';
 import {
@@ -16,9 +17,9 @@ import {
  * - Never fabricates prices or overwrites existing DB prices on failure.
  */
 
-export class FuelSyncError extends Error {
-  constructor(message: string, readonly status: number) {
-    super(message);
+export class FuelSyncError extends DomainError {
+  constructor(message: string, status: number) {
+    super(message, status);
   }
 }
 

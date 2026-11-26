@@ -18,6 +18,7 @@ export default function FleetComplianceBanner() {
   const [alerts, setAlerts] = useState<ComplianceAlert[]>([]);
   const [summary, setSummary] = useState({ total_alerts: 0, expired_count: 0, expiring_soon_count: 0 });
   const [expanded, setExpanded] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     fetch('/api/drivers/compliance?days=30', { cache: 'no-store' })
@@ -26,10 +27,25 @@ export default function FleetComplianceBanner() {
         if (d.success) {
           setAlerts(d.alerts || []);
           if (d.summary) setSummary(d.summary);
+          setLoadError(null);
+        } else {
+          setLoadError(d.error || 'Could not load fleet document compliance alerts.');
         }
       })
-      .catch(() => {});
+      .catch((err) => {
+        console.error('[FleetComplianceBanner] Failed to load compliance alerts:', err);
+        setLoadError('Could not load fleet document compliance status. Please refresh to check expiring documents.');
+      });
   }, []);
+
+  if (loadError) {
+    return (
+      <div className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 flex items-center gap-2.5 text-xs sm:text-sm font-semibold text-amber-900">
+        <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0" />
+        <span>{loadError}</span>
+      </div>
+    );
+  }
 
   if (summary.total_alerts === 0) return null;
 
