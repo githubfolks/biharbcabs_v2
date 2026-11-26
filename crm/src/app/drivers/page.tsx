@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { UserCheck, ShieldAlert, Car, PlusCircle, RefreshCw, Wallet, Phone, CheckCircle, Star, AlertTriangle, X, Gift, Award, ShieldCheck, Pencil } from 'lucide-react';
+import { UserCheck, ShieldAlert, Car, PlusCircle, RefreshCw, Wallet, Phone, CheckCircle, Star, AlertTriangle, X, Gift, Award, ShieldCheck, Pencil, FileText } from 'lucide-react';
 import { allowedActions, DriverStatusAction, REASON_MAX, REASON_MIN } from '@/lib/driver-status-rules';
 import DriverEditDialog, { DynamicCabOption } from '@/components/DriverEditDialog';
 import DriverWalletDialog from '@/components/DriverWalletDialog';
+import DriverDocumentsDialog from '@/components/DriverDocumentsDialog';
 import FleetComplianceBanner from '@/components/FleetComplianceBanner';
 import { hasPermission } from '@/lib/permissions';
 
@@ -40,6 +41,7 @@ export default function DriversPage() {
 
   // Incentive Modal State
   const [selectedDriverIncentive, setSelectedDriverIncentive] = useState<any | null>(null);
+  const [docsDriver, setDocsDriver] = useState<any | null>(null);
   const [incentiveAmount, setIncentiveAmount] = useState<number>(200);
   const [incentiveReason, setIncentiveReason] = useState<string>('Top Partner Milestone Bonus');
   const [submittingIncentive, setSubmittingIncentive] = useState(false);
@@ -577,6 +579,14 @@ export default function DriversPage() {
                           <Wallet className="h-5 w-5" />
                         </button>
                       )}
+                      <button
+                        onClick={() => setDocsDriver(d)}
+                        className="inline-flex items-center justify-center p-2 bg-white hover:bg-orange-50 border border-slate-300 hover:border-orange-300 text-orange-700 rounded-lg transition"
+                        title="Upload & verify KYC docs (Aadhaar, PAN, DL, RC, Insurance)"
+                        aria-label="KYC documents"
+                      >
+                        <FileText className="h-5 w-5" />
+                      </button>
                       <button
                         onClick={() => setEditDriverId(d.id)}
                         className="inline-flex items-center justify-center p-2 bg-white hover:bg-slate-100 border border-slate-300 text-slate-700 rounded-lg transition"
@@ -1271,6 +1281,14 @@ export default function DriversPage() {
             </form>
           </div>
         </div>
+      )}
+
+      {docsDriver && (
+        <DriverDocumentsDialog
+          driver={docsDriver}
+          canManage={hasPermission(role, 'drivers.manage')}
+          onClose={() => setDocsDriver(null)}
+        />
       )}
     </div>
   );

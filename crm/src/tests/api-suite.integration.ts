@@ -398,6 +398,59 @@ describe(`BiharCabs CRM Full API Test Suite (${BASE_URL})`, () => {
       assert.ok(Array.isArray(comp.json?.alerts));
       assert.equal(plans.status, 200);
     });
+
+    it('Driver KYC documents lifecycle: unauth 401, upload, verify, private download, delete', async () => {
+      const drvRes = await apiFetch('/api/drivers', { cookie: superCookie });
+      const firstDriver = drvRes.json?.drivers?.[0];
+      assert.ok(firstDriver?.id, 'Expected at least one driver in DB');
+      const did = Number(firstDriver.id);
+
+      // Unauthenticated access must be rejected with 401
+      const unauth = await apiFetch(`/api/drivers/${did}/documents`);
+      assert.equal(unauth.status, 401);
+
+      // Upload a tiny valid PNG (1x1 transparent pixel)
+      const pngBytes = Buffer.from(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=',
+        'base64'
+      );
+      const fd = new FormData();
+      fd.append('doc_type', 'AADHAAR_FRONT');
+      fd.append('doc_number', 'XXXX-XXXX-1234');
+      fd.append('file', new Blob([pngBytes], { type: 'image/png' }), 'aadhaar-test.png');
+
+      const upRes = await fetch(`${BASE_URL}/api/drivers/${did}/documents`, {
+        method: 'POST',
+        headers: { cookie: superCookie },
+        body: fd,
+      });
+      const upJson = await upRes.json();
+      assert.equal(upRes.status, 201, `Upload failed: ${JSON.stringify(upJson)}`);
+      const docId = Number(upJson.document.id);
+
+      // Private file endpoint rejects unauthenticated requests (401) and serves bytes when authenticated (200)
+      const fileUnauth = await apiFetch(`/api/drivers/${did}/documents/${docId}/file`);
+      assert.equal(fileUnauth.status, 401);
+      const fileAuth = await apiFetch(`/api/drivers/${did}/documents/${docId}/file`, { cookie: superCookie });
+      assert.equal(fileAuth.status, 200);
+      assert.equal(fileAuth.headers.get('content-type'), 'image/png');
+
+      // Verify document
+      const ver = await apiFetch(`/api/drivers/${did}/documents/${docId}`, {
+        method: 'PATCH',
+        cookie: superCookie,
+        body: { verification_status: 'VERIFIED' },
+      });
+      assert.equal(ver.status, 200);
+      assert.equal(ver.json?.document?.verification_status, 'VERIFIED');
+
+      // Delete document (cleans up DB row + file on disk)
+      const del = await apiFetch(`/api/drivers/${did}/documents/${docId}`, {
+        method: 'DELETE',
+        cookie: superCookie,
+      });
+      assert.equal(del.status, 200);
+    });
   });
 
   // ============================================================================

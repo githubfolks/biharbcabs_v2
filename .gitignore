@@ -45,6 +45,7 @@ public_html/.htaccess.bk
 *.dump
 *.dump.enc
 backups/
+crm/uploads/
 docker/db-init/01-biharcabs-dump.sql
 
 # ==============================================================================
