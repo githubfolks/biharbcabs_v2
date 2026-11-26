@@ -616,6 +616,51 @@ describe(`BiharCabs CRM Full API Test Suite (${BASE_URL})`, () => {
       assert.equal(e.status, 200);
       assert.match(String(e.json?.message || ''), /Evening Founder Digest \(8:00 PM\)/);
     });
+
+    it('Corporate B2B & Hotel Partners lifecycle: unauth 401, create, statement CSV, cleanup', async () => {
+      assert.equal((await apiFetch('/api/corporate')).status, 401);
+      assert.equal((await apiFetch('/api/partners')).status, 401);
+
+      const corp = await apiFetch('/api/corporate', {
+        method: 'POST',
+        cookie: superCookie,
+        body: {
+          company_name: `API Test Corp ${RUN_ID}`,
+          contact_name: 'HR Manager',
+          contact_phone: '919876500001',
+          credit_limit: 25000,
+          discount_pct: 5,
+        },
+      });
+      assert.equal(corp.status, 201);
+      const corpId = Number(corp.json?.account?.id);
+
+      const stmtCsv = await apiFetch(`/api/corporate/${corpId}/statement?month=2026-11&format=csv`, {
+        cookie: superCookie,
+      });
+      assert.equal(stmtCsv.status, 200);
+      assert.match(stmtCsv.headers.get('content-type') || '', /text\/csv/i);
+
+      const partner = await apiFetch('/api/partners', {
+        method: 'POST',
+        cookie: superCookie,
+        body: {
+          partner_name: `API Test Hotel ${RUN_ID}`,
+          partner_type: 'HOTEL',
+          city: 'Patna',
+          contact_name: 'Front Desk',
+          phone: '919876500002',
+          referral_code: `TEST_${RUN_ID.slice(-6).toUpperCase()}`,
+          commission_type: 'PERCENT',
+          commission_value: 5,
+        },
+      });
+      assert.equal(partner.status, 201);
+      const partnerId = Number(partner.json?.partner?.id);
+
+      await query(`DELETE FROM crm_corporate_accounts WHERE id = $1`, [corpId]);
+      await query(`DELETE FROM crm_partners WHERE id = $1`, [partnerId]);
+    });
   });
 
   // ============================================================================
