@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start -p 3001",
     "lint": "next lint",
-    "test": "node --test 'src/**/*.test.ts'"
+    "test": "tsx --test 'src/tests/*.test.ts'",
+    "test:api": "tsx --test src/tests/api-suite.integration.ts"
   },
   "dependencies": {
     "clsx": "^2.1.1",
