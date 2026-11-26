@@ -29,7 +29,9 @@ RETENTION_DAYS="${BACKUP_RETENTION_DAYS:-14}"
 TIMESTAMP_UTC="$(date -u +"%Y%m%dT%H%M%SZ")"
 
 mkdir -p "${BACKUP_ROOT}/n8n" "${BACKUP_ROOT}/wp"
-chmod 750 "${BACKUP_ROOT}"
+chown postgres:postgres "${BACKUP_ROOT}" "${BACKUP_ROOT}/n8n"
+chmod 750 "${BACKUP_ROOT}" "${BACKUP_ROOT}/n8n"
+chmod 700 "${BACKUP_ROOT}/wp"
 
 echo "=== [${TIMESTAMP_UTC}] Starting BiharCabs full backup ==="
 
@@ -53,7 +55,8 @@ sudo -u postgres env \
   BACKUP_S3_URI="${BACKUP_S3_URI:+${BACKUP_S3_URI%/}/crm}" \
   bash "${REPO_ROOT}/scripts/backup_pg.sh"
 
-# Ensure CRM container (uid 1001) can read last_backup.json only (dumps remain 600)
+# Ensure CRM container (uid 1001) can traverse BACKUP_ROOT and read last_backup.json only (dumps remain 600 postgres:postgres)
+chmod 755 "${BACKUP_ROOT}"
 chmod 644 "${BACKUP_ROOT}/last_backup.json"
 
 # 3. Docker MariaDB: WordPress database
