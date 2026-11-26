@@ -409,8 +409,8 @@ export default function OperatorNewBookingPage() {
   const isRouteUnserviced = Boolean(serviceCoverage && serviceCoverage.serviceable === false);
   const isPickupInPast = Boolean(
     form.pickup_date &&
-      (form.pickup_date < todayDateStr ||
-        (form.pickup_date === todayDateStr && form.pickup_time && form.pickup_time < currentTimeStr))
+    (form.pickup_date < todayDateStr ||
+      (form.pickup_date === todayDateStr && form.pickup_time && form.pickup_time < currentTimeStr))
   );
 
   async function handleSubmit(e: React.FormEvent) {
@@ -567,11 +567,10 @@ export default function OperatorNewBookingPage() {
 
             {/* Live Road Distance Banner */}
             {(distanceLoading || distanceInfo || distanceError) && (
-              <div className={`p-3.5 rounded-lg border flex flex-wrap items-center justify-between gap-3 text-xs ${
-                isDistanceOutOfRange
+              <div className={`p-3.5 rounded-lg border flex flex-wrap items-center justify-between gap-3 text-xs ${isDistanceOutOfRange
                   ? 'bg-rose-50 border-rose-300'
                   : 'bg-blue-50/70 border-blue-200'
-              }`}>
+                }`}>
                 {distanceLoading ? (
                   <span className="inline-flex items-center text-blue-700 font-medium">
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Calculating driving distance via LocationIQ...
@@ -604,7 +603,7 @@ export default function OperatorNewBookingPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
               <div>
-                <label className="block text-xs font-semibold text-slate-700">Origin City (for Driver Dispatch) *</label>
+                <label className="block text-xs font-semibold text-slate-700">Origin City *</label>
                 <input required value={form.origin_city} onChange={(e) => setForm({ ...form, origin_city: e.target.value })} placeholder="e.g. Patna" className="w-full mt-1 px-3 py-2 border rounded-md text-sm" />
               </div>
               <div>
@@ -759,9 +758,8 @@ export default function OperatorNewBookingPage() {
                       return_date: prev.return_date < nextPickup ? nextPickup : prev.return_date,
                     }));
                   }}
-                  className={`w-full mt-1 px-3 py-2 border rounded-md text-sm ${
-                    form.pickup_date && form.pickup_date < todayDateStr ? 'border-rose-400 bg-rose-50/40' : ''
-                  }`}
+                  className={`w-full mt-1 px-3 py-2 border rounded-md text-sm ${form.pickup_date && form.pickup_date < todayDateStr ? 'border-rose-400 bg-rose-50/40' : ''
+                    }`}
                 />
               </div>
               <div>
@@ -772,9 +770,8 @@ export default function OperatorNewBookingPage() {
                   min={form.pickup_date === todayDateStr ? currentTimeStr : undefined}
                   value={form.pickup_time}
                   onChange={(e) => setForm({ ...form, pickup_time: e.target.value })}
-                  className={`w-full mt-1 px-3 py-2 border rounded-md text-sm ${
-                    isPickupInPast ? 'border-rose-400 bg-rose-50/40' : ''
-                  }`}
+                  className={`w-full mt-1 px-3 py-2 border rounded-md text-sm ${isPickupInPast ? 'border-rose-400 bg-rose-50/40' : ''
+                    }`}
                 />
               </div>
               {form.is_round_trip && (
@@ -855,11 +852,10 @@ export default function OperatorNewBookingPage() {
                       setForm((prev) => ({ ...prev, is_round_trip: false }));
                     }
                   }}
-                  className={`px-2 py-2 rounded-lg text-[11px] font-bold border transition text-center ${
-                    bookingType === bt
+                  className={`px-2 py-2 rounded-lg text-[11px] font-bold border transition text-center ${bookingType === bt
                       ? 'bg-orange-600 text-white border-orange-600'
                       : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
-                  }`}
+                    }`}
                 >
                   {bt === 'LOCAL' ? 'LOCAL' : bt}
                 </button>
@@ -871,9 +867,8 @@ export default function OperatorNewBookingPage() {
                 <button
                   type="button"
                   onClick={() => setForm((prev) => ({ ...prev, is_round_trip: false }))}
-                  className={`px-2.5 py-1.5 text-xs font-bold transition ${
-                    !form.is_round_trip ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-100'
-                  }`}
+                  className={`px-2.5 py-1.5 text-xs font-bold transition ${!form.is_round_trip ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-100'
+                    }`}
                 >
                   One-Way
                 </button>
@@ -886,9 +881,8 @@ export default function OperatorNewBookingPage() {
                       return_date: prev.return_date && prev.return_date >= prev.pickup_date ? prev.return_date : prev.pickup_date,
                     }))
                   }
-                  className={`px-2.5 py-1.5 text-xs font-bold transition ${
-                    form.is_round_trip ? 'bg-indigo-600 text-white' : 'text-slate-700 hover:bg-slate-100'
-                  }`}
+                  className={`px-2.5 py-1.5 text-xs font-bold transition ${form.is_round_trip ? 'bg-indigo-600 text-white' : 'text-slate-700 hover:bg-slate-100'
+                    }`}
                 >
                   Round Trip (2x)
                 </button>
@@ -941,13 +935,12 @@ export default function OperatorNewBookingPage() {
                     key={p.id}
                     disabled={unavailable}
                     onClick={() => !unavailable && setSelectedPackageId(String(p.id))}
-                    className={`w-full text-left p-3.5 rounded-xl border-2 transition ${
-                      unavailable
+                    className={`w-full text-left p-3.5 rounded-xl border-2 transition ${unavailable
                         ? 'border-slate-200 bg-slate-100 opacity-60 cursor-not-allowed'
                         : active
                           ? `${theme.card} ring-2 ring-orange-500 border-orange-600 shadow-md`
                           : theme.card
-                    }`}
+                      }`}
                   >
                     <div className="flex justify-between items-start gap-2">
                       <div className="min-w-0">
