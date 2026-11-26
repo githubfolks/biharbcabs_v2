@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth';
 import { CancelError, cancelBooking, previewCancellation } from '@/lib/cancellations';
+import { recordAuditLog } from '@/lib/audit-log';
 
 export const dynamic = 'force-dynamic';
 
@@ -36,6 +37,15 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     if (!Number.isInteger(bookingId) || bookingId <= 0) return badId();
     const body = await req.json();
     const result = await cancelBooking({ bookingId, by: 'STAFF', fault: body?.fault, reason: String(body?.reason || ''), adminId: auth.id });
+    await recordAuditLog({
+      actor: auth,
+      action: 'BOOKING_CANCELLED',
+      entityType: 'BOOKING',
+      entityId: bookingId,
+      summary: `Cancelled booking #${bookingId} (fault: ${body?.fault || 'CUSTOMER'})`,
+      afterData: { fault: body?.fault || 'CUSTOMER', reason: String(body?.reason || ''), result },
+      req,
+    });
     return NextResponse.json({ success: true, ...result });
   } catch (err: any) {
     return failure(err);

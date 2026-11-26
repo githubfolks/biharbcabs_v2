@@ -12,31 +12,25 @@ import { BOOKING_TYPES } from '@/lib/booking-rules';
 import { getCityCabAvailability } from '@/lib/availability';
 import { getPackageDistanceTolerancePct, getSplitRules } from '@/lib/settings';
 import { checkRouteServiceability } from '@/lib/service-area';
+import {
+  consumeRateLimit,
+  getPublicClientIp,
+  getPublicRateLimits,
+  rateLimitExceededResponse,
+} from '@/lib/rate-limit';
 
 export const dynamic = 'force-dynamic';
-
-// Simple per-IP in-memory rate limiter (60 requests per 10 minutes)
-const hits = new Map<string, { count: number; resetAt: number }>();
-function checkRateLimit(ip: string, limit = 60, windowMs = 10 * 60 * 1000): boolean {
-  const now = Date.now();
-  const entry = hits.get(ip);
-  if (!entry || entry.resetAt <= now) {
-    hits.set(ip, { count: 1, resetAt: now + windowMs });
-    return true;
-  }
-  if (entry.count >= limit) return false;
-  entry.count++;
-  return true;
-}
 
 /**
  * Public read-only endpoint consumed by the WordPress frontend to display
  * configured cabs and booking plans. Never exposes internal integer IDs.
  */
 export async function GET(req: NextRequest) {
-  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
-  if (!checkRateLimit(ip)) {
-    return NextResponse.json({ success: false, error: 'Too many requests. Please try again shortly.' }, { status: 429 });
+  const limits = await getPublicRateLimits();
+  const ip = getPublicClientIp(req);
+  const ipLimit = consumeRateLimit(`pub:plans:ip:${ip}`, limits.plans_per_ip_10m);
+  if (!ipLimit.allowed) {
+    return rateLimitExceededResponse(ipLimit, 'Too many plan requests. Please try again shortly.');
   }
 
   try {

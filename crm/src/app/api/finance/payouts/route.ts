@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth';
 import { PayoutError, listDriversOwed, recordDriverPayout } from '@/lib/payouts';
+import { recordAuditLog } from '@/lib/audit-log';
 
 export const dynamic = 'force-dynamic';
 
@@ -32,6 +33,15 @@ export async function POST(req: NextRequest) {
       reference: String(body?.reference || ''),
       notes: body?.notes,
       adminId: auth.id,
+    });
+    await recordAuditLog({
+      actor: auth,
+      action: 'PAYOUT_RECORDED',
+      entityType: 'FINANCE',
+      entityId: driverId,
+      summary: `Recorded payout of ₹${Number(body?.amount)} to Driver #${driverId} via ${String(body?.channel || 'N/A')}`,
+      afterData: { driverId, amount: Number(body?.amount), channel: body?.channel, reference: body?.reference },
+      req,
     });
     return NextResponse.json({ success: true, ...result });
   } catch (err: any) {

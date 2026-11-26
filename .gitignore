@@ -43,6 +43,8 @@ public_html/.htaccess.bk
 *.bak
 *.backup
 *.dump
+*.dump.enc
+backups/
 docker/db-init/01-biharcabs-dump.sql
 
 # ==============================================================================

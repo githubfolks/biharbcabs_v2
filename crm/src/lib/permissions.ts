@@ -37,6 +37,8 @@ export const PERMISSIONS = {
   'dues.record': MONEY,
   'settings.view': ALL,
   'settings.change': SUPER,
+  'users.manage': SUPER,
+  'audit.view': SUPER,
   'inbox.use': OPS,
   'gst_documents.manage': MONEY,
   'notifications.resolve': ALL,

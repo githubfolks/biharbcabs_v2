@@ -4,6 +4,7 @@ import { getAllSettings, updateSetting } from '@/lib/settings';
 import { checkReturnTripPolicy } from '@/lib/return-trip-pricing';
 import { keepUnchangedSecrets, maskSettings } from '@/lib/settings-secrets';
 import { resetFuelSyncMemoryCache } from '@/lib/fuel-price-sync';
+import { recordAuditLog } from '@/lib/audit-log';
 
 export const dynamic = 'force-dynamic';
 
@@ -33,7 +34,9 @@ export async function POST(req: NextRequest) {
     }
 
     // A masked or omitted secret means "unchanged": keep the stored value.
-    let toSave = keepUnchangedSecrets(key, value, (await getAllSettings(true))[key]);
+    const previousAll = await getAllSettings(true);
+    const previousValue = previousAll[key];
+    let toSave = keepUnchangedSecrets(key, value, previousValue);
     if (key === 'return_trip_policy') {
       // Money rules: save clean numbers, and refuse to switch the feature on with missing or invalid values.
       const check = checkReturnTripPolicy(value);
@@ -49,6 +52,18 @@ export async function POST(req: NextRequest) {
     }
     console.info(`[Settings] '${key}' changed by admin #${auth.id}`);
     const updated = await getAllSettings(true);
+    const maskedBefore = maskSettings({ [key]: previousValue })[key];
+    const maskedAfter = maskSettings({ [key]: updated[key] })[key];
+    await recordAuditLog({
+      actor: auth,
+      action: 'SETTINGS_UPDATED',
+      entityType: 'SETTINGS',
+      entityId: key,
+      summary: `Updated system setting '${key}'`,
+      beforeData: maskedBefore ?? null,
+      afterData: maskedAfter ?? null,
+      req,
+    });
 
     return NextResponse.json({ success: true, settings: maskSettings(updated) });
   } catch (err: any) {

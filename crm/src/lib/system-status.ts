@@ -1,3 +1,4 @@
+import fs from 'fs';
 import { query } from './db';
 import { getMetaWhatsAppConfig } from './settings';
 
@@ -18,6 +19,13 @@ const RECENT_ROWS = 1000;
 
 export type WhatsAppState = 'OK' | 'FAILING' | 'NOT_CONFIGURED' | 'UNKNOWN';
 
+export interface BackupStatus {
+  state: 'OK' | 'STALE' | 'NOT_CONFIGURED';
+  lastBackupAt: string | null;
+  sizeBytes: number | null;
+  encrypted: boolean | null;
+}
+
 export interface SystemStatus {
   database: { ok: boolean };
   whatsapp: {
@@ -28,7 +36,33 @@ export interface SystemStatus {
     /** More messages than RECENT_ROWS were sent in the last hour, so the counts are a lower bound. */
     countsCapped: boolean;
   };
+  backup: BackupStatus;
   checkedAt: string;
+}
+
+const BACKUP_STALE_HOURS = 36;
+
+function readBackupStatus(): BackupStatus {
+  const statusFile = (process.env.CRM_BACKUP_STATUS_FILE || '').trim();
+  if (!statusFile) return { state: 'NOT_CONFIGURED', lastBackupAt: null, sizeBytes: null, encrypted: null };
+  try {
+    const raw = fs.readFileSync(statusFile, 'utf8');
+    const parsed = JSON.parse(raw);
+    const ts = typeof parsed.timestamp === 'string' ? parsed.timestamp : null;
+    const ms = ts ? Date.parse(ts) : NaN;
+    if (!ts || Number.isNaN(ms)) {
+      return { state: 'STALE', lastBackupAt: null, sizeBytes: null, encrypted: null };
+    }
+    const ageHours = (Date.now() - ms) / (1000 * 60 * 60);
+    return {
+      state: ageHours <= BACKUP_STALE_HOURS ? 'OK' : 'STALE',
+      lastBackupAt: ts,
+      sizeBytes: typeof parsed.size_bytes === 'number' ? parsed.size_bytes : null,
+      encrypted: typeof parsed.encrypted === 'boolean' ? parsed.encrypted : null,
+    };
+  } catch {
+    return { state: 'STALE', lastBackupAt: null, sizeBytes: null, encrypted: null };
+  }
 }
 
 /** FAILING only when every send in the window failed: one bad number among good sends is not an outage. */
@@ -41,6 +75,7 @@ export async function getSystemStatus(): Promise<SystemStatus> {
   const status: SystemStatus = {
     database: { ok: false },
     whatsapp: { state: 'UNKNOWN', lastSentAt: null, failedLastHour: 0, sentLastHour: 0, countsCapped: false },
+    backup: readBackupStatus(),
     checkedAt: new Date().toISOString(),
   };
   try {

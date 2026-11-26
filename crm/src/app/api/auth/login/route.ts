@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { withTransaction } from '@/lib/db';
 import { verifyPassword, hashPassword, createAdminSession, SESSION_COOKIE_NAME } from '@/lib/auth';
 import { getLockStatus, getLoginSecurityPolicy, recordLoginAttempt, trustedClientIp } from '@/lib/login-security';
+import { recordAuditLog } from '@/lib/audit-log';
 
 export const dynamic = 'force-dynamic';
 
@@ -66,20 +67,50 @@ export async function POST(req: NextRequest) {
     if (outcome.kind === 'locked') {
       const minutes = Math.ceil(outcome.retryAfterSeconds / 60);
       console.warn(`[Auth] Sign-in refused for ${cleanEmail}${ip ? ` from ${ip}` : ''}: too many failed attempts`);
+      await recordAuditLog({
+        actorEmail: cleanEmail,
+        action: 'AUTH_LOGIN_LOCKED',
+        entityType: 'AUTH',
+        summary: `Login locked for ${cleanEmail} (too many failed attempts)`,
+        afterData: { retryAfterSeconds: outcome.retryAfterSeconds },
+        req,
+      });
       return NextResponse.json(
         { success: false, error: `Too many failed sign-in attempts. Try again in ${minutes} minute${minutes === 1 ? '' : 's'}.` },
         { status: 429, headers: { 'Retry-After': String(outcome.retryAfterSeconds) } }
       );
     }
     if (outcome.kind === 'invalid') {
+      await recordAuditLog({
+        actorEmail: cleanEmail,
+        action: 'AUTH_LOGIN_FAILED',
+        entityType: 'AUTH',
+        summary: `Failed login attempt for ${cleanEmail}`,
+        req,
+      });
       return NextResponse.json({ success: false, error: 'Invalid email or password' }, { status: 401 });
     }
     if (outcome.kind === 'inactive') {
+      await recordAuditLog({
+        actorEmail: cleanEmail,
+        action: 'AUTH_LOGIN_FAILED',
+        entityType: 'AUTH',
+        summary: `Sign-in blocked for deactivated account ${cleanEmail}`,
+        req,
+      });
       return NextResponse.json({ success: false, error: 'This admin account has been deactivated' }, { status: 403 });
     }
 
     const userAgent = req.headers.get('user-agent') || undefined;
     const { token, expiresAt } = await createAdminSession(outcome.user.id, userAgent, ip || undefined);
+    await recordAuditLog({
+      actor: outcome.user,
+      action: 'AUTH_LOGIN',
+      entityType: 'AUTH',
+      entityId: outcome.user.id,
+      summary: `Admin ${outcome.user.email} (${outcome.user.role}) signed in`,
+      req,
+    });
 
     const response = NextResponse.json({ success: true, user: outcome.user });
     response.cookies.set({

@@ -15,24 +15,16 @@ import { notify } from '@/lib/wa-notify';
 import { sendWhatsAppText } from '@/lib/whatsapp';
 import { recordBookingEvent } from '@/lib/booking-timeline';
 import { assertRouteServiceable, ServiceAreaError } from '@/lib/service-area';
+import {
+  consumeRateLimit,
+  getPublicClientIp,
+  getPublicRateLimits,
+  rateLimitExceededResponse,
+} from '@/lib/rate-limit';
 
 export const dynamic = 'force-dynamic';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-// Rate limit: 10 bookings per IP per 10 minutes
-const hits = new Map<string, { count: number; resetAt: number }>();
-function checkRateLimit(ip: string, limit = 10, windowMs = 10 * 60 * 1000): boolean {
-  const now = Date.now();
-  const entry = hits.get(ip);
-  if (!entry || entry.resetAt <= now) {
-    hits.set(ip, { count: 1, resetAt: now + windowMs });
-    return true;
-  }
-  if (entry.count >= limit) return false;
-  entry.count++;
-  return true;
-}
 
 function normalizePhone(raw: unknown): string {
   const digits = String(raw || '').replace(/\D/g, '');
@@ -47,9 +39,11 @@ function normalizePhone(raw: unknown): string {
  * Immediately creates the booking and triggers the WhatsApp confirmation & driver dispatch workflow.
  */
 export async function POST(req: NextRequest) {
-  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
-  if (!checkRateLimit(ip)) {
-    return NextResponse.json({ success: false, error: 'Too many booking requests. Please wait a few minutes.' }, { status: 429 });
+  const limits = await getPublicRateLimits();
+  const ip = getPublicClientIp(req);
+  const ipLimit = consumeRateLimit(`pub:bookings:ip:${ip}`, limits.bookings_per_ip_10m);
+  if (!ipLimit.allowed) {
+    return rateLimitExceededResponse(ipLimit, 'Too many booking requests from your network. Please wait a few minutes.');
   }
 
   try {
@@ -57,6 +51,15 @@ export async function POST(req: NextRequest) {
     const packagePublicId = String(body.package_public_id || '').trim();
     const customerName = String(body.customer_name || '').trim().slice(0, 150);
     const customerPhone = normalizePhone(body.customer_phone);
+    if (customerPhone) {
+      const phoneLimit = consumeRateLimit(`pub:bookings:phone:${customerPhone}`, limits.bookings_per_phone_10m);
+      if (!phoneLimit.allowed) {
+        return rateLimitExceededResponse(
+          phoneLimit,
+          'Too many booking requests for this phone number. Please wait a few minutes or contact support.'
+        );
+      }
+    }
     const customerEmail = body.customer_email ? String(body.customer_email).trim().slice(0, 150) : null;
     const originCity = String(body.origin_city || '').trim().slice(0, 100);
     const destinationCity = body.destination_city ? String(body.destination_city).trim().slice(0, 100) : null;
