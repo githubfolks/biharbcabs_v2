@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import PlaceOfSupplyPanel from '@/components/PlaceOfSupplyPanel';
 import GstDocumentsPanel from '@/components/GstDocumentsPanel';
+import FinancialReportsPanel from '@/components/FinancialReportsPanel';
 
 export default function FinancePage() {
   const [ledger, setLedger] = useState<any[]>([]);
@@ -254,6 +255,9 @@ export default function FinancePage() {
           <p className="text-[10px] text-amber-600/80 mt-1">Auto-routed to clear debt</p>
         </div>
       </div>
+
+      {/* Batch 2: Core Financial Reports & CSV Exports */}
+      <FinancialReportsPanel />
 
       {/* Drivers BiharCabs owes money to */}
       <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
