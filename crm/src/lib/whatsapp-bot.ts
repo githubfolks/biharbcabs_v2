@@ -18,6 +18,7 @@ import {
   calculateTripDays,
   resolveRouteDistanceSafely,
   pricePackageForRoute,
+  selectBestFittingPlansPerCab,
 } from './pricing-engine';
 import {
   calculateRideSplitWithTaxes,
@@ -224,8 +225,8 @@ async function quoteAndOfferVehicles(phone: string, ctx: Record<string, any>): P
     getPackageDistanceTolerancePct(),
   ]);
 
-  const scorePackages = (list: typeof packages) =>
-    list
+  const scorePackages = (list: typeof packages) => {
+    const fitting = list
       .map((p) => {
         const adjusted = calculateDistanceAdjustedPricing(
           p.pricing,
@@ -244,6 +245,17 @@ async function quoteAndOfferVehicles(phone: string, ctx: Record<string, any>): P
         return { pkg: p, adjusted };
       })
       .filter((entry) => entry.adjusted.withinPackageRange);
+
+    if (routeDistance && routeDistance.distance_km > 0) {
+      return selectBestFittingPlansPerCab(
+        fitting,
+        (e) => `${e.pkg.booking_type}:${e.pkg.cab_type.code}`,
+        (e) => e.pkg.included_km,
+        (e) => e.pkg.included_hours
+      );
+    }
+    return fitting;
+  };
 
   let eligiblePackages = scorePackages(packages);
   let fallbackFromOtherTypes = false;
@@ -408,6 +420,14 @@ export async function processIncomingWhatsAppMessage(params: {
     }
     await resetConversation(fromPhone);
     await sendWhatsAppText(fromPhone, 'This trip cannot be started from your number. Please contact BiharCabs support.');
+    return;
+  }
+
+  if (conv.state === 'AWAITING_START_OTP' && !buttonId) {
+    await sendWhatsAppText(
+      fromPhone,
+      '🔐 Please enter the numeric Trip OTP from the customer (4 digits only, e.g. 4829) to start the trip.'
+    );
     return;
   }
 
@@ -1290,11 +1310,24 @@ export async function processIncomingWhatsAppMessage(params: {
     return;
   }
 
-  // Fallback for unhandled input:
+  // Fallback for unhandled input: drivers never receive the customer cab-booking prompt
+  const knownDriver =
+    conv.role === 'DRIVER' ||
+    (await query(`SELECT 1 FROM crm_drivers WHERE phone = $1 OR whatsapp_phone = $1 LIMIT 1`, [fromPhone])).rows.length > 0;
+  if (knownDriver) {
+    const billing = await getCompanyBillingInfo().catch(() => null);
+    const supportPhone = billing?.phone ? ` Call ${billing.phone} for driver support.` : '';
+    await sendWhatsAppText(
+      fromPhone,
+      `🚖 BiharCabs Driver Desk: Tap the ride buttons in your chat, or reply *READY* (wake-up check), *PLANS* (driver plans), or *REACHED HOME*.${supportPhone}`
+    );
+    return;
+  }
+
   await sendWhatsAppText(
     fromPhone,
     intents?.fallback_message ||
-      `Namaste! For instant cab booking, please reply with "HI" or send your pickup and drop city (e.g. "Patna to Darbhanga tomorrow").\n\nFor 24/7 customer support, call +91 7070992170.`
+      `Namaste! For instant cab booking, please reply with "HI" or send your pickup and drop city (e.g. "Patna to Darbhanga tomorrow").`
   );
 }
 

@@ -41,6 +41,7 @@ export interface CabTypeRow {
   seating_capacity: number;
   luggage_bags: number;
   models_description: string | null;
+  image_url: string | null;
   is_active: boolean;
 }
 
@@ -385,6 +386,38 @@ export async function pricePackageForRoute(
   return { routeDistance, pricing };
 }
 
+/**
+ * When a route's actual driving distance is known, keep only the best-fitting (smallest included_km,
+ * then smallest included_hours) package per (booking_type, cab_code) that covers the route.
+ * Prevents showing oversized 12hr / 250km / 300km plans for a short 55 km trip.
+ */
+export function selectBestFittingPlansPerCab<T>(
+  items: T[],
+  getKey: (item: T) => string,
+  getIncludedKm: (item: T) => number,
+  getIncludedHours: (item: T) => number
+): T[] {
+  const bestByKey = new Map<string, T>();
+  const keyOrder: string[] = [];
+
+  for (const item of items) {
+    const key = getKey(item);
+    const existing = bestByKey.get(key);
+    if (!existing) {
+      bestByKey.set(key, item);
+      keyOrder.push(key);
+      continue;
+    }
+    const km = getIncludedKm(item);
+    const exKm = getIncludedKm(existing);
+    if (km < exKm || (km === exKm && getIncludedHours(item) < getIncludedHours(existing))) {
+      bestByKey.set(key, item);
+    }
+  }
+
+  return keyOrder.map((k) => bestByKey.get(k)!);
+}
+
 function mapCab(r: any): CabTypeRow {
   return {
     id: Number(r.id),
@@ -402,6 +435,7 @@ function mapCab(r: any): CabTypeRow {
     seating_capacity: Number(r.seating_capacity),
     luggage_bags: Number(r.luggage_bags),
     models_description: r.models_description ?? null,
+    image_url: r.image_url ? String(r.image_url) : null,
     is_active: Boolean(r.is_active),
   };
 }
@@ -473,6 +507,7 @@ export async function createCabType(input: {
   seating_capacity?: number;
   luggage_bags?: number;
   models_description?: string | null;
+  image_url?: string | null;
   is_active?: boolean;
 }): Promise<CabTypeRow> {
   const category = String(input.category || '').trim().toUpperCase();
@@ -503,13 +538,14 @@ export async function createCabType(input: {
       `INSERT INTO crm_cab_types (
          code, category, display_name, fuel_type, mileage_kmpl, per_day_charge,
          base_buffer_minutes, extra_hour_charge, extra_km_charge, driver_ta,
-         seating_capacity, luggage_bags, models_description, is_active
-       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+         seating_capacity, luggage_bags, models_description, image_url, is_active
+       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
        RETURNING *`,
       [
         code, category, displayName, fuelType, round2(mileage), round2(pdcrg),
         Math.round(bufferMins), round2(phexchg), round2(extraKm), round2(driverTa),
-        Math.round(seats), Math.round(bags), input.models_description || null, input.is_active ?? true,
+        Math.round(seats), Math.round(bags), input.models_description || null,
+        input.image_url ? String(input.image_url).trim() : null, input.is_active ?? true,
       ]
     );
     return mapCab(res.rows[0]);
@@ -536,6 +572,10 @@ export async function updateCabType(id: number, input: Partial<CabTypeRow>): Pro
   const seats = input.seating_capacity !== undefined ? Number(input.seating_capacity) : Number(e.seating_capacity);
   const bags = input.luggage_bags !== undefined ? Number(input.luggage_bags) : Number(e.luggage_bags);
   const models = input.models_description !== undefined ? input.models_description : e.models_description;
+  const imageUrl =
+    input.image_url !== undefined
+      ? (input.image_url ? String(input.image_url).trim() : null)
+      : (e.image_url ?? null);
   const isActive = input.is_active !== undefined ? Boolean(input.is_active) : Boolean(e.is_active);
 
   if (!(mileage > 0) || !(pdcrg >= 0) || !(phexchg >= 0) || !(extraKm >= 0) || !(driverTa >= 0)) {
@@ -546,10 +586,10 @@ export async function updateCabType(id: number, input: Partial<CabTypeRow>): Pro
     `UPDATE crm_cab_types
      SET display_name = $1, mileage_kmpl = $2, per_day_charge = $3, base_buffer_minutes = $4,
          extra_hour_charge = $5, extra_km_charge = $6, driver_ta = $7, seating_capacity = $8,
-         luggage_bags = $9, models_description = $10, is_active = $11, updated_at = CURRENT_TIMESTAMP
-     WHERE id = $12
+         luggage_bags = $9, models_description = $10, image_url = $11, is_active = $12, updated_at = CURRENT_TIMESTAMP
+     WHERE id = $13
      RETURNING *`,
-    [displayName, round2(mileage), round2(pdcrg), Math.round(bufferMins), round2(phexchg), round2(extraKm), round2(driverTa), Math.round(seats), Math.round(bags), models, isActive, id]
+    [displayName, round2(mileage), round2(pdcrg), Math.round(bufferMins), round2(phexchg), round2(extraKm), round2(driverTa), Math.round(seats), Math.round(bags), models, imageUrl, isActive, id]
   );
   return mapCab(res.rows[0]);
 }
@@ -668,6 +708,7 @@ async function hydratePricedPackages(rows: any[], skipUnpriceable: boolean): Pro
       seating_capacity: Number(r.seating_capacity),
       luggage_bags: Number(r.luggage_bags),
       models_description: r.models_description ?? null,
+      image_url: r.cab_image_url ? String(r.cab_image_url) : null,
       is_active: Boolean(r.cab_is_active),
     };
     const pricing = calculatePackagePricing({
@@ -707,7 +748,7 @@ const PACKAGE_SELECT = `
     c.id AS cab_id, c.public_id AS cab_public_id, c.code AS cab_code, c.category AS cab_category,
     c.display_name AS cab_display_name, c.fuel_type AS cab_fuel_type, c.mileage_kmpl,
     c.per_day_charge, c.base_buffer_minutes, c.extra_hour_charge, c.extra_km_charge,
-    c.driver_ta, c.seating_capacity, c.luggage_bags, c.models_description, c.is_active AS cab_is_active,
+    c.driver_ta, c.seating_capacity, c.luggage_bags, c.models_description, c.image_url AS cab_image_url, c.is_active AS cab_is_active,
     f.price_per_unit AS fuel_price_per_unit
   FROM crm_packages p
   JOIN crm_cab_types c ON c.id = p.cab_type_id

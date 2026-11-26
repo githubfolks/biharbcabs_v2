@@ -175,65 +175,73 @@
                 <div class="modal-body p-4">
                     <div class="booking-form-card mx-auto" style="max-width: 600px; background: white; padding: 30px; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); border: 1px solid #f3f4f6;">
                         <h4 class="fw-bold mb-4" style="font-family: 'Outfit', sans-serif;">Book Your Ride</h4>
-                        <form action="#">
+                        <form data-bc-booking="true" data-bc-source="Modal Booking Form" action="#">
                             <div class="row g-3">
                                 <div class="col-md-6">
                                     <label class="form-label-custom">Your Name <span>*</span></label>
-                                    <input type="text" id="name_modal" class="custom-input" placeholder="Enter full name" required>
+                                    <input type="text" id="name_modal" data-bc-field="name" class="custom-input" placeholder="Enter full name" required>
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label-custom">Phone Number <span>*</span></label>
-                                    <input type="tel" id="phone_modal" class="custom-input" placeholder="+91 Mobile Number" required>
+                                    <input type="tel" id="phone_modal" data-bc-field="phone" class="custom-input" placeholder="+91 Mobile Number" required>
                                 </div>
 
                                 <div class="col-md-6 position-relative">
                                     <label class="form-label-custom">Pickup Location <span>*</span></label>
-                                    <input type="text" id="pickup_location_modal" class="custom-input pe-5" placeholder="Type pickup spot or city..." required>
-                                    <i class="fas fa-crosshairs text-primary position-absolute" id="auto_detect_btn_modal" style="right: 25px; top: 40px; cursor: pointer; font-size: 18px; z-index: 10;" title="Auto Detect Location"></i>
+                                    <input type="text" id="pickup_location_modal" data-bc-field="pickup" class="custom-input pe-5" placeholder="Type pickup spot or city..." required>
+                                    <i class="fas fa-crosshairs text-primary position-absolute" id="auto_detect_btn_modal" data-bc-field="auto" style="right: 25px; top: 40px; cursor: pointer; font-size: 18px; z-index: 10;" title="Auto Detect Location"></i>
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label-custom">Drop Location <span>*</span></label>
-                                    <input type="text" id="drop_location_modal" class="custom-input" placeholder="Type drop destination or city..." required>
+                                    <input type="text" id="drop_location_modal" data-bc-field="drop" class="custom-input" placeholder="Type drop destination or city..." required>
                                 </div>
 
                                 <div class="col-md-6">
                                     <label class="form-label-custom">Travel Date <span>*</span></label>
-                                    <input type="date" id="date_modal" class="custom-input" required>
+                                    <input type="date" id="date_modal" data-bc-field="date" class="custom-input" required>
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label-custom">Pickup Time <span>*</span></label>
-                                    <input type="time" id="time_modal" class="custom-input" required>
+                                    <input type="time" id="time_modal" data-bc-field="time" class="custom-input" required>
                                 </div>
 
                                 <div class="col-md-6">
-                                    <label class="form-label-custom">Total Passengers <span>*</span></label>
-                                    <select id="passengers_modal" class="custom-input custom-select">
-                                        <option>1 Person</option><option>2 Persons</option><option>3 Persons</option><option>4 Persons</option><option>5+ Persons</option>
+                                    <label class="form-label-custom">Trip Category <span>*</span></label>
+                                    <select id="category_modal" data-bc-field="category" class="custom-input custom-select">
+                                        <option value="Rental">Rental (Hourly / KM Packages)</option>
+                                        <option value="One Way (Drop)">One Way (Outstation)</option>
+                                        <option value="Round Trip">Round Trip (Outstation)</option>
+                                        <option value="Local">Local / Airport Transfer</option>
                                     </select>
                                 </div>
-                                <div class="col-md-6">
-                                    <label class="form-label-custom">Trip Category <span>*</span></label>
-                                    <select id="category_modal" class="custom-input custom-select">
-                                        <option>One Way (Drop)</option><option>Round Trip</option><option>Local Rental</option><option>Airport Transfer</option>
+                                <div class="col-md-6 bc-return-date-wrap" style="display:none;">
+                                    <label class="form-label-custom">Return Date <span>*</span></label>
+                                    <input type="date" id="return_date_modal" data-bc-field="return_date" name="return_date" class="custom-input">
+                                </div>
+
+                                <div class="col-12">
+                                    <label class="form-label-custom">Select Cab &amp; Live Plan <span>*</span></label>
+                                    <select id="plan_modal" data-bc-field="package_public_id" class="custom-input custom-select">
+                                        <option value="">Loading live cab plans…</option>
                                     </select>
+                                    <div class="bc-plan-status mt-2" style="font-size:12px;color:#475569;"></div>
                                 </div>
 
                                 <div class="col-12">
                                     <label class="form-label-custom">Special Instructions (Optional)</label>
-                                    <input type="text" id="instructions_modal" class="custom-input" placeholder="e.g. AC Sedan required">
+                                    <input type="text" id="instructions_modal" data-bc-field="instructions" class="custom-input" placeholder="e.g. Landmark or luggage notes">
                                 </div>
 
                                 <div class="col-12 mt-4">
-                                    <div id="fare_estimate_box_modal" class="mb-3 p-3 rounded text-center" style="display: none; background: rgba(250, 204, 21, 0.1); border: 1px dashed #facc15;">
-                                        <small class="text-muted text-uppercase fw-bold" style="letter-spacing: 1px;">Total Driving Distance</small>
+                                    <div id="fare_estimate_box_modal" data-bc-field="estimate" class="mb-3 p-3 rounded text-center" style="display: none; background: rgba(250, 204, 21, 0.1); border: 1px dashed #facc15;">
+                                        <small class="text-muted text-uppercase fw-bold" style="letter-spacing: 1px;">Estimated Driving Distance</small>
                                         <div class="mt-1">
                                             <i class="fas fa-route text-warning me-2" style="font-size: 20px;"></i>
-                                            <strong id="estimated_distance_modal" class="text-dark" style="font-size: 24px;">-</strong>
+                                            <strong id="estimated_distance_modal" data-bc-field="distance" class="text-dark" style="font-size: 24px;">-</strong>
                                         </div>
-                                        <small class="text-muted mt-2 d-block" style="font-size: 11px;">*Our team will contact you shortly with the best fare.</small>
                                     </div>
                                 
-                                    <button type="button" class="btn-whatsapp-submit" onclick="submitModalBooking()"><i class="fas fa-comment-dots me-1"></i> Send Booking on WhatsApp</button>
+                                    <button type="submit" class="btn-whatsapp-submit"><i class="fas fa-check-circle me-1"></i> Confirm Booking</button>
                                 </div>
                             </div>
                         </form>

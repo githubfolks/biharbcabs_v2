@@ -28,7 +28,7 @@ interface InteractiveListSection {
   rows: Array<{ id: string; title: string; description?: string }>;
 }
 
-function parseWaPayload(msg: WaLogMessage): {
+function parseWaPayload(msg: WaLogMessage, bookingIdByCode: Map<string, number>): {
   header?: string;
   body: string;
   footer?: string;
@@ -87,17 +87,34 @@ function parseWaPayload(msg: WaLogMessage): {
     }
   }
 
-  // Outbound template message
+  // Outbound template message (attach the template's quick-reply buttons so they can be tapped in Simulator)
   if (p?.type === 'template' && p?.template) {
-    const tplName = p.template.name || 'template';
+    const tplName = String(p.template.name || 'template');
     const comps = Array.isArray(p.template.components) ? p.template.components : [];
     const params = comps
       .filter((c: any) => c.type === 'body')
-      .flatMap((c: any) => (Array.isArray(c.parameters) ? c.parameters.map((pr: any) => pr.text) : []));
+      .flatMap((c: any) => (Array.isArray(c.parameters) ? c.parameters.map((pr: any) => String(pr.text || '')) : []));
+
+    const codeMatch = params.join(' ').match(/#?(BC-[A-Z0-9]+)/i);
+    const matchedBookingId = codeMatch ? bookingIdByCode.get(codeMatch[1].toUpperCase()) : undefined;
+    const buttons: InteractiveButton[] = [];
+    if (matchedBookingId) {
+      if (tplName.includes('driver_ride_alert')) {
+        buttons.push(
+          { id: `accept_ride_${matchedBookingId}`, title: '✅ Accept Ride' },
+          { id: `decline_ride_${matchedBookingId}`, title: '❌ Decline' }
+        );
+      } else if (tplName.includes('driver_trip_assigned')) {
+        buttons.push({ id: `start_trip_${matchedBookingId}`, title: '🚀 Start Trip' });
+      } else if (tplName.includes('driver_wakeup')) {
+        buttons.push({ id: `wakeup_ready_${matchedBookingId}`, title: '⏰ I Am Ready & On Time' });
+      }
+    }
+
     return {
       header: `Template: ${tplName}`,
       body: params.length > 0 ? params.join(' • ') : `Sent template "${tplName}"`,
-      buttons: [],
+      buttons,
       sections: [],
     };
   }
@@ -169,7 +186,7 @@ export default function WhatsAppSimulatorPage() {
         }
       }
       if (bkData?.success && Array.isArray(bkData.bookings)) {
-        setBookings(bkData.bookings.slice(0, 8));
+        setBookings(bkData.bookings.slice(0, 50));
       }
     } catch (err) {
       console.error('Failed to load drivers/bookings:', err);
@@ -353,7 +370,7 @@ export default function WhatsAppSimulatorPage() {
                     const ph = String(d.whatsapp_phone || d.phone || '').replace(/\D/g, '');
                     return (
                       <option key={d.id} value={ph}>
-                        {d.full_name} ({ph}) — {d.onboarding_status}
+                        #{d.id} {d.full_name} ({d.base_city || 'No city'}) • {ph} — {d.onboarding_status}
                       </option>
                     );
                   })}
@@ -508,8 +525,13 @@ export default function WhatsAppSimulatorPage() {
                 </p>
               </div>
             ) : (
-              messages.map((msg) => {
-                const parsed = parseWaPayload(msg);
+              (() => {
+                const bookingIdByCode = new Map<string, number>();
+                bookings.forEach((b) => {
+                  if (b.booking_code) bookingIdByCode.set(String(b.booking_code).toUpperCase(), Number(b.id));
+                });
+                return messages.map((msg) => {
+                const parsed = parseWaPayload(msg, bookingIdByCode);
                 const isUser = msg.direction === 'INBOUND';
                 return (
                   <div key={msg.id} className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
@@ -590,7 +612,8 @@ export default function WhatsAppSimulatorPage() {
                     </div>
                   </div>
                 );
-              })
+              });
+              })()
             )}
             <div ref={chatEndRef} />
           </div>

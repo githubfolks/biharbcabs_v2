@@ -35,3 +35,9 @@ function bcge_public_book_url() {
     $card = BCGE_Rate_Card::get();
     return empty($card['crm_api_base_url']) ? '' : rest_url('biharcabs/v1/book');
 }
+
+/** CRM-backed LocationIQ autocomplete proxy URL, or '' while CRM API base URL is not configured. */
+function bcge_public_autocomplete_url() {
+    $card = BCGE_Rate_Card::get();
+    return empty($card['crm_api_base_url']) ? '' : rest_url('biharcabs/v1/autocomplete');
+}

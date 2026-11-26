@@ -6,10 +6,12 @@ import {
   listPricedPackages,
   parseOptionalCoords,
   resolveRouteDistanceSafely,
+  selectBestFittingPlansPerCab,
 } from '@/lib/pricing-engine';
 import { BOOKING_TYPES } from '@/lib/booking-rules';
 import { getCityCabAvailability } from '@/lib/availability';
 import { getPackageDistanceTolerancePct, getSplitRules } from '@/lib/settings';
+import { checkRouteServiceability } from '@/lib/service-area';
 
 export const dynamic = 'force-dynamic';
 
@@ -57,7 +59,7 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const [packages, availMap, routeDistance, splitRules, tolerancePct] = await Promise.all([
+    const [packages, availMap, routeDistance, splitRules, tolerancePct, serviceCoverage] = await Promise.all([
       listPricedPackages({
         activeOnly: true,
         bookingType,
@@ -70,7 +72,22 @@ export async function GET(req: NextRequest) {
       ),
       getSplitRules(),
       getPackageDistanceTolerancePct(),
+      originCity || destinationCity
+        ? checkRouteServiceability({ origin: originCity || null, destination: destinationCity || null })
+        : Promise.resolve({ serviceable: true, code: 'OK' as const, reason: null, supportPhone: null }),
     ]);
+
+    if (!serviceCoverage.serviceable) {
+      return NextResponse.json({
+        success: true,
+        booking_types: BOOKING_TYPES,
+        ...(originCity ? { origin_city: originCity } : {}),
+        ...(destinationCity ? { destination_city: destinationCity } : {}),
+        ...(routeDistance ? { route_distance: routeDistance } : {}),
+        service_coverage: serviceCoverage,
+        plans: [],
+      });
+    }
 
     const publicPlans = packages
       .map((p) => {
@@ -117,6 +134,8 @@ export async function GET(req: NextRequest) {
             models_description: p.cab_type.models_description,
             extra_hour_charge: p.cab_type.extra_hour_charge,
             extra_km_charge: p.cab_type.extra_km_charge,
+            per_day_charge: p.cab_type.per_day_charge,
+            image_url: p.cab_type.image_url,
           },
           pricing: {
             total_fair_pre_gst: effective.totalFairPreGst,
@@ -139,13 +158,52 @@ export async function GET(req: NextRequest) {
       // Hide cab categories with 0 free cabs in origin city AND packages whose KM range is exceeded by the route.
       .filter((p) => (!p.availability || p.availability.is_available) && p.pricing.within_package_range);
 
+    // When a specific route distance is known, show only the best-fitting (smallest) tier per cab
+    // so short trips (e.g. 55 km) don't get cluttered with oversized 12hr / 250km / 300km plans.
+    const matchedPlans =
+      routeDistance && routeDistance.distance_km > 0
+        ? selectBestFittingPlansPerCab(
+            publicPlans,
+            (p) => `${p.booking_type}:${p.cab.code}`,
+            (p) => p.included_km,
+            (p) => p.included_hours
+          )
+        : publicPlans;
+
+    // Build deduplicated live cab catalog from active priced plans (single source of truth for WordPress fleet cards)
+    const cabsByCode = new Map<string, any>();
+    for (const p of matchedPlans) {
+      const existing = cabsByCode.get(p.cab.code);
+      if (!existing) {
+        cabsByCode.set(p.cab.code, {
+          ...p.cab,
+          starting_fare: p.pricing.total_payment,
+          starting_plan_name: p.name,
+          starting_plan_public_id: p.public_id,
+          starting_booking_type: p.booking_type,
+          plan_count: 1,
+          ...(p.availability ? { availability: p.availability } : {}),
+        });
+      } else {
+        existing.plan_count += 1;
+        if (p.pricing.total_payment < existing.starting_fare) {
+          existing.starting_fare = p.pricing.total_payment;
+          existing.starting_plan_name = p.name;
+          existing.starting_plan_public_id = p.public_id;
+          existing.starting_booking_type = p.booking_type;
+        }
+      }
+    }
+
     return NextResponse.json({
       success: true,
       booking_types: BOOKING_TYPES,
       ...(originCity ? { origin_city: originCity } : {}),
       ...(destinationCity ? { destination_city: destinationCity } : {}),
       ...(routeDistance ? { route_distance: routeDistance } : {}),
-      plans: publicPlans,
+      service_coverage: serviceCoverage,
+      cabs: Array.from(cabsByCode.values()),
+      plans: matchedPlans,
     });
   } catch (err: any) {
     const status = err instanceof CatalogError ? err.status : 500;

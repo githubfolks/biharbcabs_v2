@@ -430,8 +430,8 @@ add_action('admin_post_bc_download_bookings_csv', function() {
 function bc_instant_booking_shortcode($atts) {
     $atts = shortcode_atts(array(
         'title'        => __('Instant Booking Request', 'biharcabs'),
-        'subtitle'     => __("We'll reply with exact fare & confirm within 30 minutes!", 'biharcabs'),
-        'button_text'  => __('Send Booking on WhatsApp', 'biharcabs'),
+        'subtitle'     => __("Instant booking confirmation on WhatsApp with verified driver details!", 'biharcabs'),
+        'button_text'  => __('Confirm Booking', 'biharcabs'),
         'show_card'    => 'yes',
         'source'       => 'Shortcode Booking Form'
     ), $atts, 'biharcabs_booking');
@@ -495,15 +495,26 @@ function bc_instant_booking_shortcode($atts) {
                 <div class="col-md-6">
                     <label class="form-label-custom" style="display:block;margin-bottom:6px;font-weight:600;font-size:13px;color:#374151;">Trip Category <span style="color:#ef4444;">*</span></label>
                     <select data-bc-field="category" class="custom-input custom-select form-select" style="border-radius:10px;padding:12px;border:1px solid #e5e7eb;width:100%;font-size:14px;">
-                        <option>One Way (Drop)</option>
-                        <option>Round Trip</option>
-                        <option>Local Rental</option>
-                        <option>Airport Transfer</option>
+                        <option value="Rental">Rental (Hourly / KM Packages)</option>
+                        <option value="One Way (Drop)">One Way (Outstation)</option>
+                        <option value="Round Trip">Round Trip (Outstation)</option>
+                        <option value="Local">Local / Airport Transfer</option>
                     </select>
+                </div>
+                <div class="col-md-6 bc-return-date-wrap" style="display:none;">
+                    <label class="form-label-custom" style="display:block;margin-bottom:6px;font-weight:600;font-size:13px;color:#374151;">Return Date <span style="color:#ef4444;">*</span></label>
+                    <input type="date" data-bc-field="return_date" name="return_date" class="custom-input form-control" style="border-radius:10px;padding:12px;border:1px solid #e5e7eb;width:100%;font-size:14px;">
+                </div>
+                <div class="col-12">
+                    <label class="form-label-custom" style="display:block;margin-bottom:6px;font-weight:600;font-size:13px;color:#374151;">Select Cab &amp; Live Plan <span style="color:#ef4444;">*</span></label>
+                    <select data-bc-field="package_public_id" class="custom-input custom-select form-select" style="border-radius:10px;padding:12px;border:1px solid #e5e7eb;width:100%;font-size:14px;">
+                        <option value="">Loading live cab plans…</option>
+                    </select>
+                    <div class="bc-plan-status mt-2" style="font-size:12px;color:#475569;"></div>
                 </div>
                 <div class="col-12">
                     <label class="form-label-custom" style="display:block;margin-bottom:6px;font-weight:600;font-size:13px;color:#374151;">Special Instructions / Luggage (Optional)</label>
-                    <input type="text" data-bc-field="instructions" class="custom-input form-control" placeholder="e.g. AC Sedan required, 3 big suitcases" style="border-radius:10px;padding:12px;border:1px solid #e5e7eb;width:100%;font-size:14px;">
+                    <input type="text" data-bc-field="instructions" class="custom-input form-control" placeholder="e.g. Landmark, luggage notes" style="border-radius:10px;padding:12px;border:1px solid #e5e7eb;width:100%;font-size:14px;">
                 </div>
                 <div class="col-12 mt-4">
                     <div id="fare_estimate_box_<?php echo esc_attr($uniq); ?>" data-bc-field="estimate" class="mb-3 p-3 rounded text-center" style="display:none;background:rgba(250,204,21,0.12);border:1px dashed #facc15;border-radius:10px;">

@@ -29,6 +29,79 @@ class BCGE_Rest {
             'callback'            => array(__CLASS__, 'book'),
             'permission_callback' => '__return_true',
         ));
+        register_rest_route('biharcabs/v1', '/autocomplete', array(
+            'methods'             => 'GET',
+            'callback'            => array(__CLASS__, 'autocomplete'),
+            'permission_callback' => '__return_true',
+        ));
+        register_rest_route('biharcabs/v1', '/cab-image', array(
+            'methods'             => 'GET',
+            'callback'            => array(__CLASS__, 'cab_image'),
+            'permission_callback' => '__return_true',
+        ));
+    }
+
+    /** Rewrite internal CRM cab image paths (/api/public/cab-images/<file>) to the public WP proxy URL. */
+    private static function rewrite_cab_image_url($url) {
+        if (!is_string($url) || trim($url) === '') {
+            return null;
+        }
+        $trimmed = trim($url);
+        if (preg_match('#^/api/public/cab-images/([a-zA-Z0-9._-]+)$#', $trimmed, $m)) {
+            return rest_url('biharcabs/v1/cab-image') . '?file=' . rawurlencode($m[1]);
+        }
+        return $trimmed;
+    }
+
+    /** Proxy CRM-managed cab images so visitors load them cleanly over the public WordPress origin. */
+    public static function cab_image(WP_REST_Request $request) {
+        $file = sanitize_file_name((string) $request->get_param('file'));
+        if ($file === '' || !preg_match('/^[a-zA-Z0-9._-]+$/', $file)) {
+            return new WP_REST_Response(array('error' => 'Invalid filename'), 400);
+        }
+        $card = BCGE_Rate_Card::get();
+        $base = rtrim((string) ($card['crm_api_base_url'] ?? ''), '/');
+        if ($base === '') {
+            return new WP_REST_Response(array('error' => 'CRM not configured'), 503);
+        }
+        $resp = wp_remote_get($base . '/api/public/cab-images/' . rawurlencode($file), array('timeout' => 8));
+        if (is_wp_error($resp)) {
+            return new WP_REST_Response(array('error' => 'Image unreachable'), 502);
+        }
+        $status = (int) wp_remote_retrieve_response_code($resp);
+        if ($status !== 200) {
+            return new WP_REST_Response(array('error' => 'Image not found'), $status > 0 ? $status : 404);
+        }
+        $content_type = wp_remote_retrieve_header($resp, 'content-type') ?: 'image/jpeg';
+        $bytes = wp_remote_retrieve_body($resp);
+        header('Content-Type: ' . $content_type);
+        header('Cache-Control: public, max-age=86400');
+        echo $bytes;
+        exit;
+    }
+
+    /** Proxy LocationIQ place autocomplete via CRM (avoids exposing API key or domain-Referer 403 in browser). */
+    public static function autocomplete(WP_REST_Request $request) {
+        $card = BCGE_Rate_Card::get();
+        $base = rtrim((string) ($card['crm_api_base_url'] ?? ''), '/');
+        if ($base === '') {
+            return self::fail('CRM_NOT_CONFIGURED', 'CRM API base URL is not configured.', 503);
+        }
+        $q = sanitize_text_field((string) $request->get_param('q'));
+        if (strlen($q) < 2) {
+            return new WP_REST_Response(array('success' => true, 'suggestions' => array()), 200);
+        }
+        $url = $base . '/api/public/location/autocomplete?q=' . rawurlencode($q);
+        $response = wp_remote_get($url, array('timeout' => 6, 'headers' => array('Accept' => 'application/json')));
+        if (is_wp_error($response)) {
+            return self::fail('CRM_UNREACHABLE', 'Unable to load location suggestions right now.', 502);
+        }
+        $status = (int) wp_remote_retrieve_response_code($response);
+        $body = json_decode(wp_remote_retrieve_body($response), true);
+        if (!is_array($body)) {
+            return self::fail('CRM_INVALID_RESPONSE', 'Invalid response from location service.', 502);
+        }
+        return new WP_REST_Response($body, $status > 0 ? $status : 200);
     }
 
     /** Proxy live cabs and plans from the CRM public API (no hardcoded URLs or synthetic fallbacks). */
@@ -54,6 +127,22 @@ class BCGE_Rest {
         $body = json_decode(wp_remote_retrieve_body($response), true);
         if (!is_array($body)) {
             return self::fail('CRM_INVALID_RESPONSE', 'Invalid response from pricing service.', 502);
+        }
+        if (isset($body['cabs']) && is_array($body['cabs'])) {
+            foreach ($body['cabs'] as &$c) {
+                if (isset($c['image_url'])) {
+                    $c['image_url'] = self::rewrite_cab_image_url($c['image_url']);
+                }
+            }
+            unset($c);
+        }
+        if (isset($body['plans']) && is_array($body['plans'])) {
+            foreach ($body['plans'] as &$p) {
+                if (isset($p['cab']['image_url'])) {
+                    $p['cab']['image_url'] = self::rewrite_cab_image_url($p['cab']['image_url']);
+                }
+            }
+            unset($p);
         }
         return new WP_REST_Response($body, $status > 0 ? $status : 200);
     }

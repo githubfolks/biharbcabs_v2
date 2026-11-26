@@ -90,7 +90,7 @@ function bc_assets() {
         wp_enqueue_script('bc-' . $name, bc_asset('js/' . $name . '.js'), $deps, '1.1.6', true);
         $deps[] = 'bc-' . $name;
     }
-    wp_enqueue_script('biharcabs', bc_asset('js/biharcabs.js'), $deps, '1.1.6', true);
+    wp_enqueue_script('biharcabs', bc_asset('js/biharcabs.js'), $deps, '1.2.8', true);
 
     $js_vars = array(
         'sticky'          => (bool) bc_setting('sticky'),
@@ -104,7 +104,8 @@ function bc_assets() {
         'phoneLabel'      => bc_setting('phone_label'),
         'quoteUrl'        => function_exists('bcge_public_quote_url') ? bcge_public_quote_url() : '',
         'plansUrl'        => function_exists('bcge_public_plans_url') ? bcge_public_plans_url() : '',
-        'bookUrl'         => function_exists('bcge_public_book_url') ? bcge_public_book_url() : ''
+        'bookUrl'         => function_exists('bcge_public_book_url') ? bcge_public_book_url() : '',
+        'autocompleteUrl' => function_exists('bcge_public_autocomplete_url') ? bcge_public_autocomplete_url() : ''
     );
     wp_localize_script('bc-main', 'biharcabs', $js_vars);
     wp_localize_script('biharcabs', 'biharcabs', $js_vars);

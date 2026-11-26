@@ -69,7 +69,13 @@ export async function getCityCabAvailability(input: {
        FROM crm_drivers d
        JOIN crm_driver_vehicles v ON v.driver_id = d.id AND v.removed_at IS NULL
        LEFT JOIN crm_cab_types ct ON ct.id = v.cab_type_id
-       WHERE LOWER(TRIM(d.base_city)) = LOWER(TRIM($1))
+       WHERE (
+           LOWER(TRIM(d.base_city)) = LOWER(TRIM($1))
+           OR (
+             LENGTH(TRIM(d.base_city)) >= 3
+             AND LOWER($1) ~ ('(^|[^a-z0-9])' || REGEXP_REPLACE(LOWER(TRIM(d.base_city)), '[^a-z0-9 ]', '', 'g') || '($|[^a-z0-9])')
+           )
+         )
          AND d.onboarding_status = 'APPROVED_ACTIVE'
          AND d.is_available = true
          AND NOT d.offers_paused

@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Fuel, Car, Package, Shield, PlusCircle, Save, RefreshCw, Pencil, X } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { Fuel, Car, Package, Shield, PlusCircle, Save, RefreshCw, Pencil, X, Search, Upload } from 'lucide-react';
 import { BOOKING_TYPES, CAB_CATEGORIES, FUEL_TYPES } from '@/lib/booking-rules';
 import { getCabCategoryTheme } from '@/lib/cab-theme';
 import { hasPermission } from '@/lib/permissions';
@@ -39,6 +39,7 @@ export default function CatalogPage() {
     seating_capacity: '4',
     luggage_bags: '2',
     models_description: '',
+    image_url: '',
   };
   const EMPTY_PKG = {
     name: '',
@@ -62,6 +63,11 @@ export default function CatalogPage() {
   const [editingCabId, setEditingCabId] = useState<number | null>(null);
   const [editingPkgId, setEditingPkgId] = useState<number | null>(null);
   const [editingDriverPlanId, setEditingDriverPlanId] = useState<number | null>(null);
+  const [uploadingCabImg, setUploadingCabImg] = useState(false);
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const [pkgTypeFilter, setPkgTypeFilter] = useState<string>('ALL');
+  const [pkgCategoryFilter, setPkgCategoryFilter] = useState<string>('ALL');
 
   const [newCab, setNewCab] = useState(EMPTY_CAB);
   const [newPkg, setNewPkg] = useState(EMPTY_PKG);
@@ -138,6 +144,25 @@ export default function CatalogPage() {
     }
   }
 
+  async function handleUploadCabImage(file: File) {
+    setUploadingCabImg(true);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await fetch('/api/catalog/cab-types/upload', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (!data.success) {
+        alert(data.error || 'Image upload failed');
+      } else {
+        setNewCab((prev) => ({ ...prev, image_url: data.image_url }));
+      }
+    } catch (err: any) {
+      alert(err?.message || 'Image upload failed');
+    } finally {
+      setUploadingCabImg(false);
+    }
+  }
+
   async function handleSaveCab(e: React.FormEvent) {
     e.preventDefault();
     const isEdit = editingCabId !== null;
@@ -146,6 +171,7 @@ export default function CatalogPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         ...newCab,
+        image_url: newCab.image_url.trim() || null,
         mileage_kmpl: Number(newCab.mileage_kmpl),
         per_day_charge: Number(newCab.per_day_charge),
         base_buffer_minutes: Number(newCab.base_buffer_minutes),
@@ -178,6 +204,7 @@ export default function CatalogPage() {
       seating_capacity: String(c.seating_capacity ?? '4'),
       luggage_bags: String(c.luggage_bags ?? '2'),
       models_description: c.models_description || '',
+      image_url: c.image_url || '',
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
@@ -287,6 +314,52 @@ export default function CatalogPage() {
     await loadAll();
   }
 
+  const normalizedQuery = searchQuery.trim().toLowerCase();
+
+  const filteredPackages = useMemo(() => {
+    return packages.filter((p) => {
+      if (pkgTypeFilter !== 'ALL' && p.booking_type !== pkgTypeFilter) return false;
+      if (pkgCategoryFilter !== 'ALL' && p.cab_type?.category !== pkgCategoryFilter) return false;
+      if (!normalizedQuery) return true;
+      const haystack = [
+        p.name,
+        p.booking_type,
+        p.sub_type,
+        p.cab_type?.display_name,
+        p.cab_type?.category,
+        p.cab_type?.fuel_type,
+        `${p.included_km}km`,
+        `${p.included_hours}hr`,
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+      return haystack.includes(normalizedQuery);
+    });
+  }, [packages, pkgTypeFilter, pkgCategoryFilter, normalizedQuery]);
+
+  const filteredCabTypes = useMemo(() => {
+    if (!normalizedQuery) return cabTypes;
+    return cabTypes.filter((c) => {
+      const haystack = [c.display_name, c.category, c.code, c.fuel_type, c.models_description]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+      return haystack.includes(normalizedQuery);
+    });
+  }, [cabTypes, normalizedQuery]);
+
+  const filteredDriverPlans = useMemo(() => {
+    if (!normalizedQuery) return driverPlans;
+    return driverPlans.filter((p) => {
+      const haystack = [p.name, p.code, p.description, ...(p.allowed_trip_types || [])]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+      return haystack.includes(normalizedQuery);
+    });
+  }, [driverPlans, normalizedQuery]);
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -329,6 +402,84 @@ export default function CatalogPage() {
           );
         })}
       </div>
+
+      {/* Search & Filter Bar */}
+      {tab !== 'fuel' && (
+        <div className="bg-white p-3.5 rounded-lg border border-slate-200 shadow-sm flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          <div className="relative flex-1">
+            <Search className="h-4 w-4 text-slate-600 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder={
+                tab === 'packages'
+                  ? 'Search packages by name, cab type, fuel, KM, or hours (e.g. Sedan, 40km, Luxury)...'
+                  : tab === 'cabs'
+                  ? 'Search cab types by name, category, code, or fuel...'
+                  : 'Search driver subscription plans by name, code, or trip type...'
+              }
+              className="w-full pl-9 pr-8 py-2 border border-slate-300 rounded-md text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-orange-500"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                title="Clear search"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-600 hover:text-slate-900"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+          {tab === 'packages' && (
+            <div className="flex flex-wrap items-center gap-2">
+              <select
+                value={pkgTypeFilter}
+                onChange={(e) => setPkgTypeFilter(e.target.value)}
+                aria-label="Filter by booking type"
+                className="px-3 py-2 border border-slate-300 rounded-md text-xs font-semibold text-slate-800 bg-white"
+              >
+                <option value="ALL">All Types</option>
+                {BOOKING_TYPES.map((bt) => (
+                  <option key={bt} value={bt}>{bt}</option>
+                ))}
+              </select>
+              <select
+                value={pkgCategoryFilter}
+                onChange={(e) => setPkgCategoryFilter(e.target.value)}
+                aria-label="Filter by cab category"
+                className="px-3 py-2 border border-slate-300 rounded-md text-xs font-semibold text-slate-800 bg-white"
+              >
+                <option value="ALL">All Cabs</option>
+                {CAB_CATEGORIES.map((cat) => (
+                  <option key={cat} value={cat}>{cat.replace(/_/g, ' ')}</option>
+                ))}
+              </select>
+              {(searchQuery || pkgTypeFilter !== 'ALL' || pkgCategoryFilter !== 'ALL') && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchQuery('');
+                    setPkgTypeFilter('ALL');
+                    setPkgCategoryFilter('ALL');
+                  }}
+                  className="px-2.5 py-2 text-xs font-semibold text-orange-700 hover:text-orange-900"
+                >
+                  Reset
+                </button>
+              )}
+            </div>
+          )}
+          <div className="text-xs font-mono font-semibold text-slate-700 whitespace-nowrap">
+            {tab === 'packages'
+              ? `${filteredPackages.length} / ${packages.length} plans`
+              : tab === 'cabs'
+              ? `${filteredCabTypes.length} / ${cabTypes.length} cabs`
+              : `${filteredDriverPlans.length} / ${driverPlans.length} plans`}
+          </div>
+        </div>
+      )}
 
       {/* TAB 1: BOOKING PACKAGES */}
       {tab === 'packages' && (
@@ -455,9 +606,13 @@ export default function CatalogPage() {
             <div className="bg-white rounded-xl border border-slate-200 p-8 text-center text-slate-600 text-sm shadow-sm">
               No packages configured yet. Create packages above to publish them to CRM Operators, WhatsApp &amp; WordPress.
             </div>
+          ) : filteredPackages.length === 0 ? (
+            <div className="bg-white rounded-xl border border-slate-200 p-8 text-center text-slate-600 text-sm shadow-sm">
+              No packages match your search/filters. Try clearing the search box or switching filters.
+            </div>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {packages.map((p) => {
+              {filteredPackages.map((p) => {
                 const theme = getCabCategoryTheme(p.cab_type?.category);
                 return (
                   <div
@@ -621,6 +776,49 @@ export default function CatalogPage() {
                   <label className="block text-xs font-semibold text-slate-700">Base Buffer (mins)</label>
                   <input type="number" step="5" min="0" value={newCab.base_buffer_minutes} onChange={(e) => setNewCab({ ...newCab, base_buffer_minutes: e.target.value })} className="w-full mt-1 px-2.5 py-1.5 border rounded-md text-sm font-mono" />
                 </div>
+                <div className="md:col-span-3">
+                  <label className="block text-xs font-semibold text-slate-700">Cab Image (shown on Website Frontend)</label>
+                  <div className="mt-1 flex flex-wrap items-center gap-3">
+                    {newCab.image_url && (
+                      <img
+                        src={newCab.image_url}
+                        alt="Cab preview"
+                        className="h-14 w-24 object-cover rounded-md border border-slate-300 bg-slate-50"
+                      />
+                    )}
+                    <label className="inline-flex items-center px-3 py-1.5 rounded-md border border-slate-300 bg-white text-xs font-semibold text-slate-800 hover:bg-slate-50 cursor-pointer">
+                      <Upload className="h-3.5 w-3.5 mr-1.5 text-orange-600" />
+                      {uploadingCabImg ? 'Uploading…' : 'Upload JPG / PNG / WebP'}
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        disabled={uploadingCabImg}
+                        className="hidden"
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          if (f) handleUploadCabImage(f);
+                          e.target.value = '';
+                        }}
+                      />
+                    </label>
+                    <input
+                      type="text"
+                      value={newCab.image_url}
+                      onChange={(e) => setNewCab({ ...newCab, image_url: e.target.value })}
+                      placeholder="Or paste image URL (https://... or uploaded path)"
+                      className="flex-1 min-w-[220px] px-2.5 py-1.5 border rounded-md text-xs font-mono"
+                    />
+                    {newCab.image_url && (
+                      <button
+                        type="button"
+                        onClick={() => setNewCab({ ...newCab, image_url: '' })}
+                        className="text-xs font-semibold text-rose-700 hover:text-rose-900"
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                </div>
               </div>
               <div className="flex justify-end space-x-2">
                 {editingCabId && (
@@ -657,16 +855,37 @@ export default function CatalogPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200">
-                {cabTypes.map((c) => {
+                {filteredCabTypes.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="px-4 py-8 text-center text-slate-600">
+                      No cab types match &ldquo;{searchQuery}&rdquo;.
+                    </td>
+                  </tr>
+                ) : filteredCabTypes.map((c) => {
                   const theme = getCabCategoryTheme(c.category);
                   return (
                     <tr key={c.id} className={theme.rowTint}>
                       <td className="px-4 py-3">
-                        <span className={`inline-block px-2 py-0.5 rounded text-xs font-bold mb-1 ${theme.badge}`}>
-                          {c.category}
-                        </span>
-                        <div className="font-bold text-slate-950">{c.display_name}</div>
-                        <div className="text-xs text-slate-700 font-mono">{c.code}</div>
+                        <div className="flex items-center gap-3">
+                          {c.image_url ? (
+                            <img
+                              src={c.image_url}
+                              alt={c.display_name}
+                              className="h-12 w-20 object-cover rounded-md border border-slate-300 bg-white shrink-0"
+                            />
+                          ) : (
+                            <div className="h-12 w-20 rounded-md border border-dashed border-slate-300 bg-white/70 flex items-center justify-center text-[10px] font-semibold text-slate-600 shrink-0">
+                              No Img
+                            </div>
+                          )}
+                          <div>
+                            <span className={`inline-block px-2 py-0.5 rounded text-xs font-bold mb-1 ${theme.badge}`}>
+                              {c.category}
+                            </span>
+                            <div className="font-bold text-slate-950">{c.display_name}</div>
+                            <div className="text-xs text-slate-700 font-mono">{c.code}</div>
+                          </div>
+                        </div>
                       </td>
                       <td className="px-4 py-3 font-mono text-xs font-bold text-slate-900">{c.fuel_type}</td>
                       <td className="px-4 py-3 font-mono font-semibold text-slate-900">{c.mileage_kmpl}</td>
@@ -879,14 +1098,16 @@ export default function CatalogPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200">
-                {driverPlans.length === 0 ? (
+                {filteredDriverPlans.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="px-4 py-8 text-center text-slate-600">
-                      No driver subscription plans configured yet. Drivers can send PLANS on WhatsApp once created.
+                      {driverPlans.length === 0
+                        ? 'No driver subscription plans configured yet. Drivers can send PLANS on WhatsApp once created.'
+                        : `No driver plans match "${searchQuery}".`}
                     </td>
                   </tr>
                 ) : (
-                  driverPlans.map((p) => (
+                  filteredDriverPlans.map((p) => (
                     <tr key={p.id}>
                       <td className="px-4 py-3">
                         <div className="font-semibold text-slate-900">{p.name}</div>
