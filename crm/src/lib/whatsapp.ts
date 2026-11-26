@@ -254,6 +254,8 @@ export function parseIncomingWebhook(body: any): {
   text?: string;
   buttonId?: string;
   buttonText?: string;
+  mediaId?: string;
+  mediaMime?: string;
   /** For a tap on a template button: id of the template message that was tapped. */
   contextId?: string;
   rawPayload: any;
@@ -275,9 +277,19 @@ export function parseIncomingWebhook(body: any): {
   let text: string | undefined;
   let buttonId: string | undefined;
   let buttonText: string | undefined;
+  let mediaId: string | undefined;
+  let mediaMime: string | undefined;
 
   if (messageType === 'text') {
     text = message.text?.body;
+  } else if (messageType === 'image') {
+    mediaId = message.image?.id;
+    mediaMime = message.image?.mime_type;
+    text = message.image?.caption;
+  } else if (messageType === 'document') {
+    mediaId = message.document?.id;
+    mediaMime = message.document?.mime_type;
+    text = message.document?.caption;
   } else if (messageType === 'interactive') {
     const interactive = message.interactive;
     if (interactive.type === 'button_reply') {
@@ -300,6 +312,8 @@ export function parseIncomingWebhook(body: any): {
     text,
     buttonId,
     buttonText,
+    mediaId,
+    mediaMime,
     contextId: typeof message.context?.id === 'string' ? message.context.id : undefined,
     rawPayload: message,
   };

@@ -337,6 +337,40 @@ describe(`BiharCabs CRM Full API Test Suite (${BASE_URL})`, () => {
       assert.equal(pkgs.status, 200);
       assert.ok(Array.isArray(pkgs.json?.packages));
     });
+
+    it('Surge Pricing Rules CRUD: unauth 401, create, toggle, delete', async () => {
+      const unauth = await apiFetch('/api/catalog/pricing-rules');
+      assert.equal(unauth.status, 401);
+
+      const created = await apiFetch('/api/catalog/pricing-rules', {
+        method: 'POST',
+        cookie: superCookie,
+        body: {
+          name: `API Test Night Surge ${RUN_ID}`,
+          rule_type: 'NIGHT',
+          start_time: '22:00',
+          end_time: '05:00',
+          adjustment_type: 'FLAT',
+          adjustment_value: 200,
+        },
+      });
+      assert.equal(created.status, 201);
+      const ruleId = Number(created.json?.rule?.id);
+
+      const toggled = await apiFetch(`/api/catalog/pricing-rules/${ruleId}`, {
+        method: 'PATCH',
+        cookie: superCookie,
+        body: { is_active: false },
+      });
+      assert.equal(toggled.status, 200);
+      assert.equal(toggled.json?.rule?.is_active, false);
+
+      const del = await apiFetch(`/api/catalog/pricing-rules/${ruleId}`, {
+        method: 'DELETE',
+        cookie: superCookie,
+      });
+      assert.equal(del.status, 200);
+    });
   });
 
   // ============================================================================
@@ -379,6 +413,15 @@ describe(`BiharCabs CRM Full API Test Suite (${BASE_URL})`, () => {
       assert.equal(tl.status, 400);
       const cc = await apiFetch('/api/bookings/0/cancel', { cookie: superCookie });
       assert.equal(cc.status, 400);
+    });
+
+    it('Public Trip Status & SOS endpoints validate token format (400/404)', async () => {
+      const bad = await apiFetch('/api/public/trip/invalid-token');
+      assert.equal(bad.status, 400);
+      const missing = await apiFetch('/api/public/trip/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
+      assert.equal(missing.status, 404);
+      const badSos = await apiFetch('/api/public/trip/invalid-token/sos', { method: 'POST', body: {} });
+      assert.equal(badSos.status, 400);
     });
   });
 

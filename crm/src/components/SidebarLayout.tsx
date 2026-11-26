@@ -123,9 +123,9 @@ export default function SidebarLayout({ children }: SidebarLayoutProps) {
     }
   }
 
-  // If on login page, display full-width content without sidebar
-  if (pathname === '/login') {
-    return <main className="min-h-screen bg-slate-50">{children}</main>;
+  // If on login or public customer trip tracking page, display full-width content without admin sidebar
+  if (pathname === '/login' || pathname.startsWith('/trip/')) {
+    return <main className="min-h-screen bg-slate-50 overflow-y-auto">{children}</main>;
   }
 
   const allNavItems: { href: string; label: string; icon: typeof Car; badge?: string; active: boolean; permission: Permission }[] = [

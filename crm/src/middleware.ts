@@ -15,6 +15,7 @@ export function middleware(req: NextRequest) {
     pathname === '/api/payments/razorpay/webhook' ||
     pathname.startsWith('/api/dispatch/cron') ||
     pathname === '/login' ||
+    pathname.startsWith('/trip/') ||
     pathname === '/favicon.ico'
   ) {
     return NextResponse.next();

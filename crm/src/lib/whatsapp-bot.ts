@@ -47,6 +47,7 @@ import { CANCELLABLE_STATUSES, CancelError, cancelBooking, previewCancellation }
 import { formatPickup, parsePickupTime, PickupTime } from './pickup-time';
 import { recordCustomerRating } from './ratings';
 import { classifyRatingOutcome, upsertSupportTicket } from './support-tickets';
+import { downloadMetaWhatsAppMedia } from './whatsapp-media';
 import { issueStartOtp, otpMessage, reissueOtpForCustomer, startTripWithOtp } from './trip-otp';
 import { checkRouteServiceability } from './service-area';
 
@@ -368,13 +369,105 @@ export async function processIncomingWhatsAppMessage(params: {
   text?: string;
   buttonId?: string;
   buttonText?: string;
+  mediaId?: string;
+  mediaMime?: string;
 }): Promise<void> {
-  const { fromPhone, customerName, buttonId, buttonText } = params;
+  const { fromPhone, customerName, buttonId, buttonText, mediaId } = params;
   const rawText = (params.text || '').trim();
   const lowerText = rawText.toLowerCase();
 
   const conv = await getConversation(fromPhone);
   const intents = await getWhatsAppIntents().catch(() => null);
+
+  // =========================================================================
+  // 0A. INBOUND DRIVER MEDIA: ODOMETER PHOTO PROOF & SELF-SERVICE KYC VAULT
+  // =========================================================================
+  if (mediaId) {
+    const cleanPhone = fromPhone.replace(/\D/g, '');
+    const drvRes = await query(
+      `SELECT id, full_name, onboarding_status FROM crm_drivers
+       WHERE phone = $1 OR whatsapp_phone = $1 LIMIT 1`,
+      [cleanPhone]
+    );
+    if (drvRes.rows.length > 0) {
+      const drv = drvRes.rows[0];
+      const driverId = Number(drv.id);
+
+      // Check if driver has an active trip (attach as Start or End Odometer proof)
+      const activeTrip = await query(
+        `SELECT id, booking_code, booking_status, start_odometer_doc_id
+         FROM crm_bookings
+         WHERE assigned_driver_id = $1
+           AND booking_status IN ('DRIVER_ASSIGNED', 'TRIP_STARTED')
+         ORDER BY updated_at DESC LIMIT 1`,
+        [driverId]
+      );
+
+      if (activeTrip.rows.length > 0 && drv.onboarding_status === 'APPROVED_ACTIVE') {
+        const bk = activeTrip.rows[0];
+        const isEnd = bk.booking_status === 'TRIP_STARTED' && Boolean(bk.start_odometer_doc_id);
+        const docType = isEnd ? 'ODOMETER_END' : 'ODOMETER_START';
+        const downloaded = await downloadMetaWhatsAppMedia(mediaId, `drv_${driverId}_${docType.toLowerCase()}`);
+        if (downloaded) {
+          const ins = await query(
+            `INSERT INTO crm_driver_documents
+               (driver_id, doc_type, doc_number, original_filename, stored_filename, mime_type, size_bytes, verification_status)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, 'VERIFIED')
+             RETURNING id`,
+            [driverId, docType, bk.booking_code, downloaded.originalFilename, downloaded.storedFilename, downloaded.mimeType, downloaded.sizeBytes]
+          );
+          const docId = Number(ins.rows[0].id);
+          await query(
+            isEnd
+              ? `UPDATE crm_bookings SET end_odometer_doc_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`
+              : `UPDATE crm_bookings SET start_odometer_doc_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`,
+            [docId, bk.id]
+          );
+          await recordBookingEvent({
+            bookingId: Number(bk.id),
+            eventType: 'ODOMETER_UPLOADED',
+            actorType: 'DRIVER',
+            actorId: driverId,
+            actorLabel: drv.full_name,
+            summary: `${isEnd ? 'Closing' : 'Opening'} odometer photo uploaded via WhatsApp`,
+            metadata: { docId, docType },
+          });
+          await sendWhatsAppText(
+            fromPhone,
+            `✅ ${isEnd ? 'Closing' : 'Opening'} odometer photo saved for Trip #${bk.booking_code}. Thank you!`
+          );
+          return;
+        }
+      }
+
+      // Otherwise treat as Driver KYC document upload (Aadhaar, DL, RC, Insurance, Permit, PUC, PAN)
+      const cap = lowerText;
+      const docType = cap.includes('aadhaar') || cap.includes('aadhar')
+        ? (cap.includes('back') ? 'AADHAAR_BACK' : 'AADHAAR_FRONT')
+        : cap.includes('pan') ? 'PAN'
+        : cap.includes('dl') || cap.includes('licen') ? 'DRIVING_LICENSE'
+        : cap.includes('rc') ? 'VEHICLE_RC'
+        : cap.includes('insur') ? 'INSURANCE'
+        : cap.includes('permit') ? 'PERMIT'
+        : cap.includes('puc') ? 'PUC'
+        : 'DRIVER_PHOTO';
+
+      const downloaded = await downloadMetaWhatsAppMedia(mediaId, `drv_${driverId}_${docType.toLowerCase()}`);
+      if (downloaded) {
+        await query(
+          `INSERT INTO crm_driver_documents
+             (driver_id, doc_type, original_filename, stored_filename, mime_type, size_bytes, verification_status)
+           VALUES ($1, $2, $3, $4, $5, $6, 'PENDING')`,
+          [driverId, docType, downloaded.originalFilename, downloaded.storedFilename, downloaded.mimeType, downloaded.sizeBytes]
+        );
+        await sendWhatsAppText(
+          fromPhone,
+          `📄 Received your *${docType.replace(/_/g, ' ')}*! It has been saved to your BiharCabs KYC Vault for verification.\n\nTip: Add a caption like "Aadhaar", "DL", "RC", or "Insurance" when sending more documents.`
+        );
+        return;
+      }
+    }
+  }
 
   // =========================================================================
   // 0. TRIP START OTP (driver enters the customer's code; customer can ask for a new one)

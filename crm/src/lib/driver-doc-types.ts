@@ -9,6 +9,8 @@ export const DRIVER_DOC_TYPES = [
   { code: 'PERMIT', label: 'Commercial Permit' },
   { code: 'PUC', label: 'PUC Certificate' },
   { code: 'DRIVER_PHOTO', label: 'Driver Photo / Selfie' },
+  { code: 'ODOMETER_START', label: 'Start Odometer Photo' },
+  { code: 'ODOMETER_END', label: 'End Odometer Photo' },
 ] as const;
 
 export type DriverDocType = (typeof DRIVER_DOC_TYPES)[number]['code'];

@@ -5,6 +5,7 @@ import { Fuel, Car, Package, Shield, PlusCircle, Save, RefreshCw, Pencil, X, Sea
 import { BOOKING_TYPES, CAB_CATEGORIES, FUEL_TYPES } from '@/lib/booking-rules';
 import { getCabCategoryTheme } from '@/lib/cab-theme';
 import { hasPermission } from '@/lib/permissions';
+import PricingRulesPanel from '@/components/PricingRulesPanel';
 
 export default function CatalogPage() {
   const [role, setRole] = useState<string | null>(null);
@@ -1145,6 +1146,9 @@ export default function CatalogPage() {
           </div>
         </div>
       )}
+
+      {/* Peak-Season, Night & Festival Surge Pricing Rules */}
+      <PricingRulesPanel canManage={canManageCatalog} />
     </div>
   );
 }

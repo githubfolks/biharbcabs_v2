@@ -18,6 +18,8 @@ export type BookingEventType =
   | 'TRIP_STARTED'
   | 'TRIP_COMPLETED'
   | 'SLA_ESCALATED'
+  | 'SOS_TRIGGERED'
+  | 'ODOMETER_UPLOADED'
   | 'CANCELLED'
   | 'MANUAL_NOTE';
 

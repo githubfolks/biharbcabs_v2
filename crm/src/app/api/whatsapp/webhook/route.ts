@@ -90,6 +90,8 @@ export async function POST(req: NextRequest) {
       text: parsed.text,
       buttonId,
       buttonText: parsed.buttonText,
+      mediaId: parsed.mediaId,
+      mediaMime: parsed.mediaMime,
     });
 
     return NextResponse.json({ status: 'success' });
