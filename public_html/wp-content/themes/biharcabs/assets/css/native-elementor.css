@@ -1268,7 +1268,7 @@
  .bc-page-index .bc-source-index-8ec864e>*{padding:16px 16px!important}
  .bc-page-index .bc-source-index-f83715d{display:grid!important;grid-template-columns:1fr!important;gap:16px;width:100%!important;margin-left:0!important;margin-right:0!important;overflow-x:visible;padding-bottom:0}
  .bc-page-index .bc-source-index-f83715d>*{flex:none!important;width:100%!important;max-width:100%!important;min-width:0;margin:0!important;padding-left:0!important;padding-right:0!important}
- .bc-page-index .bc-source-index-f83715d img{max-height:180px;object-fit:contain}
+ .bc-page-index .bc-source-index-f83715d img{display:block;width:100%!important;height:200px!important;max-height:200px!important;object-fit:cover!important;margin:0 auto}
  .bc-page-index .bc-source-index-eb6a508,.bc-page-index .bc-source-index-d9e31aa{display:none}
 }
 
